@@ -10,37 +10,117 @@ internal static partial class Interop
     internal static partial class Http
     {
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_EasyCreate")]
-        public static extern SafeCurlHandle EasyCreate();
+        private static extern SafeCurlHandle HttpNative_EasyCreate();
+
+        public static SafeCurlHandle EasyCreate()
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_EasyCreate();
+            }
+        }
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_EasyDestroy")]
-        private static extern void EasyDestroy(IntPtr handle);
+        private static extern void HttpNative_EasyDestroy(IntPtr handle);
+
+        private static void EasyDestroy(IntPtr handle)
+        {
+            using (CurlLock.Enter())
+            {
+                HttpNative_EasyDestroy(handle);
+            }
+        }
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_EasySetOptionString", CharSet = CharSet.Ansi)]
-        public static extern CURLcode EasySetOptionString(SafeCurlHandle curl, CURLoption option, string value);
+        private static extern CURLcode HttpNative_EasySetOptionString(SafeCurlHandle curl, CURLoption option, string value);
+
+        public static CURLcode EasySetOptionString(SafeCurlHandle curl, CURLoption option, string value)
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_EasySetOptionString(curl, option, value);
+            }
+        }
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_EasySetOptionLong")]
-        public static extern CURLcode EasySetOptionLong(SafeCurlHandle curl, CURLoption option, long value);
+        private static extern CURLcode HttpNative_EasySetOptionLong(SafeCurlHandle curl, CURLoption option, long value);
+
+        public static CURLcode EasySetOptionLong(SafeCurlHandle curl, CURLoption option, long value)
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_EasySetOptionLong(curl, option, value);
+            }
+        }
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_EasySetOptionPointer")]
-        public static extern CURLcode EasySetOptionPointer(SafeCurlHandle curl, CURLoption option, IntPtr value);
+        private static extern CURLcode HttpNative_EasySetOptionPointer(SafeCurlHandle curl, CURLoption option, IntPtr value);
+
+        public static CURLcode EasySetOptionPointer(SafeCurlHandle curl, CURLoption option, IntPtr value)
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_EasySetOptionPointer(curl, option, value);
+            }
+        }
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_EasySetOptionPointer")]
-        public static extern CURLcode EasySetOptionPointer(SafeCurlHandle curl, CURLoption option, SafeHandle value);
+        private static extern CURLcode HttpNative_EasySetOptionPointer(SafeCurlHandle curl, CURLoption option, SafeHandle value);
+
+        public static CURLcode EasySetOptionPointer(SafeCurlHandle curl, CURLoption option, SafeHandle value)
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_EasySetOptionPointer(curl, option, value);
+            }
+        }
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_EasyGetErrorString")]
         public static extern IntPtr EasyGetErrorString(int code);
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_EasyGetInfoPointer")]
-        public static extern CURLcode EasyGetInfoPointer(IntPtr handle, CURLINFO info, out IntPtr value);
+        private static extern CURLcode HttpNative_EasyGetInfoPointer(IntPtr handle, CURLINFO info, out IntPtr value);
+
+        public static CURLcode EasyGetInfoPointer(IntPtr handle, CURLINFO info, out IntPtr value)
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_EasyGetInfoPointer(handle, info, out value);
+            }
+        }
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_EasyGetInfoPointer")]
-        public static extern CURLcode EasyGetInfoPointer(SafeCurlHandle handle, CURLINFO info, out IntPtr value);
+        private static extern CURLcode HttpNative_EasyGetInfoPointer(SafeCurlHandle handle, CURLINFO info, out IntPtr value);
+
+        public static CURLcode EasyGetInfoPointer(SafeCurlHandle handle, CURLINFO info, out IntPtr value)
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_EasyGetInfoPointer(handle, info, out value);
+            }
+        }
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_EasyGetInfoLong")]
-        public static extern CURLcode EasyGetInfoLong(SafeCurlHandle handle, CURLINFO info, out long value);
+        private static extern CURLcode HttpNative_EasyGetInfoLong(SafeCurlHandle handle, CURLINFO info, out long value);
+
+        public static CURLcode EasyGetInfoLong(SafeCurlHandle handle, CURLINFO info, out long value)
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_EasyGetInfoLong(handle, info, out value);
+            }
+        }
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_EasyPerform")]
-        public static extern CURLcode EasyPerform(SafeCurlHandle curl);
+        private static extern CURLcode HttpNative_EasyPerform(SafeCurlHandle curl);
+
+        public static CURLcode EasyPerform(SafeCurlHandle curl)
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_EasyPerform(curl);
+            }
+        }
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_EasyUnpause")]
         public static extern CURLcode EasyUnpause(SafeCurlHandle easy);
@@ -54,36 +134,93 @@ internal static partial class Interop
         public delegate void DebugCallback(IntPtr curl, CurlInfoType type, IntPtr data, ulong size, IntPtr userPointer);
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_RegisterSeekCallback")]
-        public static extern void RegisterSeekCallback(
+        private static extern void HttpNative_RegisterSeekCallback(
             SafeCurlHandle curl,
             SeekCallback callback,
             IntPtr userPointer,
             ref SafeCallbackHandle callbackHandle);
 
+        public static void RegisterSeekCallback(
+            SafeCurlHandle curl,
+            SeekCallback callback,
+            IntPtr userPointer,
+            ref SafeCallbackHandle callbackHandle)
+        {
+            using (CurlLock.Enter())
+            {
+                HttpNative_RegisterSeekCallback(curl, callback, userPointer, ref callbackHandle);
+            }
+        }
+
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_RegisterReadWriteCallback")]
-        public static extern void RegisterReadWriteCallback(
+        private static extern void HttpNative_RegisterReadWriteCallback(
             SafeCurlHandle curl,
             ReadWriteFunction functionType,
             ReadWriteCallback callback,
             IntPtr userPointer,
             ref SafeCallbackHandle callbackHandle);
 
+        public static void RegisterReadWriteCallback(
+            SafeCurlHandle curl,
+            ReadWriteFunction functionType,
+            ReadWriteCallback callback,
+            IntPtr userPointer,
+            ref SafeCallbackHandle callbackHandle)
+        {
+            using (CurlLock.Enter())
+            {
+                HttpNative_RegisterReadWriteCallback(curl, functionType, callback, userPointer, ref callbackHandle);
+            }
+        }
+
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_RegisterSslCtxCallback")]
-        public static extern CURLcode RegisterSslCtxCallback(
+        private static extern CURLcode HttpNative_RegisterSslCtxCallback(
             SafeCurlHandle curl,
             SslCtxCallback callback,
             IntPtr userPointer,
             ref SafeCallbackHandle callbackHandle);
 
+        public static CURLcode RegisterSslCtxCallback(
+            SafeCurlHandle curl,
+            SslCtxCallback callback,
+            IntPtr userPointer,
+            ref SafeCallbackHandle callbackHandle)
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_RegisterSslCtxCallback(curl, callback, userPointer, ref callbackHandle);
+            }
+        }
+
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_RegisterDebugCallback")]
-        public static extern CURLcode RegisterDebugCallback(
+        private static extern CURLcode HttpNative_RegisterDebugCallback(
             SafeCurlHandle curl,
             DebugCallback callback,
             IntPtr userPointer,
             ref SafeCallbackHandle callbackHandle);
 
+        public static CURLcode RegisterDebugCallback(
+            SafeCurlHandle curl,
+            DebugCallback callback,
+            IntPtr userPointer,
+            ref SafeCallbackHandle callbackHandle)
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_RegisterDebugCallback(curl, callback, userPointer, ref callbackHandle);
+            }
+        }
+
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_FreeCallbackHandle")]
-        private static extern void FreeCallbackHandle(IntPtr handle);
+        private static extern void HttpNative_FreeCallbackHandle(IntPtr handle);
+
+        private static void FreeCallbackHandle(IntPtr handle)
+        {
+            using (CurlLock.Enter())
+            {
+                HttpNative_FreeCallbackHandle(handle);
+            }
+        }
 
         // Curl options are of the format <type base> + <n>
         private const int CurlOptionLongBase = 0;
@@ -232,9 +369,12 @@ internal static partial class Interop
 
             protected override bool ReleaseHandle()
             {
-                EasyDestroy(handle);
-                SetHandle(IntPtr.Zero);
-                return true;
+                using (CurlLock.Enter())
+                {
+                    EasyDestroy(handle);
+                    SetHandle(IntPtr.Zero);
+                    return true;
+                }
             }
         }
 

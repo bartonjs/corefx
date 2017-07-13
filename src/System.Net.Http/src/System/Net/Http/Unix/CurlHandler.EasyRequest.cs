@@ -80,41 +80,46 @@ namespace System.Net.Http
             internal void InitializeCurl()
             {
                 // Create the underlying easy handle
-                SafeCurlHandle easyHandle = Interop.Http.EasyCreate();
-                if (easyHandle.IsInvalid)
+                using (Interop.Http.CurlLock.Enter())
                 {
-                    throw new OutOfMemoryException();
+                    SafeCurlHandle easyHandle = Interop.Http.EasyCreate();
+                    if (easyHandle.IsInvalid)
+                    {
+                        throw new OutOfMemoryException();
+                    }
+                    _easyHandle = easyHandle;
+
+                    EventSourceTrace("Configuring request.");
+
+                    // Before setting any other options, turn on curl's debug tracing
+                    // if desired.  CURLOPT_VERBOSE may also be set subsequently if
+                    // EventSource tracing is enabled.
+                    if (s_curlDebugLogging)
+                    {
+                        SetCurlOption(CURLoption.CURLOPT_VERBOSE, 1L);
+                    }
+
+                    // Before actually configuring the handle based on the state of the request,
+                    // do any necessary cleanup of the request object.
+                    SanitizeRequestMessage();
+
+                    // Configure the handle
+                    SetUrl();
+                    SetNetworkingOptions();
+                    SetMultithreading();
+                    SetTimeouts();
+                    SetRedirection();
+                    SetVerb();
+                    SetVersion();
+                    SetDecompressionOptions();
+                    SetProxyOptions(_requestMessage.RequestUri);
+                    SetCredentialsOptions(_handler._useDefaultCredentials
+                        ? GetDefaultCredentialAndAuth()
+                        : _handler.GetCredentials(_requestMessage.RequestUri));
+                    SetCookieOption(_requestMessage.RequestUri);
+                    SetRequestHeaders();
+                    SetSslOptions();
                 }
-                _easyHandle = easyHandle;
-
-                EventSourceTrace("Configuring request.");
-
-                // Before setting any other options, turn on curl's debug tracing
-                // if desired.  CURLOPT_VERBOSE may also be set subsequently if
-                // EventSource tracing is enabled.
-                if (s_curlDebugLogging)
-                {
-                    SetCurlOption(CURLoption.CURLOPT_VERBOSE, 1L);
-                }
-
-                // Before actually configuring the handle based on the state of the request,
-                // do any necessary cleanup of the request object.
-                SanitizeRequestMessage();
-                
-                // Configure the handle
-                SetUrl();
-                SetNetworkingOptions();
-                SetMultithreading();
-                SetTimeouts();
-                SetRedirection();
-                SetVerb();
-                SetVersion();
-                SetDecompressionOptions();
-                SetProxyOptions(_requestMessage.RequestUri);
-                SetCredentialsOptions(_handler._useDefaultCredentials ? GetDefaultCredentialAndAuth() : _handler.GetCredentials(_requestMessage.RequestUri));
-                SetCookieOption(_requestMessage.RequestUri);
-                SetRequestHeaders();
-                SetSslOptions();
 
                 EventSourceTrace("Done configuring request.");
             }

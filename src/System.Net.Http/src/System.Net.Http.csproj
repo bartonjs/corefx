@@ -234,6 +234,9 @@
     <Compile Include="$(CommonPath)\Interop\Unix\System.Net.Http.Native\Interop.CURLcode.cs">
       <Link>Common\Interop\Unix\System.Net.Http.Native\Interop.CURLcode.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\Interop\Unix\System.Net.Http.Native\Interop.CurlLock.cs">
+      <Link>Common\Interop\Unix\System.Net.Http.Native\Interop.CurlLock.cs</Link>
+    </Compile>
     <Compile Include="$(CommonPath)\Interop\Unix\System.Net.Http.Native\Interop.Easy.cs">
       <Link>Common\Interop\Unix\System.Net.Http.Native\Interop.Easy.cs</Link>
     </Compile>

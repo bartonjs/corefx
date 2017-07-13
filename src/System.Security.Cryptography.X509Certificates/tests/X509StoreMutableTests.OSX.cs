@@ -21,11 +21,14 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             catch (CryptographicException e)
             {
                 const int errSecWrPerm = -61;
+                const int errSecInteractionNotAllowed = -25308;
 
-                if (e.HResult == errSecWrPerm)
+                if (e.HResult == errSecWrPerm || e.HResult == errSecInteractionNotAllowed)
                 {
                     return false;
                 }
+
+                Console.WriteLine("The extra error code is " + e.HResult);
             }
             catch
             {

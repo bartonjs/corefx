@@ -11,17 +11,50 @@ internal static partial class Interop
     internal static partial class Http
     {
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_MultiCreate")]
-        public static extern SafeCurlMultiHandle MultiCreate();
+        private static extern SafeCurlMultiHandle HttpNative_MultiCreate();
+
+        public static SafeCurlMultiHandle MultiCreate()
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_MultiCreate();
+            }
+        }
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_MultiDestroy")]
-        private static extern CURLMcode MultiDestroy(IntPtr handle);
+        private static extern CURLMcode HttpNative_MultiDestroy(IntPtr handle);
+
+        private static CURLMcode MultiDestroy(IntPtr handle)
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_MultiDestroy(handle);
+            }
+        }
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_MultiAddHandle")]
-        public static extern CURLMcode MultiAddHandle(SafeCurlMultiHandle multiHandle, SafeCurlHandle easyHandle);
+        private static extern CURLMcode HttpNative_MultiAddHandle(SafeCurlMultiHandle multiHandle, SafeCurlHandle easyHandle);
+
+        public static CURLMcode MultiAddHandle(SafeCurlMultiHandle multiHandle, SafeCurlHandle easyHandle)
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_MultiAddHandle(multiHandle, easyHandle);
+            }
+        }
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_MultiRemoveHandle")]
-        public static extern CURLMcode MultiRemoveHandle(SafeCurlMultiHandle multiHandle, SafeCurlHandle easyHandle);
+        private static extern CURLMcode HttpNative_MultiRemoveHandle(SafeCurlMultiHandle multiHandle, SafeCurlHandle easyHandle);
 
+        public static CURLMcode MultiRemoveHandle(SafeCurlMultiHandle multiHandle, SafeCurlHandle easyHandle)
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_MultiRemoveHandle(multiHandle, easyHandle);
+            }
+        }
+
+        // Locking this one seems bad.
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_MultiWait")]
         public static extern CURLMcode MultiWait(
             SafeCurlMultiHandle multiHandle,
@@ -30,20 +63,48 @@ internal static partial class Interop
             out bool isTimeout);
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_MultiPerform")]
-        public static extern CURLMcode MultiPerform(SafeCurlMultiHandle multiHandle);
+        private static extern CURLMcode HttpNative_MultiPerform(SafeCurlMultiHandle multiHandle);
+
+        public static CURLMcode MultiPerform(SafeCurlMultiHandle multiHandle)
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_MultiPerform(multiHandle);
+            }
+        }
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_MultiInfoRead")]
-        public static extern bool MultiInfoRead(
+        private static extern bool HttpNative_MultiInfoRead(
             SafeCurlMultiHandle multiHandle,
             out CURLMSG message,
             out IntPtr easyHandle,
             out CURLcode result);
 
+        public static bool MultiInfoRead(
+            SafeCurlMultiHandle multiHandle,
+            out CURLMSG message,
+            out IntPtr easyHandle,
+            out CURLcode result)
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_MultiInfoRead(multiHandle, out message, out easyHandle, out result);
+            }
+        }
+
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_MultiGetErrorString")]
         public static extern IntPtr MultiGetErrorString(int code);
 
         [DllImport(Libraries.HttpNative, EntryPoint = "HttpNative_MultiSetOptionLong")]
-        public static extern CURLMcode MultiSetOptionLong(SafeCurlMultiHandle curl, CURLMoption option, long value);
+        private static extern CURLMcode HttpNative_MultiSetOptionLong(SafeCurlMultiHandle curl, CURLMoption option, long value);
+
+        public static CURLMcode MultiSetOptionLong(SafeCurlMultiHandle curl, CURLMoption option, long value)
+        {
+            using (CurlLock.Enter())
+            {
+                return HttpNative_MultiSetOptionLong(curl, option, value);
+            }
+        }
 
         // Enum for constants defined for the enum CURLMcode in multi.h
         internal enum CURLMcode : int
@@ -90,9 +151,12 @@ internal static partial class Interop
 
             protected override bool ReleaseHandle()
             {
-                bool result = MultiDestroy(handle) == CURLMcode.CURLM_OK;
-                SetHandle(IntPtr.Zero);
-                return result;
+                using (CurlLock.Enter())
+                {
+                    bool result = MultiDestroy(handle) == CURLMcode.CURLM_OK;
+                    SetHandle(IntPtr.Zero);
+                    return result;
+                }
             }
         }
     }

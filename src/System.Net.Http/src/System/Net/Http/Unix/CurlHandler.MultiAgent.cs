@@ -228,43 +228,50 @@ namespace System.Net.Http
             /// <summary>Creates and configures a new multi handle.</summary>
             private Interop.Http.SafeCurlMultiHandle CreateAndConfigureMultiHandle()
             {
-                // Create the new handle
-                Interop.Http.SafeCurlMultiHandle multiHandle = Interop.Http.MultiCreate();
-                if (multiHandle.IsInvalid)
+                using (Interop.Http.CurlLock.Enter())
                 {
-                    throw CreateHttpRequestException(new CurlException((int)CURLcode.CURLE_FAILED_INIT, isMulti: false));
-                }
-
-                // In support of HTTP/2, enable HTTP/2 connections to be multiplexed if possible.
-                // We must only do this if the version of libcurl being used supports HTTP/2 multiplexing.
-                // Due to a change in a libcurl signature, if we try to make this call on an older libcurl, 
-                // we'll end up accidentally and unconditionally enabling HTTP 1.1 pipelining.
-                if (s_supportsHttp2Multiplexing)
-                {
-                    ThrowIfCURLMError(Interop.Http.MultiSetOptionLong(multiHandle,
-                        Interop.Http.CURLMoption.CURLMOPT_PIPELINING,
-                        (long)Interop.Http.CurlPipe.CURLPIPE_MULTIPLEX));
-                    EventSourceTrace("Set multiplexing on multi handle");
-                }
-
-                // Configure max connections per host if it was changed from the default
-                int maxConnections = _associatedHandler.MaxConnectionsPerServer;
-                if (maxConnections < int.MaxValue) // int.MaxValue considered infinite, mapping to libcurl default of 0
-                {
-                    CURLMcode code = Interop.Http.MultiSetOptionLong(multiHandle, Interop.Http.CURLMoption.CURLMOPT_MAX_HOST_CONNECTIONS, maxConnections);
-                    switch (code)
+                    // Create the new handle
+                    Interop.Http.SafeCurlMultiHandle multiHandle = Interop.Http.MultiCreate();
+                    if (multiHandle.IsInvalid)
                     {
-                        case CURLMcode.CURLM_OK:
-                            EventSourceTrace("Set max host connections to {0}", maxConnections);
-                            break;
-                        default:
-                            // Treat failures as non-fatal in release; worst case is we employ more connections than desired.
-                            EventSourceTrace("Setting CURLMOPT_MAX_HOST_CONNECTIONS failed: {0}. Ignoring option.", code);
-                            break;
+                        throw CreateHttpRequestException(
+                            new CurlException((int)CURLcode.CURLE_FAILED_INIT, isMulti: false));
                     }
-                }
 
-                return multiHandle;
+                    // In support of HTTP/2, enable HTTP/2 connections to be multiplexed if possible.
+                    // We must only do this if the version of libcurl being used supports HTTP/2 multiplexing.
+                    // Due to a change in a libcurl signature, if we try to make this call on an older libcurl, 
+                    // we'll end up accidentally and unconditionally enabling HTTP 1.1 pipelining.
+                    if (s_supportsHttp2Multiplexing)
+                    {
+                        ThrowIfCURLMError(Interop.Http.MultiSetOptionLong(multiHandle,
+                            Interop.Http.CURLMoption.CURLMOPT_PIPELINING,
+                            (long)Interop.Http.CurlPipe.CURLPIPE_MULTIPLEX));
+                        EventSourceTrace("Set multiplexing on multi handle");
+                    }
+
+                    // Configure max connections per host if it was changed from the default
+                    int maxConnections = _associatedHandler.MaxConnectionsPerServer;
+                    if (maxConnections < int.MaxValue
+                    ) // int.MaxValue considered infinite, mapping to libcurl default of 0
+                    {
+                        CURLMcode code = Interop.Http.MultiSetOptionLong(multiHandle,
+                            Interop.Http.CURLMoption.CURLMOPT_MAX_HOST_CONNECTIONS, maxConnections);
+                        switch (code)
+                        {
+                            case CURLMcode.CURLM_OK:
+                                EventSourceTrace("Set max host connections to {0}", maxConnections);
+                                break;
+                            default:
+                                // Treat failures as non-fatal in release; worst case is we employ more connections than desired.
+                                EventSourceTrace("Setting CURLMOPT_MAX_HOST_CONNECTIONS failed: {0}. Ignoring option.",
+                                    code);
+                                break;
+                        }
+                    }
+
+                    return multiHandle;
+                }
             }
 
             /// <summary>Thread work item entrypoint for a multiagent worker.</summary>
