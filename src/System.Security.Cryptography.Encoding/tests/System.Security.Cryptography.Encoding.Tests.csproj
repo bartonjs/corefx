@@ -10,6 +10,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'netstandard-Windows_NT-Debug|AnyCPU'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'netstandard-Windows_NT-Release|AnyCPU'" />
   <ItemGroup>
+    <Compile Include="Asn1\Reader\Asn1ReaderTests.cs" />
+    <Compile Include="Asn1\Reader\ParseTag.cs" />
     <Compile Include="AsnEncodedData.cs" />
     <Compile Include="AsnEncodedDataCollectionTests.cs" />
     <Compile Include="Base64TransformsTests.cs" />
@@ -17,6 +19,9 @@
     <Compile Include="DerSequenceReaderTests.cs" />
     <Compile Include="Oid.cs" />
     <Compile Include="OidCollectionTests.cs" />
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1V2.cs">
+      <Link>Common\System\Security\Cryptography\Asn1V2.cs</Link>
+    </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\DerEncoder.cs">
       <Link>Common\System\Security\Cryptography\DerEncoder.cs</Link>
     </Compile>
