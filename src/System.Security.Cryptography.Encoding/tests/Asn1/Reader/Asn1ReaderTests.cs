@@ -15,5 +15,12 @@ namespace System.Security.Cryptography.Tests.Asn1
             ContextSpecific = TagClass.ContextSpecific,
             Private = TagClass.Private,
         }
+
+        public enum PublicEncodingRules
+        {
+            BER = AsnEncodingRules.BER,
+            CER = AsnEncodingRules.CER,
+            DER = AsnEncodingRules.DER,
+        }
     }
 }

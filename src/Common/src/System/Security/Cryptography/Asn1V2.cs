@@ -206,6 +206,16 @@ namespace System.Security.Cryptography.Asn1
         }
     }
 
+    internal enum AsnEncodingRules
+    {
+        BasicEncodingRules,
+        BER = BasicEncodingRules,
+        CanonicalEncodingRules,
+        CER = CanonicalEncodingRules,
+        DistinguishedEncodingRules,
+        DER = DistinguishedEncodingRules,
+    }
+
     internal struct AsnReader
     {
         private ReadOnlySpan<byte> _data;
@@ -230,6 +240,163 @@ namespace System.Security.Cryptography.Asn1
             }
 
             throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+        }
+
+        private static bool TryReadLength(
+            ReadOnlySpan<byte> source,
+            AsnEncodingRules ruleSet,
+            out int? length,
+            out int bytesRead)
+        {
+            length = null;
+            bytesRead = 0;
+
+            CheckEncodingRules(ruleSet);
+
+            if (source.IsEmpty)
+                return false;
+
+            // T-REC-X.690-201508 sec 8.1.3
+
+            bytesRead++;
+            byte lengthOrLengthLength = source[0];
+            const byte MultiByteMarker = 0x80;
+
+            // 0x00-0x7F are direct length values.
+            // 0x80 is BER/CER indefinite length.
+            // 0x81-0xFE says that the length takes the next 1-126 bytes.
+            // 0xFF is forbidden.
+            if (lengthOrLengthLength == MultiByteMarker)
+            {
+                // T-REC-X.690-201508 sec 10.1 (DER: Length forms)
+                if (ruleSet == AsnEncodingRules.DER)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+
+                // Null length == indefinite.
+                return true;
+            }
+
+            if (lengthOrLengthLength < MultiByteMarker)
+            {
+                length = lengthOrLengthLength;
+                return true;
+            }
+
+            if (lengthOrLengthLength == 0xFF)
+            {
+                bytesRead = 0;
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            byte lengthLength = (byte)(lengthOrLengthLength & ~MultiByteMarker);
+
+            // +1 for lengthOrLengthLength
+            if (lengthLength + 1 > source.Length)
+            {
+                bytesRead = 0;
+                return false;
+            }
+
+            // T-REC-X.690-201508 sec 9.1 (CER: Length forms)
+            // T-REC-X.690-201508 sec 10.1 (DER: Length forms)
+            bool minimalRepresentation =
+                ruleSet == AsnEncodingRules.DER || ruleSet == AsnEncodingRules.CER;
+
+            // The ITU-T specifications tecnically allow lengths up to ((2^128) - 1), but
+            // since Span's length is a signed Int32 we're limited to identifying memory
+            // that is within ((2^31) - 1) bytes of the tag start.
+            if (minimalRepresentation && lengthLength > sizeof(int))
+            {
+                bytesRead = 0;
+                return false;
+            }
+
+            uint parsedLength = 0;
+
+            for (int i = 0; i < lengthLength; i++)
+            {
+                byte current = source[bytesRead];
+                bytesRead++;
+
+                if (parsedLength == 0)
+                {
+                    if (minimalRepresentation && current == 0)
+                    {
+                        bytesRead = 0;
+                        throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                    }
+
+                    if (!minimalRepresentation && current != 0)
+                    {
+                        // Under BER rules we could have had padding zeros, so
+                        // once the first data bits come in check that we fit within
+                        // sizeof(int) due to Span bounds.
+
+                        if (lengthLength - i > sizeof(int))
+                        {
+                            bytesRead = 0;
+                            throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                        }
+                    }
+                }
+
+                parsedLength <<= 8;
+                parsedLength |= current;
+            }
+
+            // This value cannot be represented as a Span length.
+            if (parsedLength > int.MaxValue)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            if (minimalRepresentation && parsedLength < MultiByteMarker)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            length = (int)parsedLength;
+            return true;
+        }
+
+        internal (Asn1Tag, int?) ReadTagAndLength(AsnEncodingRules ruleSet, out int bytesRead)
+        {
+            if (TryPeekTag(_data, out Asn1Tag tag, out int tagBytesRead) &&
+                TryReadLength(_data.Slice(tagBytesRead), ruleSet, out int? length, out int lengthBytesRead))
+            {
+                int allBytesRead = tagBytesRead + lengthBytesRead;
+
+                if (tag.IsConstructed)
+                {
+                    // T-REC-X.690-201508 sec 9.1 (CER: Length forms) says constructed is always indefinite.
+                    if (ruleSet == AsnEncodingRules.CER && length != null)
+                    {
+                        throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                    }
+                }
+                else if (length == null)
+                {
+                    // T-REC-X.690-201508 sec 8.1.3.2 says primitive encodings must use a definite form.
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+
+                bytesRead = allBytesRead;
+                return (tag, length);
+            }
+
+            throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+        }
+
+        private static void CheckEncodingRules(AsnEncodingRules ruleSet)
+        {
+            if (ruleSet != AsnEncodingRules.BER &&
+                ruleSet != AsnEncodingRules.CER &&
+                ruleSet != AsnEncodingRules.DER)
+            {
+                throw new ArgumentOutOfRangeException(nameof(ruleSet));
+            }
         }
     }
 }
