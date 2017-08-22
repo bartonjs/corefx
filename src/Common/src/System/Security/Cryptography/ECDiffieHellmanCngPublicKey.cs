@@ -1,8 +1,6 @@
-// ==++==
-// 
-//   Copyright (c) Microsoft Corporation.  All rights reserved.
-// 
-// ==--==
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Runtime.Serialization;
@@ -11,45 +9,52 @@ using System.Security.Permissions;
 using System.Diagnostics.Contracts;
 using Microsoft.Win32.SafeHandles;
 
-namespace System.Security.Cryptography {
+namespace System.Security.Cryptography
+{
     /// <summary>
     ///     Public key used to do key exchange with the ECDiffieHellmanCng algorithm
     /// </summary>
     [Serializable]
     [System.Security.Permissions.HostProtection(MayLeakOnAbort = true)]
-    public sealed class ECDiffieHellmanCngPublicKey : ECDiffieHellmanPublicKey {
-        private CngKeyBlobFormat m_format;
-        [OptionalField] private string m_curveName;
+    public sealed class ECDiffieHellmanCngPublicKey : ECDiffieHellmanPublicKey
+    {
+        private CngKeyBlobFormat _format;
+        [OptionalField]
+        private string _curveName;
 
         /// <summary>
         ///     Wrap a CNG key
         /// </summary>
         [SecuritySafeCritical]
-        internal ECDiffieHellmanCngPublicKey(byte[] keyBlob, string curveName, CngKeyBlobFormat format) : base(keyBlob) {
+        internal ECDiffieHellmanCngPublicKey(byte[] keyBlob, string curveName, CngKeyBlobFormat format) : base(keyBlob)
+        {
             Contract.Requires(format != null);
-            Contract.Ensures(m_format != null);
+            Contract.Ensures(_format != null);
 
-            m_format = format;
+            _format = format;
             // Can be null for P256, P384, P521, or an explicit blob
-            m_curveName = curveName;
+            _curveName = curveName;
         }
 
         /// <summary>
         ///     Format the key blob is expressed in
         /// </summary>
-        public CngKeyBlobFormat BlobFormat {
-            get {
+        public CngKeyBlobFormat BlobFormat
+        {
+            get
+            {
                 Contract.Ensures(Contract.Result<CngKeyBlobFormat>() != null);
-                Contract.Assert(m_format != null);
+                Contract.Assert(_format != null);
 
-                return m_format;
+                return _format;
             }
         }
 
         /// <summary>
         ///     Clean up the key
         /// </summary>
-        protected override void Dispose(bool disposing) {
+        protected override void Dispose(bool disposing)
+        {
             base.Dispose(disposing);
         }
 
@@ -57,17 +62,22 @@ namespace System.Security.Cryptography {
         ///     Hydrate a public key from a blob
         /// </summary>
         [SecuritySafeCritical]
-        public static ECDiffieHellmanPublicKey FromByteArray(byte[] publicKeyBlob, CngKeyBlobFormat format) {
-            if (publicKeyBlob == null) {
+        public static ECDiffieHellmanPublicKey FromByteArray(byte[] publicKeyBlob, CngKeyBlobFormat format)
+        {
+            if (publicKeyBlob == null)
+            {
                 throw new ArgumentNullException("publicKeyBlob");
             }
-            if (format == null) {
+            if (format == null)
+            {
                 throw new ArgumentNullException("format");
             }
 
             // Verify that the key can import successfully, because we did in the past.
-            using (CngKey imported = CngKey.Import(publicKeyBlob, format)) {
-                if (imported.AlgorithmGroup != CngAlgorithmGroup.ECDiffieHellman) {
+            using (CngKey imported = CngKey.Import(publicKeyBlob, format))
+            {
+                if (imported.AlgorithmGroup != CngAlgorithmGroup.ECDiffieHellman)
+                {
                     throw new ArgumentException(SR.GetString(SR.Cryptography_ArgECDHRequiresECDHKey));
                 }
 
@@ -75,7 +85,8 @@ namespace System.Security.Cryptography {
             }
         }
 
-        internal static ECDiffieHellmanCngPublicKey FromKey(CngKey key) {
+        internal static ECDiffieHellmanCngPublicKey FromKey(CngKey key)
+        {
             Contract.Requires(key != null && key.AlgorithmGroup == CngAlgorithmGroup.ECDiffieHellman);
             Contract.Ensures(Contract.Result<ECDiffieHellmanCngPublicKey>() != null);
 
@@ -92,15 +103,18 @@ namespace System.Security.Cryptography {
         ///     about the XML format used.
         /// </summary>
         [SecuritySafeCritical]
-        public static ECDiffieHellmanCngPublicKey FromXmlString(string xml) {
-            if (xml == null) {
+        public static ECDiffieHellmanCngPublicKey FromXmlString(string xml)
+        {
+            if (xml == null)
+            {
                 throw new ArgumentNullException("xml");
             }
 
             bool isEcdh;
             ECParameters parameters = Rfc4050KeyFormatter.FromXml(xml, out isEcdh);
 
-            if (!isEcdh) {
+            if (!isEcdh)
+            {
                 throw new ArgumentException(SR.GetString(SR.Cryptography_ArgECDHRequiresECDHKey), "xml");
             }
 
@@ -114,11 +128,12 @@ namespace System.Security.Cryptography {
         ///     Import the public key into CNG
         /// </summary>
         /// <returns></returns>
-        public CngKey Import() {
+        public CngKey Import()
+        {
             Contract.Ensures(Contract.Result<CngKey>() != null);
-            Contract.Assert(m_format != null);
+            Contract.Assert(_format != null);
 
-            return CngKey.Import(ToByteArray(), m_curveName, BlobFormat);
+            return CngKey.Import(ToByteArray(), _curveName, BlobFormat);
         }
 
         /// <summary>
@@ -127,7 +142,8 @@ namespace System.Security.Cryptography {
         ///     See code:System.Security.Cryptography.Rfc4050KeyFormatter#RFC4050ECKeyFormat for information
         ///     about the XML format used.
         /// </summary>
-        public override string ToXmlString() {
+        public override string ToXmlString()
+        {
             Contract.Ensures(!String.IsNullOrEmpty(Contract.Result<string>()));
 
             ECParameters ecParams = ExportParameters();
@@ -144,8 +160,10 @@ namespace System.Security.Cryptography {
         ///  if explicit export is not supported by this platform. Windows 10 or higher is required.
         /// </exception>
         /// <returns>The key and explicit curve parameters used by the ECC object.</returns>
-        public override ECParameters ExportExplicitParameters() {
-            using (CngKey key = Import()) {
+        public override ECParameters ExportExplicitParameters()
+        {
+            using (CngKey key = Import())
+            {
                 return ECCng.ExportExplicitParameters(key, includePrivateParameters: false);
             }
         }
@@ -159,8 +177,10 @@ namespace System.Security.Cryptography {
         ///  if there was an issue obtaining the curve values.
         /// </exception>
         /// <returns>The key and named curve parameters used by the ECC object.</returns>
-        public override ECParameters ExportParameters() {
-            using (CngKey key = Import()) {
+        public override ECParameters ExportParameters()
+        {
+            using (CngKey key = Import())
+            {
                 return ECCng.ExportParameters(key, includePrivateParameters: false);
             }
         }

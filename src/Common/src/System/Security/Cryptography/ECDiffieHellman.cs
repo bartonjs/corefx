@@ -1,23 +1,25 @@
-// ==++==
-// 
-//   Copyright (c) Microsoft Corporation.  All rights reserved.
-// 
-// ==--==
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Runtime.Serialization;
 
-namespace System.Security.Cryptography {
+namespace System.Security.Cryptography
+{
     /// <summary>
     ///     Abstract base class for implementations of elliptic curve Diffie-Hellman to derive from
     /// </summary>
     [System.Security.Permissions.HostProtection(MayLeakOnAbort = true)]
-    public abstract class ECDiffieHellman : AsymmetricAlgorithm {
-        public override string KeyExchangeAlgorithm {
+    public abstract class ECDiffieHellman : AsymmetricAlgorithm
+    {
+        public override string KeyExchangeAlgorithm
+        {
             get { return "ECDiffieHellman"; }
         }
 
-        public override string SignatureAlgorithm {
+        public override string SignatureAlgorithm
+        {
             get { return null; }
         }
 
@@ -25,12 +27,15 @@ namespace System.Security.Cryptography {
         // Creation factory methods
         //
 
-        public static new ECDiffieHellman Create() {
+        public static new ECDiffieHellman Create()
+        {
             return Create(typeof(ECDiffieHellmanCng).FullName);
         }
 
-        public static new ECDiffieHellman Create(string algorithm) {
-            if (algorithm == null) {
+        public static new ECDiffieHellman Create(string algorithm)
+        {
+            if (algorithm == null)
+            {
                 throw new ArgumentNullException("algorithm");
             }
 
@@ -47,11 +52,14 @@ namespace System.Security.Cryptography {
         {
             ECDiffieHellman ecdh = Create();
 
-            if (ecdh != null) {
-                try {
+            if (ecdh != null)
+            {
+                try
+                {
                     ecdh.GenerateKey(curve);
                 }
-                catch {
+                catch
+                {
                     ecdh.Dispose();
                     throw;
                 }
@@ -70,11 +78,14 @@ namespace System.Security.Cryptography {
         {
             ECDiffieHellman ecdh = Create();
 
-            if (ecdh != null) {
-                try {
+            if (ecdh != null)
+            {
+                try
+                {
                     ecdh.ImportParameters(parameters);
                 }
-                catch {
+                catch
+                {
                     ecdh.Dispose();
                     throw;
                 }
