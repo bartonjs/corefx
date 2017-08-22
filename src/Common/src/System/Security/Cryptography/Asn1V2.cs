@@ -389,6 +389,66 @@ namespace System.Security.Cryptography.Asn1
             throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
         }
 
+        public static bool ReadBooleanValue(
+            ReadOnlySpan<byte> source,
+            AsnEncodingRules ruleSet)
+        {
+            // T-REC-X.690-201508 sec 8.2.1
+            if (source.Length != 1)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            byte val = source[0];
+
+            // T-REC-X.690-201508 sec 8.2.2
+            if (val == 0)
+            {
+                return false;
+            }
+
+            // T-REC-X.690-201508 sec 11.1
+            if (val != 0xFF && (ruleSet == AsnEncodingRules.DER || ruleSet == AsnEncodingRules.CER))
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            return true;
+        }
+        
+        public bool ReadBoolean(AsnEncodingRules ruleSet)
+        {
+            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out int headerLength);
+            // TODO/Review: Should non-Universal tags work, or require an expected tag parameter?
+            CheckTagIfUniversal(tag, UniversalTagNumber.Boolean);
+
+            // T-REC-X.690-201508 sec 8.2.1
+            if (tag.IsConstructed)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            bool value = ReadBooleanValue(
+                Slice(_data, headerLength, length.Value),
+                ruleSet);
+
+            _data = _data.Slice(headerLength + length.Value);
+            return value;
+        }
+
+        private static ReadOnlySpan<byte> Slice(ReadOnlySpan<byte> source, int offset, int length)
+        {
+            Debug.Assert(offset >= 0);
+            Debug.Assert(length >= 0);
+
+            if (source.Length - offset < length)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            return source.Slice(offset, length);
+        }
+
         private static void CheckEncodingRules(AsnEncodingRules ruleSet)
         {
             if (ruleSet != AsnEncodingRules.BER &&
@@ -396,6 +456,14 @@ namespace System.Security.Cryptography.Asn1
                 ruleSet != AsnEncodingRules.DER)
             {
                 throw new ArgumentOutOfRangeException(nameof(ruleSet));
+            }
+        }
+
+        private static void CheckTagIfUniversal(Asn1Tag tag, UniversalTagNumber tagNumber)
+        {
+            if (tag.TagClass == TagClass.Universal && tag.TagValue != (int)tagNumber)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
             }
         }
     }
