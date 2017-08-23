@@ -436,6 +436,145 @@ namespace System.Security.Cryptography.Asn1
             return value;
         }
 
+        private ReadOnlySpan<byte> GetIntegerContents(AsnEncodingRules ruleSet, out int headerLength)
+        {
+            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out headerLength);
+            CheckTagIfUniversal(tag, UniversalTagNumber.Integer);
+
+            // T-REC-X.690-201508 sec 8.3.1
+            if (tag.IsConstructed || length < 1)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            // Slice first so that an out of bounds value triggers a CryptographicException.
+            ReadOnlySpan<byte> contents = Slice(_data, headerLength, length.Value);
+
+            // T-REC-X.690-201508 sec 8.3.2
+            if (contents.Length > 1)
+            {
+                ushort bigEndianValue = (ushort)(contents[0] << 8 | contents[1]);
+                const ushort RedundancyMask = 0b1111_1111_1000_0000;
+                ushort masked = (ushort)(bigEndianValue & RedundancyMask);
+
+                // If the first 9 bits are all 0 or are all 1, the value is invalid.
+                if (masked == 0 || masked == RedundancyMask)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+            }
+
+            return contents;
+        }
+
+        public ReadOnlySpan<byte> GetIntegerBytes(AsnEncodingRules ruleSet)
+        {
+            ReadOnlySpan<byte> contents = GetIntegerContents(ruleSet, out int headerLength);
+            _data = _data.Slice(headerLength + contents.Length);
+            return contents;
+        }
+
+        private bool TryReadSignedInteger(AsnEncodingRules ruleSet, int sizeLimit, out long value)
+        {
+            Debug.Assert(sizeLimit <= sizeof(long));
+
+            ReadOnlySpan<byte> contents = GetIntegerContents(ruleSet, out int headerLength);
+
+            if (contents.Length > sizeLimit)
+            {
+                value = 0;
+                return false;
+            }
+
+            bool isNegative = contents[0] >= 0x80;
+            long accum = isNegative ? -1 : 0;
+
+            for (int i = 0; i < contents.Length; i++)
+            {
+                accum <<= 8;
+                accum |= contents[i];
+            }
+
+            _data = _data.Slice(headerLength + contents.Length);
+            value = accum;
+            return true;
+        }
+
+        private bool TryReadUnsignedInteger(AsnEncodingRules ruleSet, int sizeLimit, out ulong value)
+        {
+            Debug.Assert(sizeLimit <= sizeof(ulong));
+
+            ReadOnlySpan<byte> contents = GetIntegerContents(ruleSet, out int headerLength);
+            int contentLength = contents.Length;
+
+            bool isNegative = contents[0] >= 0x80;
+
+            if (isNegative)
+            {
+                // TODO/Review: Should this be "false", an Exception, or not a scenario?
+                value = 0;
+                return false;
+            }
+
+            // Remove any padding zeros.
+            if (contents.Length > 1 && contents[0] == 0)
+            {
+                contents = contents.Slice(1);
+            }
+
+            if (contents.Length > sizeLimit)
+            {
+                value = 0;
+                return false;
+            }
+
+            ulong accum = 0;
+
+            for (int i = 0; i < contents.Length; i++)
+            {
+                accum <<= 8;
+                accum |= contents[i];
+            }
+
+            _data = _data.Slice(headerLength + contentLength);
+            value = accum;
+            return true;
+        }
+
+        public bool TryReadInt32(AsnEncodingRules ruleSet, out int value)
+        {
+            if (TryReadSignedInteger(ruleSet, sizeof(int), out long longValue))
+            {
+                value = (int)longValue;
+                return true;
+            }
+
+            value = 0;
+            return false;
+        }
+
+        public bool TryReadUInt32(AsnEncodingRules ruleSet, out uint value)
+        {
+            if (TryReadUnsignedInteger(ruleSet, sizeof(uint), out ulong ulongValue))
+            {
+                value = (uint)ulongValue;
+                return true;
+            }
+
+            value = 0;
+            return false;
+        }
+
+        public bool TryReadInt64(AsnEncodingRules ruleSet, out long value)
+        {
+            return TryReadSignedInteger(ruleSet, sizeof(long), out value);
+        }
+
+        public bool TryReadUInt64(AsnEncodingRules ruleSet, out ulong value)
+        {
+            return TryReadUnsignedInteger(ruleSet, sizeof(ulong), out value);
+        }
+
         private static ReadOnlySpan<byte> Slice(ReadOnlySpan<byte> source, int offset, int length)
         {
             Debug.Assert(offset >= 0);
