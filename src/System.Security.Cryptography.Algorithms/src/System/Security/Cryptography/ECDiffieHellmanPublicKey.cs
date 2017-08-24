@@ -47,7 +47,7 @@ namespace System.Security.Cryptography
         /// <returns>The ECParameters representing the point on the curve for this key.</returns>
         public virtual ECParameters ExportParameters()
         {
-            throw new NotSupportedException(SR.GetString(SR.NotSupported_SubclassOverride));
+            throw new NotSupportedException(SR.NotSupported_SubclassOverride);
         }
 
         /// <summary>
@@ -56,7 +56,7 @@ namespace System.Security.Cryptography
         /// <returns>The ECParameters representing the point on the curve for this key, using the explicit curve format.</returns>
         public virtual ECParameters ExportExplicitParameters()
         {
-            throw new NotSupportedException(SR.GetString(SR.NotSupported_SubclassOverride));
+            throw new NotSupportedException(SR.NotSupported_SubclassOverride);
         }
     }
 }

@@ -47,6 +47,7 @@
     <Compile Include="System\Security\Cryptography\ECCurve.cs" />
     <Compile Include="System\Security\Cryptography\ECCurve.ECCurveType.cs" />
     <Compile Include="System\Security\Cryptography\ECCurve.NamedCurves.cs" />
+    <Compile Include="System\Security\Cryptography\ECDiffieHellman.cs" />
     <Compile Include="System\Security\Cryptography\ECDiffieHellmanPublicKey.cs" />
     <Compile Include="System\Security\Cryptography\ECDsa.cs" />
     <Compile Include="System\Security\Cryptography\ECDsa.Xml.cs" />

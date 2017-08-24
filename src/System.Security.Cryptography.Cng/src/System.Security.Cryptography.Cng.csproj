@@ -64,6 +64,8 @@
     <Compile Include="System\Security\Cryptography\DSACng.ImportExport.cs" />
     <Compile Include="System\Security\Cryptography\DSACng.Key.cs" />
     <Compile Include="System\Security\Cryptography\ECCng.ImportExport.cs" />
+    <Compile Include="System\Security\Cryptography\ECDiffieHellmanCng.cs" />
+    <Compile Include="System\Security\Cryptography\ECDiffieHellmanCngPublicKey.cs" />
     <Compile Include="System\Security\Cryptography\ECDsaCng.cs" />
     <Compile Include="System\Security\Cryptography\ECDsaCng.Key.cs" />
     <Compile Include="System\Security\Cryptography\ECKeyXmlFormat.cs" />
