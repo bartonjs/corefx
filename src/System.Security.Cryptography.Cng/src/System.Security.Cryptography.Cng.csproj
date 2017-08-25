@@ -65,6 +65,8 @@
     <Compile Include="System\Security\Cryptography\DSACng.Key.cs" />
     <Compile Include="System\Security\Cryptography\ECCng.ImportExport.cs" />
     <Compile Include="System\Security\Cryptography\ECDiffieHellmanCng.cs" />
+    <Compile Include="System\Security\Cryptography\ECDiffieHellmanCng.Key.cs" />
+    <Compile Include="System\Security\Cryptography\ECDiffieHellmanCng.Xml.cs" />
     <Compile Include="System\Security\Cryptography\ECDiffieHellmanCngPublicKey.cs" />
     <Compile Include="System\Security\Cryptography\ECDsaCng.cs" />
     <Compile Include="System\Security\Cryptography\ECDsaCng.Key.cs" />
@@ -172,6 +174,15 @@
     <Compile Include="$(CommonPath)\Interop\Windows\NCrypt\Interop.NCryptOpenStorageProvider.cs">
       <Link>Internal\Windows\NCrypt\Interop.NCryptOpenStorageProvider.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\Interop\Windows\NCrypt\Interop.NCryptDeriveKeyMaterial.cs">
+      <Link>Internal\Windows\NCrypt\Interop.NCryptDeriveKeyMaterial.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\Interop\Windows\NCrypt\Interop.NCryptDeriveSecretAgreement.cs">
+      <Link>Internal\Windows\NCrypt\Interop.NCryptDeriveSecretAgreement.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\Interop\Windows\NCrypt\Interop.NCryptBuffer.cs">
+      <Link>Internal\Windows\NCrypt\Interop.NCryptBuffer.cs</Link>
+    </Compile>
     <Compile Include="$(CommonPath)\Interop\Windows\NCrypt\Interop.Properties.cs">
       <Link>Internal\Windows\NCrypt\Interop.Properties.cs</Link>
     </Compile>
@@ -241,6 +252,15 @@
     <Compile Include="$(CommonPath)\System\Security\Cryptography\ECCng.ImportExport.cs">
       <Link>Common\System\Security\Cryptography\ECCng.ImportExport.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDiffieHellmanCng.cs">
+      <Link>Common\System\Security\Cryptography\ECDiffieHellmanCng.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDiffieHellmanCng.ImportExport.cs">
+      <Link>Common\System\Security\Cryptography\ECDiffieHellmanCng.ImportExport.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDiffieHellmanCngPublicKey.cs">
+      <Link>Common\System\Security\Cryptography\ECDiffieHellmanCngPublicKey.cs</Link>
+    </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDsaCng.ImportExport.cs">
       <Link>Common\System\Security\Cryptography\ECDsaCng.ImportExport.cs</Link>
     </Compile>
@@ -278,7 +298,12 @@
     <Reference Include="System.Runtime.Handles" />
   </ItemGroup>
   <ItemGroup Condition="'$(IsPartialFacadeAssembly)' != 'true'">
+    <ProjectReference Include="..\..\System.Security.Cryptography.Algorithms\src\System.Security.Cryptography.Algorithms.csproj">
+      <Project>{81A05E2E-E3AE-4246-B4E6-DD5F31FB71F9}</Project>
+      <Name>System.Security.Cryptography.Algorithms</Name>
+    </ProjectReference>
     <Reference Include="System.Buffers" />
+    <Reference Include="System.Diagnostics.Contracts" />
     <Reference Include="System.Diagnostics.Debug" />
     <Reference Include="System.Diagnostics.Tools" />
     <Reference Include="System.Resources.ResourceManager" />
@@ -286,9 +311,11 @@
     <Reference Include="System.Runtime.Extensions" />
     <Reference Include="System.Runtime.InteropServices" />
     <Reference Include="System.Runtime.InteropServices.RuntimeInformation" />
-    <Reference Include="System.Security.Cryptography.Algorithms" />
     <Reference Include="System.Security.Cryptography.Encoding" />
     <Reference Include="System.Security.Cryptography.Primitives" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Collections, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
   </ItemGroup>
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.targets))\dir.targets" />
 </Project>

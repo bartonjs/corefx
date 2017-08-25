@@ -48,6 +48,7 @@
     <Compile Include="System\Security\Cryptography\ECCurve.ECCurveType.cs" />
     <Compile Include="System\Security\Cryptography\ECCurve.NamedCurves.cs" />
     <Compile Include="System\Security\Cryptography\ECDiffieHellman.cs" />
+    <Compile Include="System\Security\Cryptography\ECDiffieHellman.Xml.cs" />
     <Compile Include="System\Security\Cryptography\ECDiffieHellmanPublicKey.cs" />
     <Compile Include="System\Security\Cryptography\ECDsa.cs" />
     <Compile Include="System\Security\Cryptography\ECDsa.Xml.cs" />
@@ -111,6 +112,9 @@
     <Compile Include="System\Security\Cryptography\DSACng.cs" />
     <Compile Include="System\Security\Cryptography\ECDsaCng.cs" />
     <Compile Include="System\Security\Cryptography\ECDsaCng.Key.cs" />
+    <Compile Include="System\Security\Cryptography\ECDiffieHellmanCng.cs" />
+    <Compile Include="System\Security\Cryptography\ECDiffieHellmanCng.Key.cs" />
+    <Compile Include="System\Security\Cryptography\ECDiffieHellmanCngPublicKey.cs" />
     <Compile Include="System\Security\Cryptography\RSACng.cs" />
     <Compile Include="Internal\Cryptography\AesImplementation.Windows.cs" />
     <Compile Include="Internal\Cryptography\DesImplementation.Windows.cs" />
@@ -255,6 +259,15 @@
     </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\ECCng.ImportExport.cs">
       <Link>Common\System\Security\Cryptography\ECCng.ImportExport.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDiffieHellmanCng.cs">
+      <Link>Common\System\Security\Cryptography\ECDsaCng.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDiffieHellmanCng.ImportExport.cs">
+      <Link>Common\System\Security\Cryptography\ECDsaCng.ImportExport.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDiffieHellmanCngPublicKey.cs">
+      <Link>Common\System\Security\Cryptography\ECDiffieHellmanCngPublicKey.cs</Link>
     </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDsaCng.cs">
       <Link>Common\System\Security\Cryptography\ECDsaCng.cs</Link>

@@ -2,16 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Runtime.Serialization;
-
 namespace System.Security.Cryptography
 {
     /// <summary>
     ///     Abstract base class for implementations of elliptic curve Diffie-Hellman to derive from
     /// </summary>
-    [System.Security.Permissions.HostProtection(MayLeakOnAbort = true)]
-    public abstract class ECDiffieHellman : AsymmetricAlgorithm
+    public abstract partial class ECDiffieHellman : AsymmetricAlgorithm
     {
         public override string KeyExchangeAlgorithm
         {
@@ -23,15 +19,6 @@ namespace System.Security.Cryptography
             get { return null; }
         }
 
-        //
-        // Creation factory methods
-        //
-
-        public static new ECDiffieHellman Create()
-        {
-            return Create(typeof(ECDiffieHellmanCng).FullName);
-        }
-
         public static new ECDiffieHellman Create(string algorithm)
         {
             if (algorithm == null)
@@ -41,62 +28,6 @@ namespace System.Security.Cryptography
 
             return CryptoConfig.CreateFromName(algorithm) as ECDiffieHellman;
         }
-
-        /// <summary>
-        /// Creates a new instance of the default implementation of the Elliptic Curve Diffie-Hellman Algorithm
-        /// (ECDH) with a newly generated key over the specified curve.
-        /// </summary>
-        /// <param name="curve">The curve to use for key generation.</param>
-        /// <returns>A new instance of the default implementation of this class.</returns>
-        public static ECDiffieHellman Create(ECCurve curve)
-        {
-            ECDiffieHellman ecdh = Create();
-
-            if (ecdh != null)
-            {
-                try
-                {
-                    ecdh.GenerateKey(curve);
-                }
-                catch
-                {
-                    ecdh.Dispose();
-                    throw;
-                }
-            }
-
-            return ecdh;
-        }
-
-        /// <summary>
-        /// Creates a new instance of the default implementation of the Elliptic Curve Diffie-Hellman Algorithm
-        /// (ECDH) using the specified ECParameters as the key.
-        /// </summary>
-        /// <param name="parameters">The parameters representing the key to use.</param>
-        /// <returns>A new instance of the default implementation of this class.</returns>
-        public static ECDiffieHellman Create(ECParameters parameters)
-        {
-            ECDiffieHellman ecdh = Create();
-
-            if (ecdh != null)
-            {
-                try
-                {
-                    ecdh.ImportParameters(parameters);
-                }
-                catch
-                {
-                    ecdh.Dispose();
-                    throw;
-                }
-            }
-
-            return ecdh;
-        }
-
-        //
-        // Key derivation
-        //
 
         public abstract ECDiffieHellmanPublicKey PublicKey { get; }
 
@@ -193,7 +124,7 @@ namespace System.Security.Cryptography
 
         private static Exception DerivedClassMustOverride()
         {
-            return new NotImplementedException(SR.GetString(SR.NotSupported_SubclassOverride));
+            return new NotImplementedException(SR.NotSupported_SubclassOverride);
         }
 
         /// <summary>
@@ -233,7 +164,7 @@ namespace System.Security.Cryptography
         /// <param name="curve">The curve to use.</param>
         public virtual void GenerateKey(ECCurve curve)
         {
-            throw new NotSupportedException(SR.GetString(SR.NotSupported_SubclassOverride));
+            throw new NotSupportedException(SR.NotSupported_SubclassOverride);
         }
     }
 }

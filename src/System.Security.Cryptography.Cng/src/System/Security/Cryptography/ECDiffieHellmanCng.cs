@@ -16,442 +16,35 @@ using Microsoft.Win32.SafeHandles;
 namespace System.Security.Cryptography
 {
     /// <summary>
-    ///     Key derivation functions used to transform the raw secret agreement into key material
-    /// </summary>
-    public enum ECDiffieHellmanKeyDerivationFunction
-    {
-        Hash,
-        Hmac,
-        Tls
-    }
-
-    /// <summary>
     ///     Wrapper for CNG's implementation of elliptic curve Diffie-Hellman key exchange
     /// </summary>
-    [System.Security.Permissions.HostProtection(MayLeakOnAbort = true)]
-    public sealed class ECDiffieHellmanCng : ECDiffieHellman
+    public sealed partial class ECDiffieHellmanCng : ECDiffieHellman
     {
-        private static KeySizes[] s_legalKeySizes = new KeySizes[] { new KeySizes(256, 384, 128), new KeySizes(521, 521, 0) };
-
-        private CngAlgorithm _hashAlgorithm = CngAlgorithm.Sha256;
-        private byte[] _hmacKey;
-        private CngKey _key;
-        private ECDiffieHellmanKeyDerivationFunction _kdf = ECDiffieHellmanKeyDerivationFunction.Hash;
-        private byte[] _label;
-        private byte[] _secretAppend;
-        private byte[] _secretPrepend;
-        private byte[] _seed;
-
-        //
-        // Constructors
-        //
-
-        public ECDiffieHellmanCng() : this(521)
+        internal string GetCurveName()
         {
-            Contract.Ensures(LegalKeySizesValue != null);
+            return Key.GetCurveName();
         }
 
-        public ECDiffieHellmanCng(int keySize)
+        private void ImportFullKeyBlob(byte[] ecfullKeyBlob, bool includePrivateParameters)
         {
-            Contract.Ensures(LegalKeySizesValue != null);
-
-            if (!NCryptNative.NCryptSupported)
-            {
-                throw new PlatformNotSupportedException(SR.GetString(SR.Cryptography_PlatformNotSupported));
-            }
-
-            LegalKeySizesValue = s_legalKeySizes;
-            KeySize = keySize;
+            Key = ECCng.ImportFullKeyBlob(ecfullKeyBlob, includePrivateParameters);
         }
 
-        public ECDiffieHellmanCng(ECCurve curve)
+        private void ImportKeyBlob(byte[] ecfullKeyBlob, string curveName, bool includePrivateParameters)
         {
-            // GenerateKey will already do all of the validation we need.
-            GenerateKey(curve);
+            Key = ECCng.ImportKeyBlob(ecfullKeyBlob, curveName, includePrivateParameters);
         }
 
-        [SecuritySafeCritical]
-        public ECDiffieHellmanCng(CngKey key)
+        private byte[] ExportKeyBlob(bool includePrivateParameters)
         {
-            Contract.Ensures(LegalKeySizesValue != null);
-            Contract.Ensures(_key != null && _key.AlgorithmGroup == CngAlgorithmGroup.ECDiffieHellman);
-
-            if (key == null)
-            {
-                throw new ArgumentNullException("key");
-            }
-            if (key.AlgorithmGroup != CngAlgorithmGroup.ECDiffieHellman)
-            {
-                throw new ArgumentException(SR.GetString(SR.Cryptography_ArgECDHRequiresECDHKey), "key");
-            }
-
-            if (!NCryptNative.NCryptSupported)
-            {
-                throw new PlatformNotSupportedException(SR.GetString(SR.Cryptography_PlatformNotSupported));
-            }
-
-            LegalKeySizesValue = s_legalKeySizes;
-
-            // Make a copy of the key so that we continue to work if it gets disposed before this algorithm
-            //
-            // This requires an assert for UnmanagedCode since we'll need to access the raw handles of the key
-            // and the handle constructor of CngKey.  The assert is safe since ECDiffieHellmanCng will never
-            // expose the key handles to calling code (without first demanding UnmanagedCode via the Handle
-            // property of CngKey).
-            //
-            // The bizzare looking disposal of the key.Handle property is intentional - Handle returns a
-            // duplicate - without disposing it, we keep the key alive until the GC runs.
-            new SecurityPermission(SecurityPermissionFlag.UnmanagedCode).Assert();
-            using (SafeNCryptKeyHandle importHandle = key.Handle)
-            {
-                Key = CngKey.Open(importHandle, key.IsEphemeral ? CngKeyHandleOpenOptions.EphemeralKey : CngKeyHandleOpenOptions.None);
-            }
-            CodeAccessPermission.RevertAssert();
-
-            // Our LegalKeySizes value stores the values that we encoded as being the correct
-            // legal key size limitations for this algorithm, as documented on MSDN.
-            //
-            // But on a new OS version we might not question if our limit is accurate, or MSDN
-            // could have been innacurate to start with.
-            //
-            // Since the key is already loaded, we know that Windows thought it to be valid;
-            // therefore we should set KeySizeValue directly to bypass the LegalKeySizes conformance
-            // check.
-            //
-            // For RSA there are known cases where this change matters. RSACryptoServiceProvider can
-            // create a 384-bit RSA key, which we consider too small to be legal. It can also create
-            // a 1032-bit RSA key, which we consider illegal because it doesn't match our 64-bit
-            // alignment requirement. (In both cases Windows loads it just fine)
-            KeySizeValue = _key.KeySize;
+            return ECCng.ExportKeyBlob(Key, includePrivateParameters);
         }
 
-        /// <summary>
-        ///     Hash algorithm used with the Hash and HMAC KDFs
-        /// </summary>
-        public CngAlgorithm HashAlgorithm
+        private byte[] ExportFullKeyBlob(bool includePrivateParameters)
         {
-            get
-            {
-                Contract.Ensures(Contract.Result<CngAlgorithm>() != null);
-                return _hashAlgorithm;
-            }
-
-            set
-            {
-                Contract.Ensures(_hashAlgorithm != null);
-
-                if (_hashAlgorithm == null)
-                {
-                    throw new ArgumentNullException("value");
-                }
-
-                _hashAlgorithm = value;
-            }
+            return ECCng.ExportFullKeyBlob(Key, includePrivateParameters);
         }
 
-        /// <summary>
-        ///     Key used with the HMAC KDF
-        /// </summary>
-        [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays", Justification = "Reviewed API design exception since these are really setters for explicit byte arrays rather than properties that will be iterated by users")]
-        public byte[] HmacKey
-        {
-            get { return _hmacKey; }
-            set { _hmacKey = value; }
-        }
-
-        /// <summary>
-        ///     KDF used to transform the secret agreement into key material
-        /// </summary>
-        public ECDiffieHellmanKeyDerivationFunction KeyDerivationFunction
-        {
-            get
-            {
-                Contract.Ensures(Contract.Result<ECDiffieHellmanKeyDerivationFunction>() >= ECDiffieHellmanKeyDerivationFunction.Hash &&
-                                 Contract.Result<ECDiffieHellmanKeyDerivationFunction>() <= ECDiffieHellmanKeyDerivationFunction.Tls);
-
-                return _kdf;
-            }
-
-            set
-            {
-                Contract.Ensures(_kdf >= ECDiffieHellmanKeyDerivationFunction.Hash &&
-                                        _kdf <= ECDiffieHellmanKeyDerivationFunction.Tls);
-
-                if (value < ECDiffieHellmanKeyDerivationFunction.Hash || value > ECDiffieHellmanKeyDerivationFunction.Tls)
-                {
-                    throw new ArgumentOutOfRangeException("value");
-                }
-
-                _kdf = value;
-            }
-        }
-
-        /// <summary>
-        ///     Label bytes used for the TLS KDF
-        /// </summary>
-        [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays", Justification = "Reviewed API design exception since these are really setters for explicit byte arrays rather than properties that will be iterated by users")]
-        public byte[] Label
-        {
-            get { return _label; }
-            set { _label = value; }
-        }
-
-        /// <summary>
-        ///     Bytes to append to the raw secret agreement before processing by the KDF
-        /// </summary>
-        [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays", Justification = "Reviewed API design exception since these are really setters for explicit byte arrays rather than properties that will be iterated by users")]
-        public byte[] SecretAppend
-        {
-            get { return _secretAppend; }
-            set { _secretAppend = value; }
-        }
-
-        /// <summary>
-        ///     Bytes to prepend to the raw secret agreement before processing by the KDF
-        /// </summary>
-        [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays", Justification = "Reviewed API design exception since these are really setters for explicit byte arrays rather than properties that will be iterated by users")]
-        public byte[] SecretPrepend
-        {
-            get { return _secretPrepend; }
-            set { _secretPrepend = value; }
-        }
-
-        /// <summary>
-        ///     Seed bytes used for the TLS KDF
-        /// </summary>
-        [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays", Justification = "Reviewed API design exception since these are really setters for explicit byte arrays rather than properties that will be iterated by users")]
-        public byte[] Seed
-        {
-            get { return _seed; }
-            set { _seed = value; }
-        }
-
-        /// <summary>
-        ///     Full key pair being used for key generation
-        /// </summary>
-        public CngKey Key
-        {
-            get
-            {
-                Contract.Ensures(Contract.Result<CngKey>() != null);
-                Contract.Ensures(Contract.Result<CngKey>().AlgorithmGroup == CngAlgorithmGroup.ECDiffieHellman);
-                Contract.Ensures(_key != null && _key.AlgorithmGroup == CngAlgorithmGroup.ECDiffieHellman);
-
-                // If the size of the key no longer matches our stored value, then we need to replace it with
-                // a new key of the correct size.
-                if (_key != null && _key.KeySize != KeySize)
-                {
-                    _key.Dispose();
-                    _key = null;
-                }
-
-                if (_key == null)
-                {
-                    // Map the current key size to a CNG algorithm name
-                    CngAlgorithm algorithm = null;
-                    switch (KeySize)
-                    {
-                        case 256:
-                            algorithm = CngAlgorithm.ECDiffieHellmanP256;
-                            break;
-
-                        case 384:
-                            algorithm = CngAlgorithm.ECDiffieHellmanP384;
-                            break;
-
-                        case 521:
-                            algorithm = CngAlgorithm.ECDiffieHellmanP521;
-                            break;
-
-                        default:
-                            Debug.Assert(false, "Illegal key size set");
-                            break;
-                    }
-
-                    _key = CngKey.Create(algorithm);
-                }
-
-                return _key;
-            }
-
-            private set
-            {
-                Contract.Requires(value != null);
-                Contract.Ensures(_key != null && _key.AlgorithmGroup == CngAlgorithmGroup.ECDiffieHellman);
-
-                if (value.AlgorithmGroup != CngAlgorithmGroup.ECDiffieHellman)
-                {
-                    throw new ArgumentException(SR.GetString(SR.Cryptography_ArgECDHRequiresECDHKey));
-                }
-
-                if (_key != null)
-                {
-                    _key.Dispose();
-                }
-
-                //
-                // We do not duplicate the handle because the only time the user has access to the key itself
-                // to dispose underneath us is when they construct via the CngKey constructor, which does a
-                // duplication. Otherwise all key lifetimes are controlled directly by the ECDiffieHellmanCng
-                // class.
-                //
-
-                _key = value;
-
-                // Our LegalKeySizes value stores the values that we encoded as being the correct
-                // legal key size limitations for this algorithm, as documented on MSDN.
-                //
-                // But on a new OS version we might not question if our limit is accurate, or MSDN
-                // could have been innacurate to start with.
-                //
-                // Since the key is already loaded, we know that Windows thought it to be valid;
-                // therefore we should set KeySizeValue directly to bypass the LegalKeySizes conformance
-                // check.
-                //
-                // For RSA there are known cases where this change matters. RSACryptoServiceProvider can
-                // create a 384-bit RSA key, which we consider too small to be legal. It can also create
-                // a 1032-bit RSA key, which we consider illegal because it doesn't match our 64-bit
-                // alignment requirement. (In both cases Windows loads it just fine)
-                KeySizeValue = _key.KeySize;
-            }
-        }
-
-        /// <summary>
-        ///     Public key used to generate key material with the second party
-        /// </summary>
-        public override ECDiffieHellmanPublicKey PublicKey
-        {
-            get
-            {
-                Contract.Ensures(Contract.Result<ECDiffieHellmanPublicKey>() != null);
-                return ECDiffieHellmanCngPublicKey.FromKey(Key);
-            }
-        }
-
-        /// <summary>
-        ///     Use the secret agreement as the HMAC key rather than supplying a seperate one
-        /// </summary>
-        public bool UseSecretAgreementAsHmacKey
-        {
-            get { return HmacKey == null; }
-        }
-
-        /// <summary>
-        ///     Given a second party's public key, derive shared key material
-        /// </summary>
-        public override byte[] DeriveKeyMaterial(ECDiffieHellmanPublicKey otherPartyPublicKey)
-        {
-            Contract.Ensures(Contract.Result<byte[]>() != null);
-            Contract.Assert(_kdf >= ECDiffieHellmanKeyDerivationFunction.Hash &&
-                            _kdf <= ECDiffieHellmanKeyDerivationFunction.Tls);
-
-            if (otherPartyPublicKey == null)
-            {
-                throw new ArgumentNullException("otherPartyPublicKey");
-            }
-
-            // We can only work with ECDiffieHellmanCngPublicKeys
-            ECDiffieHellmanCngPublicKey otherKey = otherPartyPublicKey as ECDiffieHellmanCngPublicKey;
-            if (otherPartyPublicKey == null)
-            {
-                throw new ArgumentException(SR.GetString(SR.Cryptography_ArgExpectedECDiffieHellmanCngPublicKey));
-            }
-
-            using (CngKey import = otherKey.Import())
-            {
-                return DeriveKeyMaterial(import);
-            }
-        }
-
-        /// <summary>
-        ///     Given a second party's public key, derive shared key material
-        /// </summary>
-        [SecuritySafeCritical]
-        public byte[] DeriveKeyMaterial(CngKey otherPartyPublicKey)
-        {
-            Contract.Ensures(Contract.Result<byte[]>() != null);
-            Contract.Assert(_kdf >= ECDiffieHellmanKeyDerivationFunction.Hash &&
-                            _kdf <= ECDiffieHellmanKeyDerivationFunction.Tls);
-
-            if (otherPartyPublicKey == null)
-            {
-                throw new ArgumentNullException("otherPartyPublicKey");
-            }
-            if (otherPartyPublicKey.AlgorithmGroup != CngAlgorithmGroup.ECDiffieHellman)
-            {
-                throw new ArgumentException(SR.GetString(SR.Cryptography_ArgECDHRequiresECDHKey), "otherPartyPublicKey");
-            }
-            if (otherPartyPublicKey.KeySize != KeySize)
-            {
-                throw new ArgumentException(SR.GetString(SR.Cryptography_ArgECDHKeySizeMismatch), "otherPartyPublicKey");
-            }
-
-            NCryptNative.SecretAgreementFlags flags =
-                UseSecretAgreementAsHmacKey ? NCryptNative.SecretAgreementFlags.UseSecretAsHmacKey : NCryptNative.SecretAgreementFlags.None;
-
-            // We require access to the handles for generating key material. This is safe since we will never
-            // expose these handles to user code
-            new SecurityPermission(SecurityPermissionFlag.UnmanagedCode).Assert();
-
-            // This looks horribly wrong - but accessing the handle property actually returns a duplicate handle, which
-            // we need to dispose of - otherwise, we're stuck keepign the resource alive until the GC runs.  This explicitly
-            // is not disposing of the handle underlying the key dispite what the syntax looks like.
-            using (SafeNCryptKeyHandle localKey = Key.Handle)
-            using (SafeNCryptKeyHandle otherKey = otherPartyPublicKey.Handle)
-            {
-                CodeAccessPermission.RevertAssert();
-
-                //
-                // Generating key material is a two phase process.
-                //   1. Generate the secret agreement
-                //   2. Pass the secret agreement through a KDF to get key material
-                //
-
-                using (SafeNCryptSecretHandle secretAgreement = NCryptNative.DeriveSecretAgreement(localKey, otherKey))
-                {
-                    if (KeyDerivationFunction == ECDiffieHellmanKeyDerivationFunction.Hash)
-                    {
-                        byte[] secretAppend = SecretAppend == null ? null : SecretAppend.Clone() as byte[];
-                        byte[] secretPrepend = SecretPrepend == null ? null : SecretPrepend.Clone() as byte[];
-
-                        return NCryptNative.DeriveKeyMaterialHash(secretAgreement,
-                                                                  HashAlgorithm.Algorithm,
-                                                                  secretPrepend,
-                                                                  secretAppend,
-                                                                  flags);
-                    }
-                    else if (KeyDerivationFunction == ECDiffieHellmanKeyDerivationFunction.Hmac)
-                    {
-                        byte[] hmacKey = HmacKey == null ? null : HmacKey.Clone() as byte[];
-                        byte[] secretAppend = SecretAppend == null ? null : SecretAppend.Clone() as byte[];
-                        byte[] secretPrepend = SecretPrepend == null ? null : SecretPrepend.Clone() as byte[];
-
-                        return NCryptNative.DeriveKeyMaterialHmac(secretAgreement,
-                                                                  HashAlgorithm.Algorithm,
-                                                                  hmacKey,
-                                                                  secretPrepend,
-                                                                  secretAppend,
-                                                                  flags);
-                    }
-                    else
-                    {
-                        Debug.Assert(KeyDerivationFunction == ECDiffieHellmanKeyDerivationFunction.Tls, "Unknown KDF");
-
-                        byte[] label = Label == null ? null : Label.Clone() as byte[];
-                        byte[] seed = Seed == null ? null : Seed.Clone() as byte[];
-
-                        if (label == null || seed == null)
-                        {
-                            throw new InvalidOperationException(SR.GetString(SR.Cryptography_TlsRequiresLabelAndSeed));
-                        }
-
-                        return NCryptNative.DeriveKeyMaterialTls(secretAgreement, label, seed, flags);
-                    }
-                }
-            }
-        }
-
-        [SecuritySafeCritical]
         public override byte[] DeriveKeyFromHash(
             ECDiffieHellmanPublicKey otherPartyPublicKey,
             HashAlgorithmName hashAlgorithm,
@@ -463,20 +56,19 @@ namespace System.Security.Cryptography
             if (otherPartyPublicKey == null)
                 throw new ArgumentNullException("otherPartyPublicKey");
             if (string.IsNullOrEmpty(hashAlgorithm.Name))
-                throw new ArgumentException(SR.GetString(SR.Cryptography_HashAlgorithmNameNullOrEmpty), "hashAlgorithm");
+                throw new ArgumentException(SR.Cryptography_HashAlgorithmNameNullOrEmpty, "hashAlgorithm");
 
             using (SafeNCryptSecretHandle secretAgreement = DeriveSecretAgreementHandle(otherPartyPublicKey))
             {
-                return NCryptNative.DeriveKeyMaterialHash(
+                return Interop.NCrypt.DeriveKeyMaterialHash(
                     secretAgreement,
                     hashAlgorithm.Name,
                     secretPrepend,
                     secretAppend,
-                    NCryptNative.SecretAgreementFlags.None);
+                    Interop.NCrypt.SecretAgreementFlags.None);
             }
         }
 
-        [SecuritySafeCritical]
         public override byte[] DeriveKeyFromHmac(
             ECDiffieHellmanPublicKey otherPartyPublicKey,
             HashAlgorithmName hashAlgorithm,
@@ -489,15 +81,15 @@ namespace System.Security.Cryptography
             if (otherPartyPublicKey == null)
                 throw new ArgumentNullException("otherPartyPublicKey");
             if (string.IsNullOrEmpty(hashAlgorithm.Name))
-                throw new ArgumentException(SR.GetString(SR.Cryptography_HashAlgorithmNameNullOrEmpty), "hashAlgorithm");
+                throw new ArgumentException(SR.Cryptography_HashAlgorithmNameNullOrEmpty, "hashAlgorithm");
 
             using (SafeNCryptSecretHandle secretAgreement = DeriveSecretAgreementHandle(otherPartyPublicKey))
             {
-                NCryptNative.SecretAgreementFlags flags = hmacKey == null ?
-                    NCryptNative.SecretAgreementFlags.UseSecretAsHmacKey :
-                    NCryptNative.SecretAgreementFlags.None;
+                Interop.NCrypt.SecretAgreementFlags flags = hmacKey == null ?
+                    Interop.NCrypt.SecretAgreementFlags.UseSecretAsHmacKey :
+                    Interop.NCrypt.SecretAgreementFlags.None;
 
-                return NCryptNative.DeriveKeyMaterialHmac(
+                return Interop.NCrypt.DeriveKeyMaterialHmac(
                     secretAgreement,
                     hashAlgorithm.Name,
                     hmacKey,
@@ -507,7 +99,6 @@ namespace System.Security.Cryptography
             }
         }
 
-        [SecuritySafeCritical]
         public override byte[] DeriveKeyTls(ECDiffieHellmanPublicKey otherPartyPublicKey, byte[] prfLabel, byte[] prfSeed)
         {
             Contract.Ensures(Contract.Result<byte[]>() != null);
@@ -521,209 +112,12 @@ namespace System.Security.Cryptography
 
             using (SafeNCryptSecretHandle secretAgreement = DeriveSecretAgreementHandle(otherPartyPublicKey))
             {
-                return NCryptNative.DeriveKeyMaterialTls(
+                return Interop.NCrypt.DeriveKeyMaterialTls(
                     secretAgreement,
                     prfLabel,
                     prfSeed,
-                    NCryptNative.SecretAgreementFlags.None);
+                    Interop.NCrypt.SecretAgreementFlags.None);
             }
-        }
-
-        /// <summary>
-        ///     Get a handle to the secret agreement generated between two parties
-        /// </summary>
-        public SafeNCryptSecretHandle DeriveSecretAgreementHandle(ECDiffieHellmanPublicKey otherPartyPublicKey)
-        {
-            if (otherPartyPublicKey == null)
-            {
-                throw new ArgumentNullException("otherPartyPublicKey");
-            }
-
-            // We can only work with ECDiffieHellmanCngPublicKeys
-            ECDiffieHellmanCngPublicKey otherKey = otherPartyPublicKey as ECDiffieHellmanCngPublicKey;
-            if (otherPartyPublicKey == null)
-            {
-                throw new ArgumentException(SR.GetString(SR.Cryptography_ArgExpectedECDiffieHellmanCngPublicKey));
-            }
-
-            using (CngKey importedKey = otherKey.Import())
-            {
-                return DeriveSecretAgreementHandle(importedKey);
-            }
-        }
-
-        /// <summary>
-        ///     Get a handle to the secret agreement between two parties
-        /// </summary>
-        [System.Security.SecurityCritical]
-        [SecurityPermission(SecurityAction.Demand, UnmanagedCode = true)]
-        public SafeNCryptSecretHandle DeriveSecretAgreementHandle(CngKey otherPartyPublicKey)
-        {
-            if (otherPartyPublicKey == null)
-            {
-                throw new ArgumentNullException("otherPartyPublicKey");
-            }
-            if (otherPartyPublicKey.AlgorithmGroup != CngAlgorithmGroup.ECDiffieHellman)
-            {
-                throw new ArgumentException(SR.GetString(SR.Cryptography_ArgECDHRequiresECDHKey), "otherPartyPublicKey");
-            }
-            if (otherPartyPublicKey.KeySize != KeySize)
-            {
-                throw new ArgumentException(SR.GetString(SR.Cryptography_ArgECDHKeySizeMismatch), "otherPartyPublicKey");
-            }
-
-            // This looks strange, but the Handle property returns a duplicate so we need to dispose of it when we're done
-            using (SafeNCryptKeyHandle localHandle = Key.Handle)
-            using (SafeNCryptKeyHandle otherPartyHandle = otherPartyPublicKey.Handle)
-            {
-                return NCryptNative.DeriveSecretAgreement(localHandle, otherPartyHandle);
-            }
-        }
-
-        /// <summary>
-        ///     Clean up the algorithm
-        /// </summary>
-        protected override void Dispose(bool disposing)
-        {
-            try
-            {
-                if (disposing)
-                {
-                    if (_key != null)
-                    {
-                        _key.Dispose();
-                    }
-                }
-            }
-            finally
-            {
-                base.Dispose(disposing);
-            }
-        }
-
-        public override void GenerateKey(ECCurve curve)
-        {
-            curve.Validate();
-
-            if (_key != null)
-            {
-                _key.Dispose();
-                _key = null;
-            }
-
-            CngKey newKey = CngKey.Create(curve, name => CngKey.EcdhCurveNameToAlgorithm(name));
-            _key = newKey;
-            KeySizeValue = newKey.KeySize;
-        }
-
-        //
-        // XML Import
-        //
-        // See code:System.Security.Cryptography.ECDsaCng#ECCXMLFormat and
-        // code:System.Security.Cryptography.Rfc4050KeyFormatter#RFC4050ECKeyFormat for information about
-        // elliptic curve XML formats.
-        //
-
-        public override void FromXmlString(string xmlString)
-        {
-            throw new NotImplementedException(SR.GetString(SR.Cryptography_ECXmlSerializationFormatRequired));
-        }
-
-        public void FromXmlString(string xml, ECKeyXmlFormat format)
-        {
-            if (xml == null)
-            {
-                throw new ArgumentNullException("xml");
-            }
-            if (format != ECKeyXmlFormat.Rfc4050)
-            {
-                throw new ArgumentOutOfRangeException("format");
-            }
-
-            bool isEcdh;
-            ECParameters ecParams = Rfc4050KeyFormatter.FromXml(xml, out isEcdh);
-
-            if (!isEcdh)
-            {
-                throw new ArgumentException(SR.GetString(SR.Cryptography_ArgECDHRequiresECDHKey), "xml");
-            }
-
-            ImportParameters(ecParams);
-        }
-
-        //
-        // XML Export
-        //
-        // See code:System.Security.Cryptography.ECDsaCng#ECCXMLFormat and
-        // code:System.Security.Cryptography.Rfc4050KeyFormatter#RFC4050ECKeyFormat for information about
-        // elliptic curve XML formats.
-        //
-
-        public override string ToXmlString(bool includePrivateParameters)
-        {
-            throw new NotImplementedException(SR.GetString(SR.Cryptography_ECXmlSerializationFormatRequired));
-        }
-
-        public string ToXmlString(ECKeyXmlFormat format)
-        {
-            Contract.Ensures(Contract.Result<string>() != null);
-
-            if (format != ECKeyXmlFormat.Rfc4050)
-            {
-                throw new ArgumentOutOfRangeException("format");
-            }
-
-            ECParameters ecParams = ExportParameters(false);
-            return Rfc4050KeyFormatter.ToXml(ecParams, isEcdh: true);
-        }
-
-        /// <summary>
-        ///  ImportParameters will replace the existing key that this object is working with by creating a
-        ///  new CngKey. If the parameters contains only Q, then only a public key will be imported.
-        ///  If the parameters also contains D, then a full key pair will be imported. 
-        ///  The parameters Curve value specifies the type of the curve to import.
-        /// </summary>
-        /// <exception cref="CryptographicException">
-        ///  if <paramref name="parameters" /> does not contain valid values.
-        /// </exception>
-        /// <exception cref="NotSupportedException">
-        ///  if <paramref name="parameters" /> references a curve that cannot be imported.
-        /// </exception>
-        /// <exception cref="PlatformNotSupportedException">
-        ///  if <paramref name="parameters" /> references a curve that is not supported by this platform.
-        /// </exception>
-        public override void ImportParameters(ECParameters parameters)
-        {
-            Key = ECCng.ImportEcdhParameters(ref parameters);
-        }
-
-        /// <summary>
-        ///  Exports the key and explicit curve parameters used by the ECC object into an <see cref="ECParameters"/> object.
-        /// </summary>
-        /// <exception cref="CryptographicException">
-        ///  if there was an issue obtaining the curve values.
-        /// </exception>
-        /// <exception cref="PlatformNotSupportedException">
-        ///  if explicit export is not supported by this platform. Windows 10 or higher is required.
-        /// </exception>
-        /// <returns>The key and explicit curve parameters used by the ECC object.</returns>
-        public override ECParameters ExportExplicitParameters(bool includePrivateParameters)
-        {
-            return ECCng.ExportExplicitParameters(Key, includePrivateParameters);
-        }
-
-        /// <summary>
-        ///  Exports the key used by the ECC object into an <see cref="ECParameters"/> object.
-        ///  If the key was created as a named curve, the Curve property will contain named curve parameters
-        ///  otherwise it will contain explicit parameters.
-        /// </summary>
-        /// <exception cref="CryptographicException">
-        ///  if there was an issue obtaining the curve values.
-        /// </exception>
-        /// <returns>The key and named curve parameters used by the ECC object.</returns>
-        public override ECParameters ExportParameters(bool includePrivateParameters)
-        {
-            return ECCng.ExportParameters(Key, includePrivateParameters);
         }
     }
 }

@@ -2,30 +2,20 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Runtime.Serialization;
-using System.Security;
-using System.Security.Permissions;
 using System.Diagnostics.Contracts;
-using Microsoft.Win32.SafeHandles;
 
 namespace System.Security.Cryptography
 {
     /// <summary>
-    ///     Public key used to do key exchange with the ECDiffieHellmanCng algorithm
+    /// Public key used to do key exchange with the ECDiffieHellmanCng algorithm
     /// </summary>
-    [Serializable]
-    [System.Security.Permissions.HostProtection(MayLeakOnAbort = true)]
-    public sealed class ECDiffieHellmanCngPublicKey : ECDiffieHellmanPublicKey
+    public sealed partial class ECDiffieHellmanCngPublicKey : ECDiffieHellmanPublicKey
     {
         private CngKeyBlobFormat _format;
-        [OptionalField]
-        private string _curveName;
 
         /// <summary>
-        ///     Wrap a CNG key
+        /// Wrap a CNG key
         /// </summary>
-        [SecuritySafeCritical]
         internal ECDiffieHellmanCngPublicKey(byte[] keyBlob, string curveName, CngKeyBlobFormat format) : base(keyBlob)
         {
             Contract.Requires(format != null);
@@ -37,7 +27,7 @@ namespace System.Security.Cryptography
         }
 
         /// <summary>
-        ///     Format the key blob is expressed in
+        /// Format the key blob is expressed in
         /// </summary>
         public CngKeyBlobFormat BlobFormat
         {
@@ -51,17 +41,8 @@ namespace System.Security.Cryptography
         }
 
         /// <summary>
-        ///     Clean up the key
+        /// Hydrate a public key from a blob
         /// </summary>
-        protected override void Dispose(bool disposing)
-        {
-            base.Dispose(disposing);
-        }
-
-        /// <summary>
-        ///     Hydrate a public key from a blob
-        /// </summary>
-        [SecuritySafeCritical]
         public static ECDiffieHellmanPublicKey FromByteArray(byte[] publicKeyBlob, CngKeyBlobFormat format)
         {
             if (publicKeyBlob == null)
@@ -78,7 +59,7 @@ namespace System.Security.Cryptography
             {
                 if (imported.AlgorithmGroup != CngAlgorithmGroup.ECDiffieHellman)
                 {
-                    throw new ArgumentException(SR.GetString(SR.Cryptography_ArgECDHRequiresECDHKey));
+                    throw new ArgumentException(SR.Cryptography_ArgECDHRequiresECDHKey);
                 }
 
                 return new ECDiffieHellmanCngPublicKey(publicKeyBlob, null, format);
@@ -97,35 +78,7 @@ namespace System.Security.Cryptography
         }
 
         /// <summary>
-        ///     Hydrate a public key from XML
-        /// 
-        ///     See code:System.Security.Cryptography.Rfc4050KeyFormatter#RFC4050ECKeyFormat for information
-        ///     about the XML format used.
-        /// </summary>
-        [SecuritySafeCritical]
-        public static ECDiffieHellmanCngPublicKey FromXmlString(string xml)
-        {
-            if (xml == null)
-            {
-                throw new ArgumentNullException("xml");
-            }
-
-            bool isEcdh;
-            ECParameters parameters = Rfc4050KeyFormatter.FromXml(xml, out isEcdh);
-
-            if (!isEcdh)
-            {
-                throw new ArgumentException(SR.GetString(SR.Cryptography_ArgECDHRequiresECDHKey), "xml");
-            }
-
-            CngKeyBlobFormat format;
-            string curveName;
-            byte[] blob = ECCng.EcdhParametersToBlob(ref parameters, out format, out curveName);
-            return new ECDiffieHellmanCngPublicKey(blob, curveName, format);
-        }
-
-        /// <summary>
-        ///     Import the public key into CNG
+        /// Import the public key into CNG
         /// </summary>
         /// <returns></returns>
         public CngKey Import()
@@ -134,20 +87,6 @@ namespace System.Security.Cryptography
             Contract.Assert(_format != null);
 
             return CngKey.Import(ToByteArray(), _curveName, BlobFormat);
-        }
-
-        /// <summary>
-        ///     Convert the key blob to XML
-        /// 
-        ///     See code:System.Security.Cryptography.Rfc4050KeyFormatter#RFC4050ECKeyFormat for information
-        ///     about the XML format used.
-        /// </summary>
-        public override string ToXmlString()
-        {
-            Contract.Ensures(!String.IsNullOrEmpty(Contract.Result<string>()));
-
-            ECParameters ecParams = ExportParameters();
-            return Rfc4050KeyFormatter.ToXml(ecParams, isEcdh: true);
         }
 
         /// <summary>
@@ -164,7 +103,10 @@ namespace System.Security.Cryptography
         {
             using (CngKey key = Import())
             {
-                return ECCng.ExportExplicitParameters(key, includePrivateParameters: false);
+                ECParameters ecparams = new ECParameters();
+                byte[] blob = ECCng.ExportFullKeyBlob(key, includePrivateParameters: false);
+                ECCng.ExportPrimeCurveParameters(ref ecparams, blob, includePrivateParameters: false);
+                return ecparams;
             }
         }
 
@@ -181,7 +123,20 @@ namespace System.Security.Cryptography
         {
             using (CngKey key = Import())
             {
-                return ECCng.ExportParameters(key, includePrivateParameters: false);
+                ECParameters ecparams = new ECParameters();
+                string curveName = key.GetCurveName();
+                if (string.IsNullOrEmpty(curveName))
+                {
+                    byte[] fullKeyBlob = ECCng.ExportFullKeyBlob(key, includePrivateParameters: false);
+                    ECCng.ExportPrimeCurveParameters(ref ecparams, fullKeyBlob, includePrivateParameters: false);
+                }
+                else
+                {
+                    byte[] keyBlob = ECCng.ExportKeyBlob(key, includePrivateParameters: false);
+                    ECCng.ExportNamedCurveParameters(ref ecparams, keyBlob, includePrivateParameters: false);
+                    ecparams.Curve = ECCurve.CreateFromFriendlyName(curveName);
+                }
+                return ecparams;
             }
         }
     }

@@ -508,5 +508,30 @@ namespace System.Security.Cryptography
             // All other curves are new in Win10 so use generic algorithm
             return AlgorithmName.ECDsa;
         }
+
+        /// <summary>
+        /// Map a curve name to algorithm. This enables curves that worked pre-Win10
+        /// to work with newer APIs for import and export.
+        /// </summary>
+        internal static string EcdhCurveNameToAlgorithm(string algorithm)
+        {
+            switch (algorithm)
+            {
+                case "nistP256":
+                case "ECDH_P256":
+                    return AlgorithmName.ECDHP256;
+
+                case "nistP384":
+                case "ECDH_P384":
+                    return AlgorithmName.ECDHP384;
+
+                case "nistP521":
+                case "ECDH_P521":
+                    return AlgorithmName.ECDHP521;
+            }
+
+            // All other curves are new in Win10 so use generic algorithm
+            return AlgorithmName.ECDH;
+        }
     }
 }
