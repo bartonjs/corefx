@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace System.Security.Cryptography.Asn1
 {
@@ -505,10 +506,13 @@ namespace System.Security.Cryptography.Asn1
             return value;
         }
 
-        private ReadOnlySpan<byte> GetIntegerContents(AsnEncodingRules ruleSet, out int headerLength)
+        private ReadOnlySpan<byte> GetIntegerContents(
+            AsnEncodingRules ruleSet,
+            UniversalTagNumber tagNumber,
+            out int headerLength)
         {
             (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out headerLength);
-            CheckTagIfUniversal(tag, UniversalTagNumber.Integer);
+            CheckTagIfUniversal(tag, tagNumber);
 
             // T-REC-X.690-201508 sec 8.3.1
             if (tag.IsConstructed || length < 1)
@@ -538,16 +542,22 @@ namespace System.Security.Cryptography.Asn1
 
         public ReadOnlySpan<byte> GetIntegerBytes(AsnEncodingRules ruleSet)
         {
-            ReadOnlySpan<byte> contents = GetIntegerContents(ruleSet, out int headerLength);
+            ReadOnlySpan<byte> contents =
+                GetIntegerContents(ruleSet, UniversalTagNumber.Integer, out int headerLength);
+
             _data = _data.Slice(headerLength + contents.Length);
             return contents;
         }
 
-        private bool TryReadSignedInteger(AsnEncodingRules ruleSet, int sizeLimit, out long value)
+        private bool TryReadSignedInteger(
+            AsnEncodingRules ruleSet,
+            int sizeLimit,
+            UniversalTagNumber tagNumber,
+            out long value)
         {
             Debug.Assert(sizeLimit <= sizeof(long));
 
-            ReadOnlySpan<byte> contents = GetIntegerContents(ruleSet, out int headerLength);
+            ReadOnlySpan<byte> contents = GetIntegerContents(ruleSet, tagNumber, out int headerLength);
 
             if (contents.Length > sizeLimit)
             {
@@ -569,11 +579,15 @@ namespace System.Security.Cryptography.Asn1
             return true;
         }
 
-        private bool TryReadUnsignedInteger(AsnEncodingRules ruleSet, int sizeLimit, out ulong value)
+        private bool TryReadUnsignedInteger(
+            AsnEncodingRules ruleSet,
+            int sizeLimit,
+            UniversalTagNumber tagNumber,
+            out ulong value)
         {
             Debug.Assert(sizeLimit <= sizeof(ulong));
 
-            ReadOnlySpan<byte> contents = GetIntegerContents(ruleSet, out int headerLength);
+            ReadOnlySpan<byte> contents = GetIntegerContents(ruleSet, tagNumber, out int headerLength);
             int contentLength = contents.Length;
 
             bool isNegative = contents[0] >= 0x80;
@@ -612,7 +626,7 @@ namespace System.Security.Cryptography.Asn1
 
         public bool TryReadInt32(AsnEncodingRules ruleSet, out int value)
         {
-            if (TryReadSignedInteger(ruleSet, sizeof(int), out long longValue))
+            if (TryReadSignedInteger(ruleSet, sizeof(int), UniversalTagNumber.Integer, out long longValue))
             {
                 value = (int)longValue;
                 return true;
@@ -624,7 +638,7 @@ namespace System.Security.Cryptography.Asn1
 
         public bool TryReadUInt32(AsnEncodingRules ruleSet, out uint value)
         {
-            if (TryReadUnsignedInteger(ruleSet, sizeof(uint), out ulong ulongValue))
+            if (TryReadUnsignedInteger(ruleSet, sizeof(uint), UniversalTagNumber.Integer, out ulong ulongValue))
             {
                 value = (uint)ulongValue;
                 return true;
@@ -636,12 +650,12 @@ namespace System.Security.Cryptography.Asn1
 
         public bool TryReadInt64(AsnEncodingRules ruleSet, out long value)
         {
-            return TryReadSignedInteger(ruleSet, sizeof(long), out value);
+            return TryReadSignedInteger(ruleSet, sizeof(long), UniversalTagNumber.Integer, out value);
         }
 
         public bool TryReadUInt64(AsnEncodingRules ruleSet, out ulong value)
         {
-            return TryReadUnsignedInteger(ruleSet, sizeof(ulong), out value);
+            return TryReadUnsignedInteger(ruleSet, sizeof(ulong), UniversalTagNumber.Integer, out value);
         }
 
         private static bool TryCopyPrimitiveBitStringValue(
@@ -1065,6 +1079,65 @@ namespace System.Security.Cryptography.Asn1
             }
 
             return read;
+        }
+
+        public ReadOnlySpan<byte> GetEnumeratedBytes(AsnEncodingRules ruleSet)
+        {
+            // T-REC-X.690-201508 sec 8.4 says the contents are the same as for integers.
+            ReadOnlySpan<byte> contents =
+                GetIntegerContents(ruleSet, UniversalTagNumber.Enumerated, out int headerLength);
+
+            _data = _data.Slice(headerLength + contents.Length);
+            return contents;
+        }
+
+        public TEnum GetEnumeratedValue<TEnum>(AsnEncodingRules ruleSet) where TEnum : struct
+        {
+            Type tEnum = typeof(TEnum);
+            const UniversalTagNumber tagNumber = UniversalTagNumber.Enumerated;
+            
+            // This will throw an ArgumentException if TEnum isn't an enum type,
+            // so we don't need to validate it.
+            Type backingType = tEnum.GetEnumUnderlyingType();
+
+            // TODO/review: Is this worth checking?
+            if (tEnum.IsDefined(typeof(FlagsAttribute), false))
+            {
+                // TODO/review: What kind of exception? (This message is no good)
+                throw new ArgumentException();
+            }
+
+            // T-REC-X.690-201508 sec 8.4 says the contents are the same as for integers.
+            int sizeLimit = Marshal.SizeOf(backingType);
+
+            if (backingType == typeof(int) ||
+                backingType == typeof(long) ||
+                backingType == typeof(short) ||
+                backingType == typeof(sbyte))
+            {
+                if (!TryReadSignedInteger(ruleSet, sizeLimit, tagNumber, out long value))
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+
+                return (TEnum)Enum.ToObject(tEnum, value);
+            }
+
+            if (backingType == typeof(uint) ||
+                backingType == typeof(ulong) ||
+                backingType == typeof(ushort) ||
+                backingType == typeof(byte))
+            {
+                if (!TryReadUnsignedInteger(ruleSet, sizeLimit, tagNumber, out ulong value))
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+
+                return (TEnum)Enum.ToObject(tEnum, value);
+            }
+
+            Debug.Fail($"No handler for type {backingType.Name}");
+            throw new CryptographicException();
         }
 
         private static ReadOnlySpan<byte> Slice(ReadOnlySpan<byte> source, int offset, int length)

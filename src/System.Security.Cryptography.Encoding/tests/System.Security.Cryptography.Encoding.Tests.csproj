@@ -14,6 +14,7 @@
     <Compile Include="Asn1\Reader\ParseTag.cs" />
     <Compile Include="Asn1\Reader\ReadBitString.cs" />
     <Compile Include="Asn1\Reader\ReadBoolean.cs" />
+    <Compile Include="Asn1\Reader\ReadEnumerated.cs" />
     <Compile Include="Asn1\Reader\ReadInteger.cs" />
     <Compile Include="Asn1\Reader\ReadLength.cs" />
     <Compile Include="AsnEncodedData.cs" />
