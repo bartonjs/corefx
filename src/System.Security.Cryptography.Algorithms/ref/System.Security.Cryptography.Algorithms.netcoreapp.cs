@@ -44,32 +44,4 @@ namespace System.Security.Cryptography
         public virtual bool VerifyData(System.ReadOnlySpan<byte> data, System.ReadOnlySpan<byte> signature, HashAlgorithmName hashAlgorithm, RSASignaturePadding padding) { throw null; }
         public virtual bool VerifyHash(System.ReadOnlySpan<byte> hash, System.ReadOnlySpan<byte> signature, HashAlgorithmName hashAlgorithm, RSASignaturePadding padding) { throw null; }
     }
-    public abstract partial class ECDiffieHellman : System.Security.Cryptography.AsymmetricAlgorithm
-    {
-        protected ECDiffieHellman() { }
-        public override string KeyExchangeAlgorithm { get { throw null; } }
-        public abstract System.Security.Cryptography.ECDiffieHellmanPublicKey PublicKey { get; }
-        public override string SignatureAlgorithm { get { throw null; } }
-        public static new System.Security.Cryptography.ECDiffieHellman Create() { throw null; }
-        public static System.Security.Cryptography.ECDiffieHellman Create(System.Security.Cryptography.ECCurve curve) { throw null; }
-        public static System.Security.Cryptography.ECDiffieHellman Create(System.Security.Cryptography.ECParameters parameters) { throw null; }
-        public static new System.Security.Cryptography.ECDiffieHellman Create(string algorithm) { throw null; }
-        public byte[] DeriveKeyFromHash(System.Security.Cryptography.ECDiffieHellmanPublicKey otherPartyPublicKey, System.Security.Cryptography.HashAlgorithmName hashAlgorithm) { throw null; }
-        public virtual byte[] DeriveKeyFromHash(System.Security.Cryptography.ECDiffieHellmanPublicKey otherPartyPublicKey, System.Security.Cryptography.HashAlgorithmName hashAlgorithm, byte[] secretPrepend, byte[] secretAppend) { throw null; }
-        public byte[] DeriveKeyFromHmac(System.Security.Cryptography.ECDiffieHellmanPublicKey otherPartyPublicKey, System.Security.Cryptography.HashAlgorithmName hashAlgorithm, byte[] hmacKey) { throw null; }
-        public virtual byte[] DeriveKeyFromHmac(System.Security.Cryptography.ECDiffieHellmanPublicKey otherPartyPublicKey, System.Security.Cryptography.HashAlgorithmName hashAlgorithm, byte[] hmacKey, byte[] secretPrepend, byte[] secretAppend) { throw null; }
-        public virtual byte[] DeriveKeyMaterial(System.Security.Cryptography.ECDiffieHellmanPublicKey otherPartyPublicKey) { throw null; }
-        public virtual byte[] DeriveKeyTls(System.Security.Cryptography.ECDiffieHellmanPublicKey otherPartyPublicKey, byte[] prfLabel, byte[] prfSeed) { throw null; }
-        public virtual System.Security.Cryptography.ECParameters ExportExplicitParameters(bool includePrivateParameters) { throw null; }
-        public virtual System.Security.Cryptography.ECParameters ExportParameters(bool includePrivateParameters) { throw null; }
-        public override void FromXmlString(string xmlString) { }
-        public virtual void GenerateKey(System.Security.Cryptography.ECCurve curve) { }
-        public virtual void ImportParameters(System.Security.Cryptography.ECParameters parameters) { }
-        public override string ToXmlString(bool includePrivateParameters) { throw null; }
-    }
-    public abstract partial class ECDiffieHellmanPublicKey : System.IDisposable
-    {
-        public virtual System.Security.Cryptography.ECParameters ExportExplicitParameters() { throw null; }
-        public virtual System.Security.Cryptography.ECParameters ExportParameters() { throw null; }
-    }
 }
