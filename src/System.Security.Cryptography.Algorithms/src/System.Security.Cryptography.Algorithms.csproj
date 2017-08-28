@@ -50,6 +50,7 @@
     <Compile Include="System\Security\Cryptography\ECDiffieHellman.cs" />
     <Compile Include="System\Security\Cryptography\ECDiffieHellman.Xml.cs" />
     <Compile Include="System\Security\Cryptography\ECDiffieHellmanPublicKey.cs" />
+    <Compile Include="System\Security\Cryptography\ECDiffieHellmanPublicKey.ExportParameters.cs" />
     <Compile Include="System\Security\Cryptography\ECDsa.cs" />
     <Compile Include="System\Security\Cryptography\ECDsa.Xml.cs" />
     <Compile Include="System\Security\Cryptography\ECParameters.cs" />
@@ -112,6 +113,7 @@
     <Compile Include="System\Security\Cryptography\DSACng.cs" />
     <Compile Include="System\Security\Cryptography\ECDsaCng.cs" />
     <Compile Include="System\Security\Cryptography\ECDsaCng.Key.cs" />
+    <Compile Include="System\Security\Cryptography\ECDiffieHellman.Create.Cng.cs" />
     <Compile Include="System\Security\Cryptography\ECDiffieHellmanCng.cs" />
     <Compile Include="System\Security\Cryptography\ECDiffieHellmanCng.Key.cs" />
     <Compile Include="System\Security\Cryptography\ECDiffieHellmanCngPublicKey.cs" />
