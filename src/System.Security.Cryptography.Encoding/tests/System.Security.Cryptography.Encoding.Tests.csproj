@@ -17,6 +17,7 @@
     <Compile Include="Asn1\Reader\ReadEnumerated.cs" />
     <Compile Include="Asn1\Reader\ReadInteger.cs" />
     <Compile Include="Asn1\Reader\ReadLength.cs" />
+    <Compile Include="Asn1\Reader\ReadOctetString.cs" />
     <Compile Include="AsnEncodedData.cs" />
     <Compile Include="AsnEncodedDataCollectionTests.cs" />
     <Compile Include="Base64TransformsTests.cs" />

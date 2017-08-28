@@ -1140,6 +1140,282 @@ namespace System.Security.Cryptography.Asn1
             throw new CryptographicException();
         }
 
+        private bool TryGetOctetStringBytes(
+            AsnEncodingRules ruleSet,
+            out ReadOnlySpan<byte> contents,
+            out int headerLength)
+        {
+            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out headerLength);
+            CheckTagIfUniversal(tag, UniversalTagNumber.OctetString);
+
+            if (tag.IsConstructed)
+            {
+                if (ruleSet == AsnEncodingRules.DER)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+
+                contents = default(ReadOnlySpan<byte>);
+                return false;
+            }
+
+            Debug.Assert(length.HasValue);
+            ReadOnlySpan<byte> encodedValue = Slice(_data, headerLength, length.Value);
+
+            if (ruleSet == AsnEncodingRules.CER && encodedValue.Length > MaxCERSegmentSize)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            contents = encodedValue;
+            return true;
+        }
+
+        /// <summary>
+        /// Gets the source data for an OctetString under a primitive encoding.
+        /// </summary>
+        /// <param name="ruleSet">The encoding rules for the reader.</param>
+        /// <param name="contents">The content bytes for the OctetString payload.</param>
+        /// <returns>
+        ///   <c>true</c> if the octet string uses a primitive encoding, <c>false</c> otherwise.
+        /// </returns>
+        /// <exception cref="CryptographicException">
+        ///  <ul>
+        ///   <li>No data remains</li>
+        ///   <li>The tag is invalid for an OctetString value</li>
+        ///   <li>The length is invalid under the chosen encoding rules</li>
+        ///   <li>A CER encoding was chosen and the primitive content length exceeds the maximum allowed</li>
+        /// </ul>
+        /// </exception>
+        public bool TryGetOctetStringBytes(
+            AsnEncodingRules ruleSet,
+            out ReadOnlySpan<byte> contents)
+        {
+            bool didGet = TryGetOctetStringBytes(ruleSet, out contents, out int headerLength);
+
+            if (didGet)
+            {
+                // Skip the tag+length (header) and the unused bit count byte (1) and the contents.
+                _data = _data.Slice(headerLength + contents.Length);
+            }
+
+            return didGet;
+        }
+
+        private static int CopyConstructedOctetString(
+            ReadOnlySpan<byte> source,
+            ref Span<byte> destination,
+            bool write,
+            AsnEncodingRules ruleSet,
+            bool isIndefinite,
+            ref int lastSegmentLength,
+            out int bytesRead)
+        {
+            if (source.IsEmpty)
+            {
+                if (isIndefinite)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+
+                bytesRead = 0;
+                return 0;
+            }
+
+            int totalRead = 0;
+            int totalContent = 0;
+            ReadOnlySpan<byte> cur = source;
+
+            while (!cur.IsEmpty)
+            {
+                AsnReader reader = new AsnReader(cur);
+                (Asn1Tag tag, int? length) = reader.ReadTagAndLength(ruleSet, out int headerLength);
+                
+                if (tag.TagClass != TagClass.Universal)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+
+                totalRead += headerLength;
+
+                if (isIndefinite && tag.TagValue == (int)UniversalTagNumber.EndOfContents)
+                {
+                    ValidateEndOfContents(tag, length, headerLength);
+
+                    bytesRead = totalRead;
+                    return totalContent;
+                }
+
+                if (tag.TagValue != (int)UniversalTagNumber.OctetString)
+                {
+                    // T-REC-X.690-201508 sec 8.7.3.2 (in particular, Note 2)
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+
+                if (ruleSet == AsnEncodingRules.CER)
+                {
+                    if (tag.IsConstructed || lastSegmentLength != MaxCERSegmentSize)
+                    {
+                        // T-REC-X.690-201508 sec 9.2
+                        throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                    }
+                }
+
+                cur = cur.Slice(headerLength);
+
+                if (length == null)
+                {
+                    totalContent += CopyConstructedOctetString(
+                        cur,
+                        ref destination,
+                        write,
+                        ruleSet,
+                        true,
+                        ref lastSegmentLength,
+                        out int nestedBytesRead);
+
+                    totalRead += nestedBytesRead;
+                    cur = cur.Slice(nestedBytesRead);
+                }
+                else if (tag.IsConstructed)
+                {
+                    totalContent += CopyConstructedOctetString(
+                        Slice(cur, 0, length.Value),
+                        ref destination,
+                        write,
+                        ruleSet,
+                        false,
+                        ref lastSegmentLength,
+                        out int nestedContentRead);
+
+                    totalRead += nestedContentRead;
+                    cur = cur.Slice(nestedContentRead);
+                }
+                else
+                {
+                    int lengthValue = length.Value;
+
+                    // T-REC-X.690-201508 sec 9.2
+                    if (ruleSet == AsnEncodingRules.CER && lengthValue > MaxCERSegmentSize)
+                    {
+                        throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                    }
+
+                    totalRead += lengthValue;
+                    totalContent += lengthValue;
+                    lastSegmentLength = lengthValue;
+
+                    ReadOnlySpan<byte> segment = Slice(cur, 0, lengthValue);
+                    cur = cur.Slice(lengthValue);
+
+                    if (write)
+                    {
+                        segment.CopyTo(destination);
+                        destination = destination.Slice(lengthValue);
+                    }
+                }
+            }
+
+            if (isIndefinite)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            bytesRead = totalRead;
+            return totalContent;
+        }
+
+        private static bool TryCopyConstructedOctetStringValue(
+            ReadOnlySpan<byte> source,
+            Span<byte> dest,
+            AsnEncodingRules ruleSet,
+            bool isIndefinite,
+            out int bytesRead,
+            out int bytesWritten)
+        {
+            int lastSegmentSize = MaxCERSegmentSize;
+
+            Span<byte> tmpDest = dest;
+
+            int contentLength = CopyConstructedOctetString(
+                source,
+                ref tmpDest,
+                false,
+                ruleSet,
+                isIndefinite,
+                ref lastSegmentSize,
+                out int encodedLength);
+
+            // ITU-T-REC-X.690-201508 sec 9.2
+            if (ruleSet == AsnEncodingRules.CER && contentLength <= MaxCERSegmentSize)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            if (dest.Length < contentLength)
+            {
+                bytesRead = 0;
+                bytesWritten = 0;
+                return false;
+            }
+
+            tmpDest = dest;
+            lastSegmentSize = MaxCERSegmentSize;
+
+            bytesWritten = CopyConstructedOctetString(
+                source,
+                ref tmpDest,
+                true,
+                ruleSet,
+                isIndefinite,
+                ref lastSegmentSize,
+                out bytesRead);
+
+            Debug.Assert(bytesWritten == contentLength);
+            Debug.Assert(bytesRead == encodedLength);
+            return true;
+        }
+
+        public bool TryCopyOctetStringBytes(
+            AsnEncodingRules ruleSet,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            if (TryGetOctetStringBytes(
+                ruleSet,
+                out ReadOnlySpan<byte> contents,
+                out int headerLength))
+            {
+                if (contents.Length > destination.Length)
+                {
+                    bytesWritten = 0;
+                    return false;
+                }
+
+                contents.CopyTo(destination);
+                bytesWritten = contents.Length;
+                _data.Slice(headerLength + contents.Length);
+                return true;
+            }
+
+            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out headerLength);
+
+            bool copied = TryCopyConstructedOctetStringValue(
+                Slice(_data, headerLength, length),
+                destination,
+                ruleSet,
+                length == null,
+                out int bytesRead,
+                out bytesWritten);
+
+            if (copied)
+            {
+                _data = _data.Slice(headerLength + bytesRead);
+            }
+
+            return copied;
+        }
+
         private static ReadOnlySpan<byte> Slice(ReadOnlySpan<byte> source, int offset, int length)
         {
             Debug.Assert(offset >= 0);
