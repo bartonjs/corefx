@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using Test.Cryptography;
 using Xunit;
 
 namespace System.Security.Cryptography.EcDiffieHellman.Tests
@@ -313,28 +314,6 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
             };
         }
 
-        [Theory]
-        [MemberData("HmacDerivationTestCases")]
-        public static void HmacDerivation_KnownResults(
-            HashAlgorithmName hashAlgorithm,
-            string hmacKeyBytes,
-            string prependBytes,
-            string appendBytes,
-            string answerBytes)
-        {
-            byte[] hmacKey = hmacKeyBytes == null ? null : hmacKeyBytes.HexToByteArray();
-            byte[] prepend = prependBytes == null ? null : prependBytes.HexToByteArray();
-            byte[] append = appendBytes == null ? null : appendBytes.HexToByteArray();
-            byte[] answer = answerBytes.HexToByteArray();
-            byte[] output;
 
-            using (ECDiffieHellman ecdh = OpenKnownKey())
-            using (ECDiffieHellmanPublicKey publicKey = ecdh.PublicKey)
-            {
-                output = ecdh.DeriveKeyFromHmac(publicKey, hashAlgorithm, hmacKey, prepend, append);
-            }
-
-            Assert.Equal(answer, output);
-        }
     }
 }

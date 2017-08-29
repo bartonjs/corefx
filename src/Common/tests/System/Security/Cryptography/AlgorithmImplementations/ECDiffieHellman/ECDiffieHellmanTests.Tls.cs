@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using Test.Cryptography;
 using Xunit;
 
 namespace System.Security.Cryptography.EcDiffieHellman.Tests
@@ -189,23 +190,6 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
                     "ED83A7CF14C6F1577FE7AD90F1D78D36AFF5D2612B78A70E5FD000660E4A3B00DFF9B7C118C29A3D32536A89A5481C00",
                 },
             };
-        }
-
-        [Theory]
-        [MemberData("TlsDerivationTestCases")]
-        public static void TlsDerivation_KnownResults(string labelText, string answerBytes)
-        {
-            byte[] label = Encoding.ASCII.GetBytes(labelText);
-            byte[] answer = answerBytes.HexToByteArray();
-            byte[] output;
-
-            using (ECDiffieHellman ecdh = OpenKnownKey())
-            using (ECDiffieHellmanPublicKey publicKey = ecdh.PublicKey)
-            {
-                output = ecdh.DeriveKeyTls(publicKey, label, s_emptySeed);
-            }
-
-            Assert.Equal(answer, output);
         }
     }
 }

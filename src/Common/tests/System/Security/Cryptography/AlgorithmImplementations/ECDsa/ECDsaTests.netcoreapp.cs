@@ -248,7 +248,7 @@ namespace System.Security.Cryptography.EcDsa.Tests
         {
             using (ECDsa ecdsa = ECDsaFactory.Create())
             {
-                ecdsa.ImportParameters(ECDsaTestData.GetNistP256ExplicitTestData());
+                ecdsa.ImportParameters(EccTestData.GetNistP256ExplicitTestData());
                 Verify256(ecdsa, true);
             }
         }

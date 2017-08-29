@@ -40,7 +40,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         [Theory, MemberData("TestCurvesFull")]
         public static void TestExplicitCurves(CurveDef curveDef)
         {
-            if (!ECDiffieHellmanFactory.AreExplicitCurvesSupported)
+            if (!ECDiffieHellmanFactory.ExplicitCurvesSupported)
             {
                 return;
             }
@@ -64,7 +64,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         [Theory, MemberData("TestCurves")]
         public static void TestExplicitCurvesKeyAgree(CurveDef curveDef)
         {
-            if (!ECDiffieHellmanFactory.AreExplicitCurvesSupported)
+            if (!ECDiffieHellmanFactory.ExplicitCurvesSupported)
             {
                 return;
             }
@@ -129,7 +129,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         [Fact]
         public static void TestExplicitImportValidationNegative()
         {
-            if (!ECDiffieHellmanFactory.AreExplicitCurvesSupported)
+            if (!ECDiffieHellmanFactory.ExplicitCurvesSupported)
             {
                 return;
             }
@@ -138,7 +138,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
             {
                 using (ECDiffieHellman ec = ECDiffieHellmanFactory.Create())
                 {
-                    ECParameters p = ECDsaTestData.GetNistP256ExplicitTestData();
+                    ECParameters p = EccTestData.GetNistP256ExplicitTestData();
                     Assert.True(p.Curve.IsPrime);
                     ec.ImportParameters(p);
 
@@ -182,14 +182,14 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         [Fact]
         public static void ImportExplicitWithSeedButNoHash()
         {
-            if (!ECDiffieHellmanFactory.AreExplicitCurvesSupported)
+            if (!ECDiffieHellmanFactory.ExplicitCurvesSupported)
             {
                 return;
             }
 
             using (ECDiffieHellman ec = ECDiffieHellmanFactory.Create())
             {
-                ECCurve curve = GetNistP256ExplicitCurve();
+                ECCurve curve = EccTestData.GetNistP256ExplicitCurve();
                 Assert.NotNull(curve.Hash);
                 ec.GenerateKey(curve);
 
@@ -205,14 +205,14 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         [Fact]
         public static void ImportExplicitWithHashButNoSeed()
         {
-            if (!ECDiffieHellmanFactory.AreExplicitCurvesSupported)
+            if (!ECDiffieHellmanFactory.ExplicitCurvesSupported)
             {
                 return;
             }
 
             using (ECDiffieHellman ec = ECDiffieHellmanFactory.Create())
             {
-                ECCurve curve = GetNistP256ExplicitCurve();
+                ECCurve curve = EccTestData.GetNistP256ExplicitCurve();
                 Assert.NotNull(curve.Hash);
                 ec.GenerateKey(curve);
 
@@ -228,7 +228,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         [Fact]
         public static void TestNamedImportValidationNegative()
         {
-            if (!ECDiffieHellmanFactory.AreExplicitCurvesSupported)
+            if (!ECDiffieHellmanFactory.ExplicitCurvesSupported)
             {
                 return;
             }
@@ -237,7 +237,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
             {
                 using (ECDiffieHellman ec = ECDiffieHellmanFactory.Create())
                 {
-                    ECParameters p = ECDsaTestData.GetNistP224KeyTestData();
+                    ECParameters p = EccTestData.GetNistP224KeyTestData();
                     Assert.True(p.Curve.IsNamed);
                     var q = p.Q;
                     var c = p.Curve;
@@ -263,14 +263,14 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         [Fact]
         public static void TestGeneralExportWithExplicitParameters()
         {
-            if (!ECDiffieHellmanFactory.AreExplicitCurvesSupported)
+            if (!ECDiffieHellmanFactory.ExplicitCurvesSupported)
             {
                 return;
             }
 
             using (ECDiffieHellman ecdsa = ECDiffieHellmanFactory.Create())
             {
-                ECParameters param = ECDsaTestData.GetNistP256ExplicitTestData();
+                ECParameters param = EccTestData.GetNistP256ExplicitTestData();
                 param.Validate();
                 ecdsa.ImportParameters(param);
                 Assert.True(param.Curve.IsExplicit);
@@ -286,14 +286,14 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         [Fact]
         public static void TestExplicitCurveImportOnUnsupportedPlatform()
         {
-            if (ECDiffieHellmanFactory.AreExplicitCurvesSupported)
+            if (ECDiffieHellmanFactory.ExplicitCurvesSupported)
             {
                 return;
             }
 
             using (ECDiffieHellman ecdsa = ECDiffieHellmanFactory.Create())
             {
-                ECParameters param = ECDsaTestData.GetNistP256ExplicitTestData();
+                ECParameters param = EccTestData.GetNistP256ExplicitTestData();
                 Assert.Throws<PlatformNotSupportedException>(() => ecdsa.ImportParameters(param));
             }
         }
@@ -301,14 +301,14 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         [Fact]
         public static void TestNamedCurveWithExplicitKey()
         {
-            if (!ECDiffieHellmanFactory.AreExplicitCurvesSupported)
+            if (!ECDiffieHellmanFactory.ExplicitCurvesSupported)
             {
                 return;
             }
 
             using (ECDiffieHellman ec = ECDiffieHellmanFactory.Create())
             {
-                ECParameters parameters = ECDsaTestData.GetNistP224KeyTestData();
+                ECParameters parameters = EccTestData.GetNistP224KeyTestData();
                 ec.ImportParameters(parameters);
                 VerifyNamedCurve(parameters, ec, 224, true);
             }

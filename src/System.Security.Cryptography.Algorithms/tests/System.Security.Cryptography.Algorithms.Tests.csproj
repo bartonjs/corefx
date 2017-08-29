@@ -52,6 +52,12 @@
     <Compile Include="$(CommonTestPath)\System\Security\Cryptography\AlgorithmImplementations\EC\CurveDef.cs">
       <Link>CommonTest\System\Security\Cryptography\AlgorithmImplementations\EC\CurveDef.cs</Link>
     </Compile>
+    <Compile Include="$(CommonTestPath)\System\Security\Cryptography\AlgorithmImplementations\EC\EccTestBase.cs">
+      <Link>CommonTest\System\Security\Cryptography\AlgorithmImplementations\EC\EccTestBase.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonTestPath)\System\Security\Cryptography\AlgorithmImplementations\EC\EccTestData.cs">
+      <Link>CommonTest\System\Security\Cryptography\AlgorithmImplementations\EC\EccTestData.cs</Link>
+    </Compile>
     <Compile Include="$(CommonTestPath)\System\Security\Cryptography\AlgorithmImplementations\ECDiffieHellman\ECDiffieHellmanFactory.cs">
       <Link>CommonTest\System\Security\Cryptography\AlgorithmImplementations\ECDiffieHellman\ECDiffieHellmanFactory.cs</Link>
     </Compile>
@@ -93,9 +99,6 @@
     </Compile>
     <Compile Include="$(CommonTestPath)\System\Security\Cryptography\AlgorithmImplementations\ECDsa\ECDsaTestsBase.cs">
       <Link>CommonTest\System\Security\Cryptography\AlgorithmImplementations\ECDsa\ECDsaTestsBase.cs</Link>
-    </Compile>
-    <Compile Include="$(CommonTestPath)\System\Security\Cryptography\AlgorithmImplementations\ECDsa\ECDsaTestData.cs">
-      <Link>CommonTest\System\Security\Cryptography\AlgorithmImplementations\ECDsa\ECDsaTestData.cs</Link>
     </Compile>
     <Compile Include="$(CommonTestPath)\System\Security\Cryptography\AlgorithmImplementations\RSA\EncryptDecrypt.cs">
       <Link>CommonTest\System\Security\Cryptography\AlgorithmImplementations\RSA\EncryptDecrypt.cs</Link>

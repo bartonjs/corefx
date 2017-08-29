@@ -8,29 +8,14 @@ using System.Security.Cryptography.Tests;
 using System.Security.Cryptography;
 
 using Xunit;
+using Test.Cryptography;
 
 namespace System.Security.Cryptography.EcDiffieHellman.Tests
 {
-    public partial class ECDiffieHellmanTests : EccTests
+    public partial class ECDiffieHellmanTests : EccTestBase
     {
         private static List<object[]> s_everyKeysize;
         private static List<object[]> s_mismatchedKeysizes;
-
-        private static ECDiffieHellman OpenKnownKey()
-        {
-            byte[] blob = (
-                "45434B36" +
-                "42000000" +
-                "014AACFCDA18F77EBF11DC0A2D394D3032E86C3AC0B5F558916361163EA6AD3DB27F6476D6C6E5D9C4A77BCCC5C0069D481718DACA3B1B13035AF5D246C4DC0CE0EA" +
-                "00CA500F75537C782E027DE568F148334BF56F7E24C3830792236B5D20F7A33E99862B1744D2413E4C4AC29DBA42FC48D23AE5B916BED73997EC69B3911C686C5164" +
-                "00202F9F5480723D1ACF15372CE0B99B6CC3E8772FFDDCF828EEEB314B3EAA35B19886AAB1E6871E548C261C7708BF561A4C373D3EED13F0749851F57B86DC049D71" +
-                "").HexToByteArray();
-
-            using (CngKey cngKey = CngKey.Import(blob, CngKeyBlobFormat.EccPrivateBlob))
-            {
-                return new ECDiffieHellmanCng(cngKey);
-            }
-        }
 
         public static IEnumerable<object[]> EveryKeysize()
         {

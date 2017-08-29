@@ -5,6 +5,8 @@
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using System.Security.Cryptography.Tests;
+using Test.Cryptography;
 using Xunit;
 
 namespace System.Security.Cryptography.EcDiffieHellman.Tests
@@ -24,7 +26,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         {
             Verify(
                 ECCurve.NamedCurves.nistP256,
-                GetNistP256ExplicitCurve(),
+                EccTestData.GetNistP256ExplicitCurve(),
                 "700c48f77f56584c5cc632ca65640db91b6bacce3a4df6b42ce7cc838833d287",
                 "db71e509e3fd9b060ddb20ba5c51dcc5948d46fbf640dfe0441782cab85fa4ac",
                 "7d7dc5f71eb29ddaf80d6214632eeae03d9058af1fb6d22ed80badb62bc1a534",
@@ -38,7 +40,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         {
             Verify(
                 ECCurve.NamedCurves.nistP256,
-                GetNistP256ExplicitCurve(),
+                EccTestData.GetNistP256ExplicitCurve(),
                 "809f04289c64348c01515eb03d5ce7ac1a8cb9498f5caa50197e58d43a86a7ae",
                 "b29d84e811197f25eba8f5194092cb6ff440e26d4421011372461f579271cda3",
                 "38f65d6dce47676044d58ce5139582d568f64bb16098d179dbab07741dd5caf5",
@@ -52,7 +54,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         {
             Verify(
                 ECCurve.NamedCurves.nistP384,
-                GetNistP384ExplicitCurve(),
+                EccTestData.GetNistP384ExplicitCurve(),
                 "a7c76b970c3b5fe8b05d2838ae04ab47697b9eaf52e764592efda27fe7513272734466b400091adbf2d68c58e0c50066",
                 "ac68f19f2e1cb879aed43a9969b91a0839c4c38a49749b661efedf243451915ed0905a32b060992b468c64766fc8437a",
                 "3cc3122a68f0d95027ad38c067916ba0eb8c38894d22e1b15618b6818a661774ad463b205da88cf699ab4d43c9cf98a1",
@@ -66,7 +68,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         {
             Verify(
                 ECCurve.NamedCurves.nistP384,
-                GetNistP384ExplicitCurve(),
+                EccTestData.GetNistP384ExplicitCurve(),
                 "30f43fcf2b6b00de53f624f1543090681839717d53c7c955d1d69efaf0349b7363acb447240101cbb3af6641ce4b88e0",
                 "25e46c0c54f0162a77efcc27b6ea792002ae2ba82714299c860857a68153ab62e525ec0530d81b5aa15897981e858757",
                 "92860c21bde06165f8e900c687f8ef0a05d14f290b3f07d8b3a8cc6404366e5d5119cd6d03fb12dc58e89f13df9cd783",
@@ -80,7 +82,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         {
             Verify(
                 ECCurve.NamedCurves.nistP521,
-                GetNistP521ExplicitCurve(),
+                EccTestData.GetNistP521ExplicitCurve(),
                 "00685a48e86c79f0f0875f7bc18d25eb5fc8c0b07e5da4f4370f3a9490340854334b1e1b87fa395464c60626124a4e70d0f785601d37c09870ebf176666877a2046d",
                 "01ba52c56fc8776d9e8f5db4f0cc27636d0b741bbe05400697942e80b739884a83bde99e0f6716939e632bc8986fa18dccd443a348b6c3e522497955a4f3c302f676",
                 "017eecc07ab4b329068fba65e56a1f8890aa935e57134ae0ffcce802735151f4eac6564f6ee9974c5e6887a1fefee5743ae2241bfeb95d5ce31ddcb6f9edb4d6fc47",
@@ -94,7 +96,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         {
             Verify(
                 ECCurve.NamedCurves.nistP521,
-                GetNistP521ExplicitCurve(),
+                EccTestData.GetNistP521ExplicitCurve(),
                 "01df277c152108349bc34d539ee0cf06b24f5d3500677b4445453ccc21409453aafb8a72a0be9ebe54d12270aa51b3ab7f316aa5e74a951c5e53f74cd95fc29aee7a",
                 "013d52f33a9f3c14384d1587fa8abe7aed74bc33749ad9c570b471776422c7d4505d9b0a96b3bfac041e4c6a6990ae7f700e5b4a6640229112deafa0cd8bb0d089b0",
                 "00816f19c1fb10ef94d4a1d81c156ec3d1de08b66761f03f06ee4bb9dcebbbfe1eaa1ed49a6a990838d8ed318c14d74cc872f95d05d07ad50f621ceb620cd905cfb8",
@@ -158,7 +160,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
                     Verify(iut, cavsPublic, s_sha384, HashAlgorithmName.SHA384, iutZ);
                 }
 
-                if (ECDiffieHellmanFactory.AreExplicitCurvesSupported)
+                if (ECDiffieHellmanFactory.ExplicitCurvesSupported)
                 {
                     iutParameters.Curve = explicitCurve;
                     iut.ImportParameters(iutParameters);

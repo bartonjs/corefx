@@ -4,15 +4,34 @@
 
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using System.Security.Cryptography.Tests;
+using System.Text;
+using Test.Cryptography;
 using Xunit;
 
 namespace System.Security.Cryptography.EcDiffieHellman.Tests
 {
-    public partial class ECDiffieHellmanCngTests
+    public partial class ECDiffieHellmanTests
     {
         private static ECDiffieHellmanCng NewDefaultECDHCng()
         {
             return new ECDiffieHellmanCng();
+        }
+
+        public static ECDiffieHellman OpenKnownKey()
+        {
+            byte[] blob = (
+                "45434B36" +
+                "42000000" +
+                "014AACFCDA18F77EBF11DC0A2D394D3032E86C3AC0B5F558916361163EA6AD3DB27F6476D6C6E5D9C4A77BCCC5C0069D481718DACA3B1B13035AF5D246C4DC0CE0EA" +
+                "00CA500F75537C782E027DE568F148334BF56F7E24C3830792236B5D20F7A33E99862B1744D2413E4C4AC29DBA42FC48D23AE5B916BED73997EC69B3911C686C5164" +
+                "00202F9F5480723D1ACF15372CE0B99B6CC3E8772FFDDCF828EEEB314B3EAA35B19886AAB1E6871E548C261C7708BF561A4C373D3EED13F0749851F57B86DC049D71" +
+                "").HexToByteArray();
+
+            using (CngKey cngKey = CngKey.Import(blob, CngKeyBlobFormat.EccPrivateBlob))
+            {
+                return new ECDiffieHellmanCng(cngKey);
+            }
         }
 
         [Fact]
@@ -158,6 +177,69 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
 
                 Assert.Equal(newWay, oldWay);
             }
+        }
+
+        [Theory]
+        [MemberData("HmacDerivationTestCases")]
+        public static void HmacDerivation_KnownResults(
+            HashAlgorithmName hashAlgorithm,
+            string hmacKeyBytes,
+            string prependBytes,
+            string appendBytes,
+            string answerBytes)
+        {
+            byte[] hmacKey = hmacKeyBytes == null ? null : hmacKeyBytes.HexToByteArray();
+            byte[] prepend = prependBytes == null ? null : prependBytes.HexToByteArray();
+            byte[] append = appendBytes == null ? null : appendBytes.HexToByteArray();
+            byte[] answer = answerBytes.HexToByteArray();
+            byte[] output;
+
+            using (ECDiffieHellman ecdh = OpenKnownKey())
+            using (ECDiffieHellmanPublicKey publicKey = ecdh.PublicKey)
+            {
+                output = ecdh.DeriveKeyFromHmac(publicKey, hashAlgorithm, hmacKey, prepend, append);
+            }
+
+            Assert.Equal(answer, output);
+        }
+
+        [Theory]
+        [MemberData("TlsDerivationTestCases")]
+        public static void TlsDerivation_KnownResults(string labelText, string answerBytes)
+        {
+            byte[] label = Encoding.ASCII.GetBytes(labelText);
+            byte[] answer = answerBytes.HexToByteArray();
+            byte[] output;
+
+            using (ECDiffieHellman ecdh = OpenKnownKey())
+            using (ECDiffieHellmanPublicKey publicKey = ecdh.PublicKey)
+            {
+                output = ecdh.DeriveKeyTls(publicKey, label, s_emptySeed);
+            }
+
+            Assert.Equal(answer, output);
+        }
+
+        [Theory]
+        [MemberData("HashDerivationTestCases")]
+        public static void HashDerivation_KnownResults(
+            HashAlgorithmName hashAlgorithm,
+            string prependBytes,
+            string appendBytes,
+            string answerBytes)
+        {
+            byte[] prepend = prependBytes == null ? null : prependBytes.HexToByteArray();
+            byte[] append = appendBytes == null ? null : appendBytes.HexToByteArray();
+            byte[] answer = answerBytes.HexToByteArray();
+            byte[] output;
+
+            using (ECDiffieHellman ecdh = OpenKnownKey())
+            using (ECDiffieHellmanPublicKey publicKey = ecdh.PublicKey)
+            {
+                output = ecdh.DeriveKeyFromHash(publicKey, hashAlgorithm, prepend, append);
+            }
+
+            Assert.Equal(answer, output);
         }
     }
 }

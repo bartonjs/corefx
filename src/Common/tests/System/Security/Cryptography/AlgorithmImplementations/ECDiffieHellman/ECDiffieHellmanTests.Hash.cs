@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using Test.Cryptography;
 using Xunit;
 
 namespace System.Security.Cryptography.EcDiffieHellman.Tests
@@ -245,28 +246,6 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
                     "7DB5520A5D6351595FC286CD53509D964FBB152C289F072581CB5E16EBF319E8",
                 },
             };
-        }
-
-        [Theory]
-        [MemberData("HashDerivationTestCases")]
-        public static void HashDerivation_KnownResults(
-            HashAlgorithmName hashAlgorithm,
-            string prependBytes,
-            string appendBytes,
-            string answerBytes)
-        {
-            byte[] prepend = prependBytes == null ? null : prependBytes.HexToByteArray();
-            byte[] append = appendBytes == null ? null : appendBytes.HexToByteArray();
-            byte[] answer = answerBytes.HexToByteArray();
-            byte[] output;
-
-            using (ECDiffieHellman ecdh = OpenKnownKey())
-            using (ECDiffieHellmanPublicKey publicKey = ecdh.PublicKey)
-            {
-                output = ecdh.DeriveKeyFromHash(publicKey, hashAlgorithm, prepend, append);
-            }
-
-            Assert.Equal(answer, output);
         }
     }
 }

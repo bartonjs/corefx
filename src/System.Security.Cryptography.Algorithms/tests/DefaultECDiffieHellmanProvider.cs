@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Runtime.InteropServices;
+using Test.Cryptography;
 
 namespace System.Security.Cryptography.EcDiffieHellman.Tests
 {
