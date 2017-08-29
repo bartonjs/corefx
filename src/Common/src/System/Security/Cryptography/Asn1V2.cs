@@ -1416,6 +1416,21 @@ namespace System.Security.Cryptography.Asn1
             return copied;
         }
 
+        public void ReadNull(AsnEncodingRules ruleSet)
+        {
+            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out int headerLength);
+            CheckTagIfUniversal(tag, UniversalTagNumber.Null);
+
+            // T-REC-X.690-201508 sec 8.8.1
+            // T-REC-X.690-201508 sec 8.8.2
+            if (tag.IsConstructed || length != 0)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            _data = _data.Slice(headerLength);
+        }
+
         private static ReadOnlySpan<byte> Slice(ReadOnlySpan<byte> source, int offset, int length)
         {
             Debug.Assert(offset >= 0);
