@@ -14,6 +14,9 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         [Theory, MemberData("TestCurvesFull")]
         public static void TestNamedCurves(CurveDef curveDef)
         {
+            if (!curveDef.Curve.IsNamed)
+                return;
+
             using (ECDiffieHellman ec1 = ECDiffieHellmanFactory.Create(curveDef.Curve))
             {
                 ECParameters param1 = ec1.ExportParameters(curveDef.IncludePrivate);
