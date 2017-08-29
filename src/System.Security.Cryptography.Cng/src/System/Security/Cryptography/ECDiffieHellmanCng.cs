@@ -2,16 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Security;
-using System.Security.Permissions;
 using System.Diagnostics.Contracts;
 using Microsoft.Win32.SafeHandles;
+using Internal.Cryptography;
 
 namespace System.Security.Cryptography
 {
@@ -20,53 +13,52 @@ namespace System.Security.Cryptography
     /// </summary>
     public sealed partial class ECDiffieHellmanCng : ECDiffieHellman
     {
+        private CngAlgorithmCore _core = new CngAlgorithmCore { DefaultKeyType = CngAlgorithm.ECDiffieHellman };
+        private CngAlgorithm _hashAlgorithm = CngAlgorithm.Sha256;
+
         public ECDiffieHellmanCng(CngKey key)
         {
-            Contract.Ensures(LegalKeySizesValue != null);
-            Contract.Ensures(_key != null && _key.AlgorithmGroup == CngAlgorithmGroup.ECDiffieHellman);
-
             if (key == null)
-            {
-                throw new ArgumentNullException("key");
-            }
+                throw new ArgumentNullException(nameof(key));
+
             if (key.AlgorithmGroup != CngAlgorithmGroup.ECDiffieHellman)
+                throw new ArgumentException(SR.Cryptography_ArgECDHRequiresECDHKey, nameof(key));
+
+            Key = CngAlgorithmCore.Duplicate(key);
+        }
+
+        /// <summary>
+        ///     Hash algorithm used with the Hash and HMAC KDFs
+        /// </summary>
+        public CngAlgorithm HashAlgorithm
+        {
+            get
             {
-                throw new ArgumentException(SR.Cryptography_ArgECDHRequiresECDHKey, "key");
+                Contract.Ensures(Contract.Result<CngAlgorithm>() != null);
+                return _hashAlgorithm;
             }
 
-            LegalKeySizes = s_legalKeySizes;
-            // Make a copy of the key so that we continue to work if it gets disposed before this algorithm
-            //
-            // This requires an assert for UnmanagedCode since we'll need to access the raw handles of the key
-            // and the handle constructor of CngKey.  The assert is safe since ECDiffieHellmanCng will never
-            // expose the key handles to calling code (without first demanding UnmanagedCode via the Handle
-            // property of CngKey).
-            //
-            // The bizzare looking disposal of the key.Handle property is intentional - Handle returns a
-            // duplicate - without disposing it, we keep the key alive until the GC runs.
-            //TODO: CAS
-            //new SecurityPermission(SecurityPermissionFlag.UnmanagedCode).Assert();
-            using (SafeNCryptKeyHandle importHandle = key.Handle)
+            set
             {
-                Key = CngKey.Open(importHandle, key.IsEphemeral ? CngKeyHandleOpenOptions.EphemeralKey : CngKeyHandleOpenOptions.None);
-            }
-            //CodeAccessPermission.RevertAssert();
+                Contract.Ensures(_hashAlgorithm != null);
 
-            // Our LegalKeySizes value stores the values that we encoded as being the correct
-            // legal key size limitations for this algorithm, as documented on MSDN.
-            //
-            // But on a new OS version we might not question if our limit is accurate, or MSDN
-            // could have been innacurate to start with.
-            //
-            // Since the key is already loaded, we know that Windows thought it to be valid;
-            // therefore we should set KeySizeValue directly to bypass the LegalKeySizes conformance
-            // check.
-            //
-            // For RSA there are known cases where this change matters. RSACryptoServiceProvider can
-            // create a 384-bit RSA key, which we consider too small to be legal. It can also create
-            // a 1032-bit RSA key, which we consider illegal because it doesn't match our 64-bit
-            // alignment requirement. (In both cases Windows loads it just fine)
-            KeySizeValue = _key.KeySize;
+                if (_hashAlgorithm == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
+
+                _hashAlgorithm = value;
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            _core.Dispose();
+        }
+
+        private void DisposeKey()
+        {
+            _core.DisposeKey();
         }
 
         internal string GetCurveName()
