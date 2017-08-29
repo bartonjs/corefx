@@ -137,6 +137,19 @@ namespace System.Security.Cryptography
             {
                 throw new ArgumentNullException(nameof(oidValue));
             }
+
+            // Special case the nist/secp 256,384,521 curves because their
+            // Windows curveName does not match the OID lookup value
+            switch (oidValue)
+            {
+                case ECDSA_P256_OID_VALUE:
+                    return ECCurve.NamedCurves.nistP256;
+                case ECDSA_P384_OID_VALUE:
+                    return ECCurve.NamedCurves.nistP384;
+                case ECDSA_P521_OID_VALUE:
+                    return ECCurve.NamedCurves.nistP521;
+            }
+
             return ECCurve.CreateFromValueAndName(oidValue, null);
         }
 

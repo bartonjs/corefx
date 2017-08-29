@@ -288,7 +288,7 @@ namespace System.Security.Cryptography
         /// <summary>
         ///     Get a handle to the secret agreement between two parties
         /// </summary>
-        [SecurityPermission(SecurityAction.Demand, UnmanagedCode = true)]
+        //TODO CAS [SecurityPermission(SecurityAction.Demand, UnmanagedCode = true)]
         public SafeNCryptSecretHandle DeriveSecretAgreementHandle(CngKey otherPartyPublicKey)
         {
             if (otherPartyPublicKey == null)

@@ -11,6 +11,11 @@ namespace System.Security.Cryptography
     {
         private readonly byte[] _keyBlob;
 
+        protected ECDiffieHellmanPublicKey()
+        {
+            _keyBlob = new byte[0];
+        }
+
         protected ECDiffieHellmanPublicKey(byte[] keyBlob)
         {
             if (keyBlob == null)

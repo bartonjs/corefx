@@ -13,6 +13,9 @@ namespace System.Security.Cryptography
     {
         private CngKeyBlobFormat _format;
 
+        //TODO: I may want to ignore the error for thyis instead of providing a default base constructor.
+        public ECDiffieHellmanCngPublicKey() : base() { }
+
         /// <summary>
         /// Wrap a CNG key
         /// </summary>

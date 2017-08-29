@@ -222,6 +222,7 @@ namespace System.Security.Cryptography
     }
     public abstract partial class ECDiffieHellmanPublicKey : System.IDisposable
     {
+        protected ECDiffieHellmanPublicKey() { }
         protected ECDiffieHellmanPublicKey(byte[] keyBlob) { }
         public void Dispose() { }
         protected virtual void Dispose(bool disposing) { }

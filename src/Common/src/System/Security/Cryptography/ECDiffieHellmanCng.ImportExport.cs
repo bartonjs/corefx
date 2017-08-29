@@ -33,7 +33,7 @@ namespace System.Security.Cryptography
 
                 if (curve.IsPrime)
                 {
-                    byte[] ecExplicitBlob = ECCng.GetPrimeCurveBlob(ref parameters);
+                    byte[] ecExplicitBlob = ECCng.GetPrimeCurveBlob(ref parameters, ecdh: true);
                     ImportFullKeyBlob(ecExplicitBlob, includePrivateParamerters);
                 }
                 else if (curve.IsNamed)
@@ -42,7 +42,7 @@ namespace System.Security.Cryptography
                     if (string.IsNullOrEmpty(curve.Oid.FriendlyName))
                         throw new PlatformNotSupportedException(string.Format(SR.Cryptography_InvalidCurveOid, curve.Oid.Value.ToString()));
 
-                    byte[] ecNamedCurveBlob = ECCng.GetNamedCurveBlob(ref parameters);
+                    byte[] ecNamedCurveBlob = ECCng.GetNamedCurveBlob(ref parameters, ecdh: true);
                     ImportKeyBlob(ecNamedCurveBlob, curve.Oid.FriendlyName, includePrivateParamerters);
                 }
                 else
