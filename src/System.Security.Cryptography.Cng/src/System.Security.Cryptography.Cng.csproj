@@ -256,6 +256,9 @@
     <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDiffieHellmanCng.cs">
       <Link>Common\System\Security\Cryptography\ECDiffieHellmanCng.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDiffieHellmanCng.Derive.cs">
+      <Link>Common\System\Security\Cryptography\ECDsaCng.Derive.cs</Link>
+    </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDiffieHellmanCng.ImportExport.cs">
       <Link>Common\System\Security\Cryptography\ECDiffieHellmanCng.ImportExport.cs</Link>
     </Compile>

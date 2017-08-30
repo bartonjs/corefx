@@ -24,7 +24,8 @@ namespace System.Security.Cryptography
             {
                 get
                 {
-                    return new ECDiffieHellmanCngPublicKey(ExportKeyBlob(includePrivateParameters: false), GetCurveName());
+                    string curveName = GetCurveName();
+                    return new ECDiffieHellmanCngPublicKey(curveName == null ? ExportFullKeyBlob(includePrivateParameters: false) : ExportKeyBlob(includePrivateParameters: false), curveName);
                 }
             }
 

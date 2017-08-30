@@ -51,11 +51,17 @@ namespace System.Security.Cryptography
             /// <returns>The key and named curve parameters used by the ECC object.</returns>
             public override ECParameters ExportParameters()
             {
-                ECParameters ecparams = new ECParameters();
-                ECCng.ExportNamedCurveParameters(ref ecparams, _keyBlob, includePrivateParameters: false);
-                ecparams.Curve = ECCurve.CreateFromFriendlyName(_curveName);
-
-                return ecparams;
+                if (string.IsNullOrEmpty(_curveName))
+                {
+                    return ExportExplicitParameters();
+                }
+                else
+                {
+                    ECParameters ecparams = new ECParameters();
+                    ECCng.ExportNamedCurveParameters(ref ecparams, _keyBlob, includePrivateParameters: false);
+                    ecparams.Curve = ECCurve.CreateFromFriendlyName(_curveName);
+                    return ecparams;
+                }
             }
         }
     }
