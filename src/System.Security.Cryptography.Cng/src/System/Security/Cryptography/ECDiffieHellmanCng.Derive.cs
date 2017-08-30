@@ -63,25 +63,15 @@ namespace System.Security.Cryptography
             Interop.NCrypt.SecretAgreementFlags flags =
                 UseSecretAgreementAsHmacKey ? Interop.NCrypt.SecretAgreementFlags.UseSecretAsHmacKey : Interop.NCrypt.SecretAgreementFlags.None;
 
-            // We require access to the handles for generating key material. This is safe since we will never
-            // expose these handles to user code
-            //TODO probably need to do something with these.
-            // new SecurityPermission(SecurityPermissionFlag.UnmanagedCode).Assert();
-
             // This looks horribly wrong - but accessing the handle property actually returns a duplicate handle, which
             // we need to dispose of - otherwise, we're stuck keepign the resource alive until the GC runs.  This explicitly
             // is not disposing of the handle underlying the key dispite what the syntax looks like.
             using (SafeNCryptKeyHandle localKey = Key.Handle)
             using (SafeNCryptKeyHandle otherKey = otherPartyPublicKey.Handle)
             {
-                //TODO: CAS 
-                //CodeAccessPermission.RevertAssert();
-
-                //
                 // Generating key material is a two phase process.
                 //   1. Generate the secret agreement
                 //   2. Pass the secret agreement through a KDF to get key material
-                //
 
                 using (SafeNCryptSecretHandle secretAgreement = Interop.NCrypt.DeriveSecretAgreement(localKey, otherKey))
                 {
@@ -153,7 +143,6 @@ namespace System.Security.Cryptography
         /// <summary>
         ///     Get a handle to the secret agreement between two parties
         /// </summary>
-        //TODO CAS [SecurityPermission(SecurityAction.Demand, UnmanagedCode = true)]
         public SafeNCryptSecretHandle DeriveSecretAgreementHandle(CngKey otherPartyPublicKey)
         {
             if (otherPartyPublicKey == null)
