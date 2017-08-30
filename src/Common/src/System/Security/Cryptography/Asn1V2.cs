@@ -3,7 +3,9 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace System.Security.Cryptography.Asn1
 {
@@ -1429,6 +1431,116 @@ namespace System.Security.Cryptography.Asn1
             }
 
             _data = _data.Slice(headerLength);
+        }
+        
+        private static BigInteger ReadSubIdentifier(
+            ReadOnlySpan<byte> source,
+            out int bytesRead)
+        {
+            Debug.Assert(source.Length > 0);
+
+            // T-REC-X.690-201508 sec 8.19.2 (last sentence)
+            if (source[0] == 0x80)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            BigInteger accum = BigInteger.Zero;
+
+            for (int idx = 0; idx < source.Length; idx++)
+            {
+                byte cur = source[idx];
+
+                accum <<= 7;
+                accum |= (cur & 0x7F);
+
+                // If the high bit isn't set this marks the end of the sub-identifier.
+                if (cur < 0x80)
+                {
+                    bytesRead = idx + 1;
+                    return accum;
+                }
+            }
+
+            throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+        }
+
+        private string ReadObjectIdentifierAsString(AsnEncodingRules ruleSet, out int totalBytesRead)
+        {
+            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out int headerLength);
+            CheckTagIfUniversal(tag, UniversalTagNumber.ObjectIdentifier);
+
+            // T-REC-X.690-201508 sec 8.19.1
+            // T-REC-X.690-201508 sec 8.19.2 says the minimum length is 1
+            if (tag.IsConstructed || length < 1)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            ReadOnlySpan<byte> contents = Slice(_data, headerLength, length.Value);
+            BigInteger firstIdentifier = ReadSubIdentifier(contents, out int bytesRead);
+            byte firstArc;
+
+            // T-REC-X.690-201508 sec 8.19.4
+            // The first two subidentifiers (X.Y) are encoded as (X * 40) + Y, because Y is
+            // bounded [0, 39] for X in {0, 1}, and only X in {0, 1, 2} are legal.
+            // So:
+            // * identifier < 40 => X = 0, Y = identifier.
+            // * identifier < 80 => X = 1, Y = identifier - 40.
+            // * else: X = 2, Y = identifier - 80.
+
+            if (firstIdentifier < 40)
+            {
+                firstArc = 0;
+            }
+            else if (firstIdentifier < 80)
+            {
+                firstArc = 1;
+                firstIdentifier -= 40;
+            }
+            else
+            {
+                firstArc = 2;
+                firstIdentifier -= 80;
+            }
+
+            StringBuilder builder = new StringBuilder(contents.Length * 4);
+            builder.Append(firstArc);
+            builder.Append('.');
+            builder.Append(firstIdentifier.ToString());
+
+            contents = contents.Slice(bytesRead);
+
+            while (!contents.IsEmpty)
+            {
+                BigInteger subIdentifier = ReadSubIdentifier(contents, out bytesRead);
+                builder.Append('.');
+                builder.Append(subIdentifier.ToString());
+
+                contents = contents.Slice(bytesRead);
+            }
+
+            totalBytesRead = headerLength + length.Value;
+            return builder.ToString();
+        }
+
+        public string ReadObjectIdentifierAsString(AsnEncodingRules ruleSet)
+        {
+            string oidValue = ReadObjectIdentifierAsString(ruleSet, out int bytesRead);
+
+            _data = _data.Slice(bytesRead);
+
+            return oidValue;
+        }
+
+        public Oid ReadObjectIdentifier(AsnEncodingRules ruleSet, bool skipFriendlyName=false)
+        {
+            string oidValue = ReadObjectIdentifierAsString(ruleSet, out int bytesRead);
+            Oid oid = skipFriendlyName ? new Oid(oidValue, oidValue) : new Oid(oidValue);
+
+            _data = _data.Slice(bytesRead);
+
+            return oid;
         }
 
         private static ReadOnlySpan<byte> Slice(ReadOnlySpan<byte> source, int offset, int length)
