@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Buffers;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -225,6 +226,8 @@ namespace System.Security.Cryptography.Asn1
     {
         // ITU-T-REC-X.690-201508 sec 9.2
         private const int MaxCERSegmentSize = 1000;
+
+        private static readonly Text.Encoding s_utf8Encoding = new UTF8Encoding(false, true);
 
         private ReadOnlySpan<byte> _data;
 
@@ -1145,10 +1148,11 @@ namespace System.Security.Cryptography.Asn1
         private bool TryGetOctetStringBytes(
             AsnEncodingRules ruleSet,
             out ReadOnlySpan<byte> contents,
-            out int headerLength)
+            out int headerLength,
+            UniversalTagNumber universalTagNumber = UniversalTagNumber.OctetString)
         {
             (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out headerLength);
-            CheckTagIfUniversal(tag, UniversalTagNumber.OctetString);
+            CheckTagIfUniversal(tag, universalTagNumber);
 
             if (tag.IsConstructed)
             {
@@ -1173,6 +1177,20 @@ namespace System.Security.Cryptography.Asn1
             return true;
         }
 
+        private bool TryGetOctetStringBytes(
+            AsnEncodingRules ruleSet,
+            UniversalTagNumber universalTagNumber,
+            out ReadOnlySpan<byte> contents)
+        {
+            if (TryGetOctetStringBytes(ruleSet, out contents, out int headerLength, universalTagNumber))
+            {
+                _data = _data.Slice(headerLength + contents.Length);
+                return true;
+            }
+
+            return false;
+        }
+
         /// <summary>
         /// Gets the source data for an OctetString under a primitive encoding.
         /// </summary>
@@ -1193,15 +1211,7 @@ namespace System.Security.Cryptography.Asn1
             AsnEncodingRules ruleSet,
             out ReadOnlySpan<byte> contents)
         {
-            bool didGet = TryGetOctetStringBytes(ruleSet, out contents, out int headerLength);
-
-            if (didGet)
-            {
-                // Skip the tag+length (header) and the unused bit count byte (1) and the contents.
-                _data = _data.Slice(headerLength + contents.Length);
-            }
-
-            return didGet;
+            return TryGetOctetStringBytes(ruleSet, UniversalTagNumber.OctetString, out contents);
         }
 
         private static int CopyConstructedOctetString(
@@ -1330,6 +1340,7 @@ namespace System.Security.Cryptography.Asn1
         private static bool TryCopyConstructedOctetStringValue(
             ReadOnlySpan<byte> source,
             Span<byte> dest,
+            bool write,
             AsnEncodingRules ruleSet,
             bool isIndefinite,
             out int bytesRead,
@@ -1352,6 +1363,13 @@ namespace System.Security.Cryptography.Asn1
             if (ruleSet == AsnEncodingRules.CER && contentLength <= MaxCERSegmentSize)
             {
                 throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            if (!write)
+            {
+                bytesRead = encodedLength;
+                bytesWritten = contentLength;
+                return true;
             }
 
             if (dest.Length < contentLength)
@@ -1405,6 +1423,7 @@ namespace System.Security.Cryptography.Asn1
             bool copied = TryCopyConstructedOctetStringValue(
                 Slice(_data, headerLength, length),
                 destination,
+                true,
                 ruleSet,
                 length == null,
                 out int bytesRead,
@@ -1541,6 +1560,195 @@ namespace System.Security.Cryptography.Asn1
             _data = _data.Slice(bytesRead);
 
             return oid;
+        }
+
+        private bool TryCopyCharacterStringBytes(
+            AsnEncodingRules ruleSet,
+            UniversalTagNumber universalTagNumber,
+            Span<byte> destination,
+            bool write,
+            out int bytesRead,
+            out int bytesWritten)
+        {
+            if (TryGetOctetStringBytes(
+                ruleSet,
+                out ReadOnlySpan<byte> contents,
+                out int headerLength,
+                universalTagNumber))
+            {
+                bytesWritten = contents.Length;
+
+                if (write)
+                {
+                    if (destination.Length < bytesWritten)
+                    {
+                        bytesWritten = 0;
+                        bytesRead = 0;
+                        return false;
+                    }
+
+                    contents.CopyTo(destination);
+                }
+
+                bytesRead = headerLength + bytesWritten;
+                return true;
+            }
+
+            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out headerLength);
+
+            bool copied = TryCopyConstructedOctetStringValue(
+                Slice(_data, headerLength, length),
+                destination,
+                write,
+                ruleSet,
+                length == null,
+                out int contentBytesRead,
+                out bytesWritten);
+
+            bytesRead = headerLength + contentBytesRead;
+            return copied;
+        }
+
+        private static unsafe bool TryCopyCharacterString(
+            ReadOnlySpan<byte> source,
+            Text.Encoding encoding,
+            Span<char> destination,
+            out int charsWritten)
+        {
+            fixed (byte* bytePtr = &source.DangerousGetPinnableReference())
+            fixed (char* charPtr = &destination.DangerousGetPinnableReference())
+            {
+                try
+                {
+                    int charCount = encoding.GetCharCount(bytePtr, source.Length);
+
+                    if (charCount > destination.Length)
+                    {
+                        charsWritten = 0;
+                        return false;
+                    }
+
+                    charsWritten = encoding.GetChars(bytePtr, source.Length, charPtr, destination.Length);
+                    Debug.Assert(charCount == charsWritten);
+                }
+                catch (DecoderFallbackException e)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding, e);
+                }
+
+                return true;
+            }
+        }
+
+        private bool TryCopyCharacterString(
+            AsnEncodingRules ruleSet,
+            UniversalTagNumber universalTagNumber,
+            Text.Encoding encoding,
+            Span<char> destination,
+            out int charsWritten)
+        {
+            if (TryGetOctetStringBytes(
+                ruleSet,
+                out ReadOnlySpan<byte> contents,
+                out int headerLength,
+                universalTagNumber))
+            {
+                bool copied = TryCopyCharacterString(contents, encoding, destination, out charsWritten);
+
+                if (copied)
+                {
+                    _data = _data.Slice(headerLength + contents.Length);
+                }
+
+                return copied;
+            }
+
+            bool parsed = TryCopyCharacterStringBytes(
+                ruleSet,
+                universalTagNumber,
+                Span<byte>.Empty,
+                false,
+                out int bytesRead,
+                out int bytesWritten);
+
+            Debug.Assert(parsed, "TryCopyCharacterStringBytes returned false in counting mode");
+
+            byte[] rented = ArrayPool<byte>.Shared.Rent(bytesWritten);
+
+            try
+            {
+                if (!TryCopyCharacterStringBytes(ruleSet, universalTagNumber, rented, true, out bytesRead, out bytesWritten))
+                {
+                    Debug.Fail("TryCopyCharacterStringBytes failed with a precomputed size");
+                    throw new CryptographicException();
+                }
+
+                bool copied = TryCopyCharacterString(
+                    rented.AsSpan().Slice(0, bytesWritten),
+                    encoding,
+                    destination,
+                    out charsWritten);
+
+                if (copied)
+                {
+                    _data = _data.Slice(bytesRead);
+                }
+
+                return copied;
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(rented, clearArray: true);
+            }
+        }
+
+        /// <summary>
+        /// Gets the source data for a UTF8String under a primitive encoding.
+        /// </summary>
+        /// <param name="ruleSet">The encoding rules for the reader.</param>
+        /// <param name="contents">The content bytes for the OctetString payload.</param>
+        /// <returns>
+        ///   <c>true</c> if the octet string uses a primitive encoding, <c>false</c> otherwise.
+        /// </returns>
+        /// <exception cref="CryptographicException">
+        ///  <ul>
+        ///   <li>No data remains</li>
+        ///   <li>The tag is invalid for a UTF8String value</li>
+        ///   <li>The length is invalid under the chosen encoding rules</li>
+        ///   <li>A CER encoding was chosen and the primitive content length exceeds the maximum allowed</li>
+        /// </ul>
+        /// </exception>
+        public bool TryGetUTF8StringBytes(AsnEncodingRules ruleSet, out ReadOnlySpan<byte> contents)
+        {
+            return TryGetOctetStringBytes(ruleSet, UniversalTagNumber.UTF8String, out contents);
+        }
+
+        public bool TryCopyUTF8StringBytes(AsnEncodingRules ruleSet, Span<byte> destination, out int bytesWritten)
+        {
+            bool copied = TryCopyCharacterStringBytes(
+                ruleSet,
+                UniversalTagNumber.UTF8String,
+                destination,
+                true,
+                out int bytesRead,
+                out bytesWritten);
+
+            if (copied)
+            {
+                _data = _data.Slice(bytesRead);
+            }
+
+            return copied;
+        }
+
+        public bool TryCopyUTF8String(AsnEncodingRules ruleSet, Span<char> destination, out int charsWritten)
+        {
+            return TryCopyCharacterString(
+                ruleSet,
+                UniversalTagNumber.UTF8String,
+                s_utf8Encoding,
+                destination,
+                out charsWritten);
         }
 
         private static ReadOnlySpan<byte> Slice(ReadOnlySpan<byte> source, int offset, int length)
