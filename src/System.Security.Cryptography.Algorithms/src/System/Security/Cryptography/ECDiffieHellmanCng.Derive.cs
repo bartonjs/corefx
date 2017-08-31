@@ -19,8 +19,6 @@ namespace System.Security.Cryptography
             public override byte[] DeriveKeyMaterial(ECDiffieHellmanPublicKey otherPartyPublicKey)
             {
                 Contract.Ensures(Contract.Result<byte[]>() != null);
-                Contract.Assert(_kdf >= ECDiffieHellmanKeyDerivationFunction.Hash &&
-                                _kdf <= ECDiffieHellmanKeyDerivationFunction.Tls);
 
                 if (otherPartyPublicKey == null)
                 {
@@ -41,50 +39,10 @@ namespace System.Security.Cryptography
                         throw new ArgumentException(SR.Cryptography_ArgECDHKeySizeMismatch, "otherPartyPublicKey");
                     }
 
-                    Interop.NCrypt.SecretAgreementFlags flags =
-                        UseSecretAgreementAsHmacKey ? Interop.NCrypt.SecretAgreementFlags.UseSecretAsHmacKey : Interop.NCrypt.SecretAgreementFlags.None;
-
                     using (SafeNCryptKeyHandle localKey = GetDuplicatedKeyHandle())
                     using (SafeNCryptSecretHandle secretAgreement = Interop.NCrypt.DeriveSecretAgreement(localKey, otherKey))
                     {
-                        if (KeyDerivationFunction == ECDiffieHellmanKeyDerivationFunction.Hash)
-                        {
-                            byte[] secretAppend = SecretAppend == null ? null : SecretAppend.Clone() as byte[];
-                            byte[] secretPrepend = SecretPrepend == null ? null : SecretPrepend.Clone() as byte[];
-
-                            return Interop.NCrypt.DeriveKeyMaterialHash(secretAgreement,
-                                                                        _hashAlgorithm.Name,
-                                                                        secretPrepend,
-                                                                        secretAppend,
-                                                                        flags);
-                        }
-                        else if (KeyDerivationFunction == ECDiffieHellmanKeyDerivationFunction.Hmac)
-                        {
-                            byte[] hmacKey = HmacKey == null ? null : HmacKey.Clone() as byte[];
-                            byte[] secretAppend = SecretAppend == null ? null : SecretAppend.Clone() as byte[];
-                            byte[] secretPrepend = SecretPrepend == null ? null : SecretPrepend.Clone() as byte[];
-
-                            return Interop.NCrypt.DeriveKeyMaterialHmac(secretAgreement,
-                                                                        _hashAlgorithm.Name,
-                                                                        hmacKey,
-                                                                        secretPrepend,
-                                                                        secretAppend,
-                                                                        flags);
-                        }
-                        else
-                        {
-                            Debug.Assert(KeyDerivationFunction == ECDiffieHellmanKeyDerivationFunction.Tls, "Unknown KDF");
-
-                            byte[] label = Label == null ? null : Label.Clone() as byte[];
-                            byte[] seed = Seed == null ? null : Seed.Clone() as byte[];
-
-                            if (label == null || seed == null)
-                            {
-                                throw new InvalidOperationException(SR.Cryptography_TlsRequiresLabelAndSeed);
-                            }
-
-                            return Interop.NCrypt.DeriveKeyMaterialTls(secretAgreement, label, seed, flags);
-                        }
+                        return Interop.NCrypt.DeriveKeyMaterialHash(secretAgreement, _hashAlgorithm.Name, null, null, Interop.NCrypt.SecretAgreementFlags.UseSecretAsHmacKey);
                     }
                 }
             }

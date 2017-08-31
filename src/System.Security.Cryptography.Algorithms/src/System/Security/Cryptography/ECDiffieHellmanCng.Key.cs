@@ -40,7 +40,23 @@ namespace System.Security.Cryptography
                     }
 
                     // Use hard-coded values (for use with pre-Win10 APIs)
-                    return SpecialNistAlgorithmToCurveName(algorithm);
+                    if (algorithm == AlgorithmName.ECDHP256 || algorithm == AlgorithmName.ECDsaP256)
+                    {
+                        return "nistP256";
+                    }
+
+                    if (algorithm == AlgorithmName.ECDHP384 || algorithm == AlgorithmName.ECDsaP384)
+                    {
+                        return "nistP384";
+                    }
+
+                    if (algorithm == AlgorithmName.ECDHP521 || algorithm == AlgorithmName.ECDsaP521)
+                    {
+                        return "nistP521";
+                    }
+
+                    Debug.Fail(string.Format("Unknown curve {0}", algorithm));
+                    throw new PlatformNotSupportedException(string.Format(SR.Cryptography_CurveNotSupported, algorithm));
                 }
             }
 

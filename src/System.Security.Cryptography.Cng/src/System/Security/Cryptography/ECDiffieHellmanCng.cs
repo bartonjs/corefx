@@ -9,12 +9,28 @@ using Internal.Cryptography;
 namespace System.Security.Cryptography
 {
     /// <summary>
+    ///     Key derivation functions used to transform the raw secret agreement into key material
+    /// </summary>
+    public enum ECDiffieHellmanKeyDerivationFunction
+    {
+        Hash,
+        Hmac,
+        Tls
+    }
+    
+    /// <summary>
     ///     Wrapper for CNG's implementation of elliptic curve Diffie-Hellman key exchange
     /// </summary>
     public sealed partial class ECDiffieHellmanCng : ECDiffieHellman
     {
         private CngAlgorithmCore _core = new CngAlgorithmCore { DefaultKeyType = CngAlgorithm.ECDiffieHellman };
         private CngAlgorithm _hashAlgorithm = CngAlgorithm.Sha256;
+        private ECDiffieHellmanKeyDerivationFunction _kdf = ECDiffieHellmanKeyDerivationFunction.Hash;
+        private byte[] _hmacKey;
+        private byte[] _label;
+        private byte[] _secretAppend;
+        private byte[] _secretPrepend;
+        private byte[] _seed;
 
         public ECDiffieHellmanCng(CngKey key)
         {
@@ -49,6 +65,86 @@ namespace System.Security.Cryptography
 
                 _hashAlgorithm = value;
             }
+        }
+
+        /// <summary>
+        ///     KDF used to transform the secret agreement into key material
+        /// </summary>
+        public ECDiffieHellmanKeyDerivationFunction KeyDerivationFunction
+        {
+            get
+            {
+                Contract.Ensures(Contract.Result<ECDiffieHellmanKeyDerivationFunction>() >= ECDiffieHellmanKeyDerivationFunction.Hash &&
+                                 Contract.Result<ECDiffieHellmanKeyDerivationFunction>() <= ECDiffieHellmanKeyDerivationFunction.Tls);
+
+                return _kdf;
+            }
+
+            set
+            {
+                Contract.Ensures(_kdf >= ECDiffieHellmanKeyDerivationFunction.Hash &&
+                                        _kdf <= ECDiffieHellmanKeyDerivationFunction.Tls);
+
+                if (value < ECDiffieHellmanKeyDerivationFunction.Hash || value > ECDiffieHellmanKeyDerivationFunction.Tls)
+                {
+                    throw new ArgumentOutOfRangeException("value");
+                }
+
+                _kdf = value;
+            }
+        }
+
+        /// <summary>
+        ///     Key used with the HMAC KDF
+        /// </summary>
+        public byte[] HmacKey
+        {
+            get { return _hmacKey; }
+            set { _hmacKey = value; }
+        }
+
+        /// <summary>
+        ///     Label bytes used for the TLS KDF
+        /// </summary>
+        public byte[] Label
+        {
+            get { return _label; }
+            set { _label = value; }
+        }
+
+        /// <summary>
+        ///     Bytes to append to the raw secret agreement before processing by the KDF
+        /// </summary>
+        public byte[] SecretAppend
+        {
+            get { return _secretAppend; }
+            set { _secretAppend = value; }
+        }
+
+        /// <summary>
+        ///     Bytes to prepend to the raw secret agreement before processing by the KDF
+        /// </summary>
+        public byte[] SecretPrepend
+        {
+            get { return _secretPrepend; }
+            set { _secretPrepend = value; }
+        }
+
+        /// <summary>
+        ///     Seed bytes used for the TLS KDF
+        /// </summary>
+        public byte[] Seed
+        {
+            get { return _seed; }
+            set { _seed = value; }
+        }
+
+        /// <summary>
+        ///     Use the secret agreement as the HMAC key rather than supplying a seperate one
+        /// </summary>
+        public bool UseSecretAgreementAsHmacKey
+        {
+            get { return HmacKey == null; }
         }
 
         protected override void Dispose(bool disposing)

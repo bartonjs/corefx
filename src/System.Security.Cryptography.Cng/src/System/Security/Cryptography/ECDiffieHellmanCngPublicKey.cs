@@ -12,8 +12,9 @@ namespace System.Security.Cryptography
     public sealed partial class ECDiffieHellmanCngPublicKey : ECDiffieHellmanPublicKey
     {
         private CngKeyBlobFormat _format;
+        private string _curveName;
 
-        //TODO: I may want to ignore the error for thyis instead of providing a default base constructor.
+        //TODO: I may want to ignore the error for this instead of providing a default base constructor.
         public ECDiffieHellmanCngPublicKey() : base() { }
 
         /// <summary>
@@ -27,6 +28,21 @@ namespace System.Security.Cryptography
             _format = format;
             // Can be null for P256, P384, P521, or an explicit blob
             _curveName = curveName;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+        }
+
+        public override string ToXmlString()
+        {
+            throw new PlatformNotSupportedException();
+        }
+
+        public static ECDiffieHellmanCngPublicKey FromXmlString(string xml)
+        {
+            throw new PlatformNotSupportedException();
         }
 
         /// <summary>

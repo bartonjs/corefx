@@ -8,12 +8,25 @@ namespace System.Security.Cryptography
 {
     internal static partial class ECDiffieHellmanImplementation
     {
-        /// <summary>
-        /// Public key used to do key exchange with the ECDiffieHellmanCng algorithm
-        /// </summary>
         public sealed partial class ECDiffieHellmanCngPublicKey : ECDiffieHellmanPublicKey
         {
             private byte[] _keyBlob;
+            private string _curveName;
+
+            protected override void Dispose(bool disposing)
+            {
+                base.Dispose(disposing);
+            }
+
+            public override string ToXmlString()
+            {
+                throw new PlatformNotSupportedException();
+            }
+
+            public static ECDiffieHellmanCngPublicKey FromXmlString(string xml)
+            {
+                throw new PlatformNotSupportedException();
+            }
 
             internal ECDiffieHellmanCngPublicKey(byte[] keyBlob, string curveName) : base(keyBlob)
             {

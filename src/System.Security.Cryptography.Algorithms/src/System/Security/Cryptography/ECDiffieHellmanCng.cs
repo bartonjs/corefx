@@ -78,6 +78,11 @@ namespace System.Security.Cryptography
                     return CngKeyLite.ExportKeyBlob(keyHandle, blobType);
                 }
             }
+
+            internal static bool IsECNamedCurve(string algorithm)
+            {
+                return (algorithm == AlgorithmName.ECDH || algorithm == AlgorithmName.ECDsa);
+            }
         }
     }
 }
