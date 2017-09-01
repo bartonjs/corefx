@@ -382,6 +382,15 @@
     <Compile Include="$(CommonPath)\System\Security\Cryptography\DSAOpenSsl.cs">
       <Link>Common\System\Security\Cryptography\DSAOpenSsl.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDiffieHellmanOpenSsl.cs">
+      <Link>Common\System\Security\Cryptography\ECDiffieHellmanOpenSsl.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDiffieHellmanOpenSsl.ImportExport.cs">
+      <Link>Common\System\Security\Cryptography\ECDiffieHellmanOpenSsl.ImportExport.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDiffieHellmanOpenSslPublicKey.cs">
+      <Link>Common\System\Security\Cryptography\ECDiffieHellmanOpenSslPublicKey.cs</Link>
+    </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDsaOpenSsl.cs">
       <Link>Common\System\Security\Cryptography\ECDsaOpenSsl.cs</Link>
     </Compile>
@@ -399,6 +408,7 @@
     <Compile Include="Internal\Cryptography\RC2Implementation.Unix.cs" />
     <Compile Include="Internal\Cryptography\TripleDesImplementation.Unix.cs" />
     <Compile Include="System\Security\Cryptography\ECDsaOpenSsl.cs" />
+    <Compile Include="System\Security\Cryptography\ECDiffieHellman.Create.OpenSsl.cs" />
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetsOSX)' == 'true' ">
     <Compile Include="$(CommonPath)\Interop\OSX\Interop.CoreFoundation.cs">
