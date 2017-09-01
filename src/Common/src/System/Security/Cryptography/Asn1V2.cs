@@ -227,6 +227,9 @@ namespace System.Security.Cryptography.Asn1
         // ITU-T-REC-X.690-201508 sec 9.2
         private const int MaxCERSegmentSize = 1000;
 
+        // T-REC-X.690-201508 sec 8.1.5 says only 0000 is legal.
+        private const int EndOfContentsEncodedLength = 2;
+
         private static readonly Text.Encoding s_utf8Encoding = new UTF8Encoding(false, true);
 
         private ReadOnlySpan<byte> _data;
@@ -403,7 +406,7 @@ namespace System.Security.Cryptography.Asn1
         private static void ValidateEndOfContents(Asn1Tag tag, int? length, int headerLength)
         {
             // T-REC-X.690-201508 sec 8.1.5 excludes the BER 8100 length form for 0.
-            if (tag.IsConstructed || length != 0 || headerLength != 2)
+            if (tag.IsConstructed || length != 0 || headerLength != EndOfContentsEncodedLength)
             {
                 throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
             }
@@ -421,10 +424,8 @@ namespace System.Security.Cryptography.Asn1
                 AsnReader reader = new AsnReader(cur);
                 (Asn1Tag tag, int? length) = reader.ReadTagAndLength(ruleSet, out int bytesRead);
                 ReadOnlySpan<byte> nestedContents = reader.GetContentSpan(ruleSet);
-                int localLen = bytesRead + nestedContents.Length;
 
-                totalLen += localLen;
-                cur = cur.Slice(localLen);
+                int localLen = bytesRead + nestedContents.Length;
 
                 if (tag == Asn1Tag.EndOfContents)
                 {
@@ -432,6 +433,21 @@ namespace System.Security.Cryptography.Asn1
 
                     return source.Slice(0, totalLen);
                 }
+
+                // If the current value was an indefinite-length-encoded value
+                // then we need to skip over the EOC as well.  But we didn't want to
+                // include it as part of the content span.
+                //
+                // T-REC-X.690-201508 sec 8.1.1.1 / 8.1.1.3 indicate that the
+                // End -of-Contents octets are "after" the contents octets, not
+                // "at the end" of them.
+                if (length == null)
+                {
+                    localLen += EndOfContentsEncodedLength;
+                }
+
+                totalLen += localLen;
+                cur = cur.Slice(localLen);
             }
 
             throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
@@ -456,7 +472,7 @@ namespace System.Security.Cryptography.Asn1
             if (length == null)
             {
                 ReadOnlySpan<byte> nestedContents = GetContentSpan(ruleSet);
-                _data = _data.Slice(bytesRead + nestedContents.Length);
+                _data = _data.Slice(bytesRead + nestedContents.Length + EndOfContentsEncodedLength);
             }
             else
             {
