@@ -15,7 +15,7 @@ namespace System.Security.Cryptography
         {
             private byte[] DeriveKeyMaterialFromCngKey(ECDiffieHellmanCngPublicKey otherPartyPublicKey)
             {
-                using (SafeNCryptKeyHandle otherKeyHandle = CngKeyLite.ImportKeyBlob(Interop.BCrypt.KeyBlobType.BCRYPT_ECCPUBLIC_BLOB, otherKey.ToByteArray(), otherKey._curveName))
+                using (SafeNCryptKeyHandle otherKeyHandle = CngKeyLite.ImportKeyBlob(Interop.BCrypt.KeyBlobType.BCRYPT_ECCPUBLIC_BLOB, otherPartyPublicKey.ToByteArray(), otherPartyPublicKey._curveName))
                 {
                     string importedKeyAlgorithmGroup = CngKeyLite.GetPropertyAsString(otherKeyHandle, CngKeyLite.KeyPropertyName.AlgorithmGroup, CngPropertyOptions.None);
                     if (importedKeyAlgorithmGroup == null || importedKeyAlgorithmGroup != "ECDH")
