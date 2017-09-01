@@ -1722,7 +1722,7 @@ namespace System.Security.Cryptography.Asn1
         /// Gets the source data for a UTF8String under a primitive encoding.
         /// </summary>
         /// <param name="ruleSet">The encoding rules for the reader.</param>
-        /// <param name="contents">The content bytes for the OctetString payload.</param>
+        /// <param name="contents">The content bytes for the UTF8String payload.</param>
         /// <returns>
         ///   <c>true</c> if the octet string uses a primitive encoding, <c>false</c> otherwise.
         /// </returns>
