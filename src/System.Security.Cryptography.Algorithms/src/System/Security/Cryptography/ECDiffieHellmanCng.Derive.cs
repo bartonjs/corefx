@@ -13,34 +13,22 @@ namespace System.Security.Cryptography
     {
         public sealed partial class ECDiffieHellmanCng : ECDiffieHellman
         {
-            /// <summary>
-            ///     Given a second party's public key, derive shared key material
-            /// </summary>
-            public override byte[] DeriveKeyMaterial(ECDiffieHellmanPublicKey otherPartyPublicKey)
+            private byte[] DeriveKeyMaterialFromCngKey(ECDiffieHellmanCngPublicKey otherPartyPublicKey)
             {
-                Contract.Ensures(Contract.Result<byte[]>() != null);
-
-                if (otherPartyPublicKey == null)
+                using (SafeNCryptKeyHandle otherKeyHandle = CngKeyLite.ImportKeyBlob(Interop.BCrypt.KeyBlobType.BCRYPT_ECCPUBLIC_BLOB, otherKey.ToByteArray(), otherKey._curveName))
                 {
-                    throw new ArgumentNullException("otherPartyPublicKey");
-                }
-
-                ECParameters otherPartyParameters = otherPartyPublicKey.ExportParameters();
-                using (ECDiffieHellmanCng otherPartyCng = (ECDiffieHellmanCng)Create(otherPartyParameters)) //TODO: catch this if it fails and throw exception that the otherpartyPublicKey must be CNG
-                using (SafeNCryptKeyHandle otherKey = otherPartyCng.GetDuplicatedKeyHandle())
-                {
-                    string importedKeyAlgorithmGroup = CngKeyLite.GetPropertyAsString(otherKey, CngKeyLite.KeyPropertyName.AlgorithmGroup, CngPropertyOptions.None);
+                    string importedKeyAlgorithmGroup = CngKeyLite.GetPropertyAsString(otherKeyHandle, CngKeyLite.KeyPropertyName.AlgorithmGroup, CngPropertyOptions.None);
                     if (importedKeyAlgorithmGroup == null || importedKeyAlgorithmGroup != "ECDH")
                     {
                         throw new ArgumentException(SR.Cryptography_ArgECDHRequiresECDHKey, "otherPartyPublicKey");
                     }
-                    if (CngKeyLite.GetKeyLength(otherKey) != KeySize)
+                    if (CngKeyLite.GetKeyLength(otherKeyHandle) != KeySize)
                     {
                         throw new ArgumentException(SR.Cryptography_ArgECDHKeySizeMismatch, "otherPartyPublicKey");
                     }
 
                     using (SafeNCryptKeyHandle localKey = GetDuplicatedKeyHandle())
-                    using (SafeNCryptSecretHandle secretAgreement = Interop.NCrypt.DeriveSecretAgreement(localKey, otherKey))
+                    using (SafeNCryptSecretHandle secretAgreement = Interop.NCrypt.DeriveSecretAgreement(localKey, otherKeyHandle))
                     {
                         return Interop.NCrypt.DeriveKeyMaterialHash(secretAgreement, _hashAlgorithm.Name, null, null, Interop.NCrypt.SecretAgreementFlags.UseSecretAsHmacKey);
                     }

@@ -132,6 +132,7 @@
     <Compile Include="DefaultECDsaProvider.cs" />
     <Compile Include="DefaultECDiffieHellmanProvider.cs" />
     <Compile Include="DefaultRSAProvider.cs" />
+    <Compile Include="ECDiffieHellmanTests.cs" />
     <Compile Include="HashAlgorithmTest.cs" />
     <Compile Include="InvalidUsageTests.cs" />
     <Compile Include="HmacMD5Tests.cs" />
@@ -157,7 +158,7 @@
   <ItemGroup Condition="'$(TargetsWindows)' == 'true'">
     <Compile Include="DefaultECDsaProvider.Windows.cs" />
     <Compile Include="DefaultECDiffieHellmanProvider.Windows.cs" />
-   </ItemGroup>
+  </ItemGroup>
   <ItemGroup Condition="'$(TargetsUnix)' == 'true'">
     <Compile Include="DefaultECDsaProvider.Unix.cs" />
     <Compile Include="DefaultECDiffieHellmanProvider.Unix.cs" />

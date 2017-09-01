@@ -194,6 +194,19 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
             }
         }
 
+        [Fact]
+        public static void DeriveKeyMaterialEquivalentToDeriveKeyFromHash()
+        {
+            using (ECDiffieHellman ecdh = ECDiffieHellmanFactory.Create())
+            using (ECDiffieHellmanPublicKey publicKey = ecdh.PublicKey)
+            {
+                byte[] simple = ecdh.DeriveKeyMaterial(publicKey);
+                byte[] nulls = ecdh.DeriveKeyFromHash(publicKey, HashAlgorithmName.SHA256, null, null);
+
+                Assert.Equal(simple, nulls);
+            }
+        }
+
         public static IEnumerable<object[]> HashDerivationTestCases()
         {
             return new object[][]

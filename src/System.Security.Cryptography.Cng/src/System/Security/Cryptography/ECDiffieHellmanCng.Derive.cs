@@ -11,28 +11,9 @@ namespace System.Security.Cryptography
 {
     public sealed partial class ECDiffieHellmanCng : ECDiffieHellman
     {
-        /// <summary>
-        ///     Given a second party's public key, derive shared key material
-        /// </summary>
-        public override byte[] DeriveKeyMaterial(ECDiffieHellmanPublicKey otherPartyPublicKey)
+        private byte[] DeriveKeyMaterialFromCngKey(ECDiffieHellmanCngPublicKey otherPartyPublicKey)
         {
-            Contract.Ensures(Contract.Result<byte[]>() != null);
-            Contract.Assert(_kdf >= ECDiffieHellmanKeyDerivationFunction.Hash &&
-                            _kdf <= ECDiffieHellmanKeyDerivationFunction.Tls);
-
-            if (otherPartyPublicKey == null)
-            {
-                throw new ArgumentNullException("otherPartyPublicKey");
-            }
-
-            // We can only work with ECDiffieHellmanCngPublicKeys
-            ECDiffieHellmanCngPublicKey otherKey = otherPartyPublicKey as ECDiffieHellmanCngPublicKey;
-            if (otherPartyPublicKey == null)
-            {
-                throw new ArgumentException(SR.Cryptography_ArgExpectedECDiffieHellmanCngPublicKey);
-            }
-
-            using (CngKey import = otherKey.Import())
+            using (CngKey import = otherPartyPublicKey.Import())
             {
                 return DeriveKeyMaterial(import);
             }

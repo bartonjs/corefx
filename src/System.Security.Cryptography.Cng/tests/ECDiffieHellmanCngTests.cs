@@ -3,8 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
-using System.Security.Cryptography;
-using System.Security.Cryptography.Tests;
 using System.Text;
 using Test.Cryptography;
 using Xunit;
@@ -240,6 +238,19 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
             }
 
             Assert.Equal(answer, output);
+        }
+
+        [Fact]
+        public static void HashDerivation_AlgorithmsCreateECDH()
+        {
+            using (ECDiffieHellman ecdhCng = new ECDiffieHellmanCng())
+            using (ECDiffieHellman ecdhAlgorithms = ECDiffieHellman.Create())
+            {
+                Assert.NotNull(ecdhAlgorithms.PublicKey);
+                byte[] outputCng = ecdhCng.DeriveKeyMaterial(ecdhAlgorithms.PublicKey);
+                byte[] outputAlgorithms = ecdhAlgorithms.DeriveKeyMaterial(ecdhCng.PublicKey);
+                Assert.Equal(outputCng, outputAlgorithms);
+            }
         }
     }
 }

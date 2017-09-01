@@ -11,7 +11,7 @@ namespace System.Security.Cryptography
         public sealed partial class ECDiffieHellmanCngPublicKey : ECDiffieHellmanPublicKey
         {
             private byte[] _keyBlob;
-            private string _curveName;
+            internal string _curveName;
 
             protected override void Dispose(bool disposing)
             {
