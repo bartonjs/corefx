@@ -232,6 +232,7 @@ namespace System.Security.Cryptography.Asn1
 
         private static readonly Text.Encoding s_utf8Encoding = new UTF8Encoding(false, true);
         private static readonly Text.Encoding s_bmpEncoding = new BMPEncoding();
+        private static readonly Text.Encoding s_ia5Encoding = new IA5Encoding();
 
         private ReadOnlySpan<byte> _data;
         private readonly AsnEncodingRules _ruleSet;
@@ -1779,6 +1780,52 @@ namespace System.Security.Cryptography.Asn1
         }
 
         /// <summary>
+        /// Gets the source data for an IA5String under a primitive encoding.
+        /// </summary>
+        /// <param name="contents">The content bytes for the IA5String payload.</param>
+        /// <returns>
+        ///   <c>true</c> if the octet string uses a primitive encoding, <c>false</c> otherwise.
+        /// </returns>
+        /// <exception cref="CryptographicException">
+        ///  <ul>
+        ///   <li>No data remains</li>
+        ///   <li>The tag is invalid for an IA5String value</li>
+        ///   <li>The length is invalid under the chosen encoding rules</li>
+        ///   <li>A CER encoding was chosen and the primitive content length exceeds the maximum allowed</li>
+        /// </ul>
+        /// </exception>
+        public bool TryGetIA5StringBytes(out ReadOnlySpan<byte> contents)
+        {
+            return TryGetOctetStringBytes(UniversalTagNumber.IA5String, out contents);
+        }
+
+        public bool TryCopyIA5StringBytes(Span<byte> destination, out int bytesWritten)
+        {
+            bool copied = TryCopyCharacterStringBytes(
+                UniversalTagNumber.IA5String,
+                destination,
+                true,
+                out int bytesRead,
+                out bytesWritten);
+
+            if (copied)
+            {
+                _data = _data.Slice(bytesRead);
+            }
+
+            return copied;
+        }
+
+        public bool TryCopyIA5String(Span<char> destination, out int charsWritten)
+        {
+            return TryCopyCharacterString(
+                UniversalTagNumber.IA5String,
+                s_ia5Encoding,
+                destination,
+                out charsWritten);
+        }
+
+        /// <summary>
         /// Gets the source data for a BMPString under a primitive encoding.
         /// </summary>
         /// <param name="contents">The content bytes for the BMPString payload.</param>
@@ -1946,6 +1993,73 @@ namespace System.Security.Cryptography.Asn1
         }
     }
 
+    internal class IA5Encoding : SpanBasedEncoding
+    {
+        public override int GetMaxByteCount(int charCount)
+        {
+            return charCount;
+        }
+
+        public override int GetMaxCharCount(int byteCount)
+        {
+            return byteCount;
+        }
+
+        protected override int GetBytes(ReadOnlySpan<char> chars, Span<byte> bytes, bool write)
+        {
+            if (chars.IsEmpty)
+                return 0;
+
+            for (int i = 0; i < chars.Length; i++)
+            {
+                char c = chars[i];
+
+                if (c > 0x7F)
+                {
+                    EncoderFallback.CreateFallbackBuffer().Fallback(c, i);
+
+                    Debug.Fail("Fallback should have thrown");
+                    throw new CryptographicException();
+                }
+
+                if (write)
+                {
+                    bytes[i] = (byte)c;
+                }
+            }
+
+            return chars.Length;
+        }
+
+        protected override int GetChars(ReadOnlySpan<byte> bytes, Span<char> chars, bool write)
+        {
+            if (bytes.IsEmpty)
+                return 0;
+
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                byte b = bytes[i];
+
+                if (b >= 0x7F)
+                {
+                    DecoderFallback.CreateFallbackBuffer().Fallback(
+                        new[] { b }, 
+                        i);
+
+                    Debug.Fail("Fallback should have thrown");
+                    throw new CryptographicException();
+                }
+
+                if (write)
+                {
+                    chars[i] = (char)b;
+                }
+            }
+
+            return bytes.Length;
+        }
+    }
+
     /// <summary>
     /// Big-Endian UCS-2 encoding (the same as UTF-16BE, but disallowing surrogate pairs to leave plane 0)
     /// </summary>
@@ -1965,6 +2079,9 @@ namespace System.Security.Cryptography.Asn1
                 if (char.IsSurrogate(c))
                 {
                     EncoderFallback.CreateFallbackBuffer().Fallback(c, i);
+
+                    Debug.Fail("Fallback should have thrown");
+                    throw new CryptographicException();
                 }
 
                 ushort val16 = c;
