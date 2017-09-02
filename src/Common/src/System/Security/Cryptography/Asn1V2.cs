@@ -420,9 +420,10 @@ namespace System.Security.Cryptography.Asn1
 
         private static ReadOnlySpan<byte> SeekEndOfContents(
             ReadOnlySpan<byte> source,
-            AsnEncodingRules ruleSet)
+            AsnEncodingRules ruleSet,
+            int initialSliceOffset = 0)
         {
-            ReadOnlySpan<byte> cur = source;
+            ReadOnlySpan<byte> cur = source.Slice(initialSliceOffset);
             int totalLen = 0;
 
             while (!cur.IsEmpty)
@@ -459,6 +460,18 @@ namespace System.Security.Cryptography.Asn1
             throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
         }
 
+        public ReadOnlySpan<byte> PeekEncodedValue()
+        {
+            (Asn1Tag tag, int? length) = ReadTagAndLength(out int bytesRead);
+
+            if (length == null)
+            {
+                return SeekEndOfContents(_data, _ruleSet, bytesRead);
+            }
+
+            return Slice(_data, 0, bytesRead + length.Value);
+        }
+
         public ReadOnlySpan<byte> PeekContentSpan()
         {
             (Asn1Tag tag, int? length) = ReadTagAndLength(out int bytesRead);
@@ -473,17 +486,14 @@ namespace System.Security.Cryptography.Asn1
 
         public void SkipValue()
         {
-            (Asn1Tag tag, int? length) = ReadTagAndLength(out int bytesRead);
+            GetEncodedValue();
+        }
 
-            if (length == null)
-            {
-                ReadOnlySpan<byte> nestedContents = PeekContentSpan();
-                _data = _data.Slice(bytesRead + nestedContents.Length + EndOfContentsEncodedLength);
-            }
-            else
-            {
-                _data = _data.Slice(bytesRead + length.Value);
-            }
+        public ReadOnlySpan<byte> GetEncodedValue()
+        {
+            ReadOnlySpan<byte> encodedValue = PeekEncodedValue();
+            _data = _data.Slice(encodedValue.Length);
+            return encodedValue;
         }
 
         private static bool ReadBooleanValue(
@@ -1771,8 +1781,110 @@ namespace System.Security.Cryptography.Asn1
             }
             else
             {
+                contents = SeekEndOfContents(_data.Slice(headerLength), _ruleSet, 0);
+                suffix = EndOfContentsEncodedLength;
+            }
+
+            _data = _data.Slice(headerLength + contents.Length + suffix);
+            return new AsnReader(contents, _ruleSet);
+        }
+
+        /// <summary>
+        /// Builds a new AsnReader over the bytes bounded by the current position which
+        /// corresponds to an ASN.1 SET OF value, validating the CER or DER sort ordering
+        /// unless suppressed.
+        /// </summary>
+        /// <param name="skipSortOrderValidation">
+        ///   <c>false</c> to validate the sort ordering of the contents, <c>true</c> to
+        ///   allow reading the data without verifying it was properly sorted by the writer.
+        /// </param>
+        /// <returns>An AsnReader over the current position, bounded by the contained length value.</returns>
+        public AsnReader ReadSetOf(bool skipSortOrderValidation = false)
+        {
+            (Asn1Tag tag, int? length) = ReadTagAndLength(out int headerLength);
+            CheckTagIfUniversal(tag, UniversalTagNumber.SetOf);
+
+            // T-REC-X.690-201508 sec 8.12.1
+            if (!tag.IsConstructed)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            ReadOnlySpan<byte> contents;
+            int suffix = 0;
+
+            if (length != null)
+            {
+                contents = Slice(_data, headerLength, length.Value);
+            }
+            else
+            {
                 contents = SeekEndOfContents(_data.Slice(headerLength), _ruleSet);
                 suffix = EndOfContentsEncodedLength;
+            }
+
+            if (!skipSortOrderValidation)
+            {
+                // T-REC-X.690-201508 sec 11.6
+                // BER data is not required to be sorted.
+                if (_ruleSet == AsnEncodingRules.DER ||
+                    _ruleSet == AsnEncodingRules.CER)
+                {
+                    AsnReader reader = new AsnReader(contents, _ruleSet);
+
+                    ReadOnlySpan<byte> current = ReadOnlySpan<byte>.Empty;
+
+                    while (reader.HasData)
+                    {
+                        ReadOnlySpan<byte> previous = current;
+                        current = reader.GetEncodedValue();
+
+                        int end = Math.Min(previous.Length, current.Length);
+                        int i;
+
+                        for (i = 0; i < end; i++)
+                        {
+                            byte currentVal = current[i];
+                            byte previousVal = previous[i];
+
+                            if (currentVal > previousVal)
+                            {
+                                break;
+                            }
+
+                            if (currentVal < previousVal)
+                            {
+                                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                            }
+                        }
+
+                        if (i == end)
+                        {
+                            // If everything was a tie then we treat the shorter thing as if it were
+                            // followed by an infinite number of 0x00s.  So "previous" better not have
+                            // more data, or if it does, none of it can be non-zero.
+                            //
+                            // Note: It doesn't seem possible for the tiebreaker to matter.
+                            // In DER everything is length prepended, so the content is only compared
+                            // if the tag and length were the same.
+                            //
+                            // In CER you could have an indefinite octet string, but it will contain
+                            // primitive octet strings and EoC. So at some point an EoC is compared
+                            // against a tag, and the sort order is determined.
+                            //
+                            // But since the spec calls it out, maybe there's something degenerate, so
+                            // we'll guard against it anyways.
+
+                            for (; i < previous.Length; i++)
+                            {
+                                if (previous[i] != 0)
+                                {
+                                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             _data = _data.Slice(headerLength + contents.Length + suffix);

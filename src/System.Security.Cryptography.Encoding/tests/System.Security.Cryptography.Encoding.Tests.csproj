@@ -18,6 +18,7 @@
     <Compile Include="Asn1\Reader\ReadEnumerated.cs" />
     <Compile Include="Asn1\Reader\ReadIA5String.cs" />
     <Compile Include="Asn1\Reader\ReadSequence.cs" />
+    <Compile Include="Asn1\Reader\ReadSetOf.cs" />
     <Compile Include="Asn1\Reader\ReadUTF8String.cs" />
     <Compile Include="Asn1\Reader\ReadInteger.cs" />
     <Compile Include="Asn1\Reader\ReadLength.cs" />
