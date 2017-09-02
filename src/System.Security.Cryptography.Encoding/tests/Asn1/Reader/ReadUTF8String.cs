@@ -128,7 +128,7 @@ namespace System.Security.Cryptography.Tests.Asn1
             byte[] inputData = inputHex.HexToByteArray();
             char[] output = new char[expectedValue.Length];
 
-            AsnReader reader = new AsnReader(inputData);
+            AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
             bool copied;
             int charsWritten;
 
@@ -136,9 +136,7 @@ namespace System.Security.Cryptography.Tests.Asn1
             {
                 output[0] = 'a';
 
-                copied = reader.TryCopyUTF8String(
-                    (AsnEncodingRules)ruleSet,
-                    output.AsSpan().Slice(0, expectedValue.Length - 1),
+                copied = reader.TryCopyUTF8String(output.AsSpan().Slice(0, expectedValue.Length - 1),
                     out charsWritten);
 
                 Assert.False(copied, "reader.TryCopyUTF8String - too short");
@@ -146,9 +144,7 @@ namespace System.Security.Cryptography.Tests.Asn1
                 Assert.Equal('a', output[0]);
             }
 
-            copied = reader.TryCopyUTF8String(
-                (AsnEncodingRules)ruleSet,
-                output,
+            copied = reader.TryCopyUTF8String(output,
                 out charsWritten);
 
             Assert.True(copied, "reader.TryCopyUTF8String");
@@ -168,7 +164,7 @@ namespace System.Security.Cryptography.Tests.Asn1
             string expectedHex = Text.Encoding.UTF8.GetBytes(expectedString).ByteArrayToHex();
             byte[] output = new byte[expectedHex.Length / 2];
 
-            AsnReader reader = new AsnReader(inputData);
+            AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
             bool copied;
             int bytesWritten;
 
@@ -176,9 +172,7 @@ namespace System.Security.Cryptography.Tests.Asn1
             {
                 output[0] = 32;
 
-                copied = reader.TryCopyUTF8StringBytes(
-                    (AsnEncodingRules)ruleSet,
-                    output.AsSpan().Slice(0, output.Length - 1),
+                copied = reader.TryCopyUTF8StringBytes(output.AsSpan().Slice(0, output.Length - 1),
                     out bytesWritten);
 
                 Assert.False(copied, "reader.TryCopyUTF8StringBytes - too short");
@@ -186,9 +180,7 @@ namespace System.Security.Cryptography.Tests.Asn1
                 Assert.Equal(32, output[0]);
             }
 
-            copied = reader.TryCopyUTF8StringBytes(
-                (AsnEncodingRules)ruleSet,
-                output,
+            copied = reader.TryCopyUTF8StringBytes(output,
                 out bytesWritten);
 
             Assert.True(copied, "reader.TryCopyUTF8StringBytes");
@@ -210,11 +202,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             bool expectSuccess)
         {
             byte[] inputData = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(inputData);
+            AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
 
-            bool got = reader.TryGetUTF8StringBytes(
-                (AsnEncodingRules)ruleSet,
-                out ReadOnlySpan<byte> contents);
+            bool got = reader.TryGetUTF8StringBytes(out ReadOnlySpan<byte> contents);
 
             if (expectSuccess)
             {
@@ -260,11 +250,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(inputData);
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
 
-                    reader.TryGetUTF8StringBytes(
-                        (AsnEncodingRules)ruleSet,
-                        out ReadOnlySpan<byte> contents);
+                    reader.TryGetUTF8StringBytes(out ReadOnlySpan<byte> contents);
                 });
         }
 
@@ -325,11 +313,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(inputData);
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
 
-                    reader.TryCopyUTF8StringBytes(
-                        (AsnEncodingRules)ruleSet,
-                        outputData,
+                    reader.TryCopyUTF8StringBytes(outputData,
                         out bytesWritten);
                 });
 
@@ -347,11 +333,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(inputData);
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
 
-                    reader.TryCopyUTF8String(
-                        (AsnEncodingRules)ruleSet,
-                        outputData,
+                    reader.TryCopyUTF8String(outputData,
                         out bytesWritten);
                 });
 
@@ -502,12 +486,9 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             byte[] output = new byte[1000];
 
-            const AsnEncodingRules ruleSet = AsnEncodingRules.CER;
-            AsnReader reader = new AsnReader(input);
+            AsnReader reader = new AsnReader(input, AsnEncodingRules.CER);
 
-            bool success = reader.TryCopyUTF8StringBytes(
-                ruleSet,
-                output,
+            bool success = reader.TryCopyUTF8StringBytes(output,
                 out int bytesWritten);
 
             Assert.True(success, "reader.TryCopyUTF8StringBytes");
@@ -571,12 +552,9 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             byte[] output = new byte[1001];
 
-            const AsnEncodingRules ruleSet = AsnEncodingRules.CER;
-            AsnReader reader = new AsnReader(input);
+            AsnReader reader = new AsnReader(input, AsnEncodingRules.CER);
 
-            bool success = reader.TryCopyUTF8StringBytes(
-                ruleSet,
-                output,
+            bool success = reader.TryCopyUTF8StringBytes(output,
                 out int bytesWritten);
 
             Assert.True(success, "reader.TryCopyUTF8StringBytes");

@@ -234,12 +234,16 @@ namespace System.Security.Cryptography.Asn1
         private static readonly Text.Encoding s_bmpEncoding = new BMPEncoding();
 
         private ReadOnlySpan<byte> _data;
+        private readonly AsnEncodingRules _ruleSet;
 
         public bool HasData => !_data.IsEmpty;
 
-        public AsnReader(ReadOnlySpan<byte> data)
+        public AsnReader(ReadOnlySpan<byte> data, AsnEncodingRules ruleSet)
         {
+            CheckEncodingRules(ruleSet);
+
             _data = data;
+            _ruleSet = ruleSet;
         }
 
         public static bool TryPeekTag(ReadOnlySpan<byte> source, out Asn1Tag tag, out int bytesRead)
@@ -376,17 +380,17 @@ namespace System.Security.Cryptography.Asn1
             return true;
         }
 
-        internal (Asn1Tag, int?) ReadTagAndLength(AsnEncodingRules ruleSet, out int bytesRead)
+        internal (Asn1Tag, int?) ReadTagAndLength(out int bytesRead)
         {
             if (TryPeekTag(_data, out Asn1Tag tag, out int tagBytesRead) &&
-                TryReadLength(_data.Slice(tagBytesRead), ruleSet, out int? length, out int lengthBytesRead))
+                TryReadLength(_data.Slice(tagBytesRead), _ruleSet, out int? length, out int lengthBytesRead))
             {
                 int allBytesRead = tagBytesRead + lengthBytesRead;
 
                 if (tag.IsConstructed)
                 {
                     // T-REC-X.690-201508 sec 9.1 (CER: Length forms) says constructed is always indefinite.
-                    if (ruleSet == AsnEncodingRules.CER && length != null)
+                    if (_ruleSet == AsnEncodingRules.CER && length != null)
                     {
                         throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
                     }
@@ -422,9 +426,9 @@ namespace System.Security.Cryptography.Asn1
 
             while (!cur.IsEmpty)
             {
-                AsnReader reader = new AsnReader(cur);
-                (Asn1Tag tag, int? length) = reader.ReadTagAndLength(ruleSet, out int bytesRead);
-                ReadOnlySpan<byte> nestedContents = reader.GetContentSpan(ruleSet);
+                AsnReader reader = new AsnReader(cur, ruleSet);
+                (Asn1Tag tag, int? length) = reader.ReadTagAndLength(out int bytesRead);
+                ReadOnlySpan<byte> nestedContents = reader.PeekContentSpan();
 
                 int localLen = bytesRead + nestedContents.Length;
 
@@ -454,25 +458,25 @@ namespace System.Security.Cryptography.Asn1
             throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
         }
 
-        public ReadOnlySpan<byte> GetContentSpan(AsnEncodingRules ruleSet)
+        public ReadOnlySpan<byte> PeekContentSpan()
         {
-            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out int bytesRead);
+            (Asn1Tag tag, int? length) = ReadTagAndLength(out int bytesRead);
 
             if (length == null)
             {
-                return SeekEndOfContents(_data.Slice(bytesRead), ruleSet);
+                return SeekEndOfContents(_data.Slice(bytesRead), _ruleSet);
             }
 
             return Slice(_data, bytesRead, length.Value);
         }
 
-        public void SkipValue(AsnEncodingRules ruleSet)
+        public void SkipValue()
         {
-            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out int bytesRead);
+            (Asn1Tag tag, int? length) = ReadTagAndLength(out int bytesRead);
 
             if (length == null)
             {
-                ReadOnlySpan<byte> nestedContents = GetContentSpan(ruleSet);
+                ReadOnlySpan<byte> nestedContents = PeekContentSpan();
                 _data = _data.Slice(bytesRead + nestedContents.Length + EndOfContentsEncodedLength);
             }
             else
@@ -481,7 +485,7 @@ namespace System.Security.Cryptography.Asn1
             }
         }
 
-        public static bool ReadBooleanValue(
+        private static bool ReadBooleanValue(
             ReadOnlySpan<byte> source,
             AsnEncodingRules ruleSet)
         {
@@ -508,9 +512,9 @@ namespace System.Security.Cryptography.Asn1
             return true;
         }
         
-        public bool ReadBoolean(AsnEncodingRules ruleSet)
+        public bool ReadBoolean()
         {
-            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out int headerLength);
+            (Asn1Tag tag, int? length) = ReadTagAndLength(out int headerLength);
             // TODO/Review: Should non-Universal tags work, or require an expected tag parameter?
             CheckTagIfUniversal(tag, UniversalTagNumber.Boolean);
 
@@ -522,18 +526,17 @@ namespace System.Security.Cryptography.Asn1
 
             bool value = ReadBooleanValue(
                 Slice(_data, headerLength, length.Value),
-                ruleSet);
+                _ruleSet);
 
             _data = _data.Slice(headerLength + length.Value);
             return value;
         }
 
         private ReadOnlySpan<byte> GetIntegerContents(
-            AsnEncodingRules ruleSet,
             UniversalTagNumber tagNumber,
             out int headerLength)
         {
-            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out headerLength);
+            (Asn1Tag tag, int? length) = ReadTagAndLength(out headerLength);
             CheckTagIfUniversal(tag, tagNumber);
 
             // T-REC-X.690-201508 sec 8.3.1
@@ -562,24 +565,23 @@ namespace System.Security.Cryptography.Asn1
             return contents;
         }
 
-        public ReadOnlySpan<byte> GetIntegerBytes(AsnEncodingRules ruleSet)
+        public ReadOnlySpan<byte> GetIntegerBytes()
         {
             ReadOnlySpan<byte> contents =
-                GetIntegerContents(ruleSet, UniversalTagNumber.Integer, out int headerLength);
+                GetIntegerContents(UniversalTagNumber.Integer, out int headerLength);
 
             _data = _data.Slice(headerLength + contents.Length);
             return contents;
         }
 
         private bool TryReadSignedInteger(
-            AsnEncodingRules ruleSet,
             int sizeLimit,
             UniversalTagNumber tagNumber,
             out long value)
         {
             Debug.Assert(sizeLimit <= sizeof(long));
 
-            ReadOnlySpan<byte> contents = GetIntegerContents(ruleSet, tagNumber, out int headerLength);
+            ReadOnlySpan<byte> contents = GetIntegerContents(tagNumber, out int headerLength);
 
             if (contents.Length > sizeLimit)
             {
@@ -602,14 +604,13 @@ namespace System.Security.Cryptography.Asn1
         }
 
         private bool TryReadUnsignedInteger(
-            AsnEncodingRules ruleSet,
             int sizeLimit,
             UniversalTagNumber tagNumber,
             out ulong value)
         {
             Debug.Assert(sizeLimit <= sizeof(ulong));
 
-            ReadOnlySpan<byte> contents = GetIntegerContents(ruleSet, tagNumber, out int headerLength);
+            ReadOnlySpan<byte> contents = GetIntegerContents(tagNumber, out int headerLength);
             int contentLength = contents.Length;
 
             bool isNegative = contents[0] >= 0x80;
@@ -646,9 +647,9 @@ namespace System.Security.Cryptography.Asn1
             return true;
         }
 
-        public bool TryReadInt32(AsnEncodingRules ruleSet, out int value)
+        public bool TryReadInt32(out int value)
         {
-            if (TryReadSignedInteger(ruleSet, sizeof(int), UniversalTagNumber.Integer, out long longValue))
+            if (TryReadSignedInteger(sizeof(int), UniversalTagNumber.Integer, out long longValue))
             {
                 value = (int)longValue;
                 return true;
@@ -658,9 +659,9 @@ namespace System.Security.Cryptography.Asn1
             return false;
         }
 
-        public bool TryReadUInt32(AsnEncodingRules ruleSet, out uint value)
+        public bool TryReadUInt32(out uint value)
         {
-            if (TryReadUnsignedInteger(ruleSet, sizeof(uint), UniversalTagNumber.Integer, out ulong ulongValue))
+            if (TryReadUnsignedInteger(sizeof(uint), UniversalTagNumber.Integer, out ulong ulongValue))
             {
                 value = (uint)ulongValue;
                 return true;
@@ -670,14 +671,14 @@ namespace System.Security.Cryptography.Asn1
             return false;
         }
 
-        public bool TryReadInt64(AsnEncodingRules ruleSet, out long value)
+        public bool TryReadInt64(out long value)
         {
-            return TryReadSignedInteger(ruleSet, sizeof(long), UniversalTagNumber.Integer, out value);
+            return TryReadSignedInteger(sizeof(long), UniversalTagNumber.Integer, out value);
         }
 
-        public bool TryReadUInt64(AsnEncodingRules ruleSet, out ulong value)
+        public bool TryReadUInt64(out ulong value)
         {
-            return TryReadUnsignedInteger(ruleSet, sizeof(ulong), UniversalTagNumber.Integer, out value);
+            return TryReadUnsignedInteger(sizeof(ulong), UniversalTagNumber.Integer, out value);
         }
 
         private static bool TryCopyPrimitiveBitStringValue(
@@ -799,8 +800,8 @@ namespace System.Security.Cryptography.Asn1
 
             while (!cur.IsEmpty)
             {
-                AsnReader reader = new AsnReader(cur);
-                (Asn1Tag tag, int? length) = reader.ReadTagAndLength(ruleSet, out int headerLength);
+                AsnReader reader = new AsnReader(cur, ruleSet);
+                (Asn1Tag tag, int? length) = reader.ReadTagAndLength(out int headerLength);
 
                 if (tag.TagClass != TagClass.Universal)
                 {
@@ -967,17 +968,16 @@ namespace System.Security.Cryptography.Asn1
         }
 
         private bool TryGetBitStringBytes(
-            AsnEncodingRules ruleSet,
             out int unusedBitCount,
             out ReadOnlySpan<byte> contents,
             out int headerLength)
         {
-            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out headerLength);
+            (Asn1Tag tag, int? length) = ReadTagAndLength(out headerLength);
             CheckTagIfUniversal(tag, UniversalTagNumber.BitString);
 
             if (tag.IsConstructed)
             {
-                if (ruleSet == AsnEncodingRules.DER)
+                if (_ruleSet == AsnEncodingRules.DER)
                 {
                     throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
                 }
@@ -995,7 +995,7 @@ namespace System.Security.Cryptography.Asn1
                 Span<byte>.Empty,
                 false,
                 true,
-                ruleSet,
+                _ruleSet,
                 out unusedBitCount,
                 out int bytesWritten))
             {
@@ -1010,7 +1010,6 @@ namespace System.Security.Cryptography.Asn1
         /// <summary>
         /// Gets the source data for a BitString under a primitive encoding.
         /// </summary>
-        /// <param name="ruleSet">The encoding rules for the reader.</param>
         /// <param name="unusedBitCount">The encoded value for the number of unused bits.</param>
         /// <param name="contents">The content bytes for the BitString payload.</param>
         /// <returns>
@@ -1028,11 +1027,10 @@ namespace System.Security.Cryptography.Asn1
         /// </ul>
         /// </exception>
         public bool TryGetBitStringBytes(
-            AsnEncodingRules ruleSet,
             out int unusedBitCount,
             out ReadOnlySpan<byte> contents)
         {
-            bool didGet = TryGetBitStringBytes(ruleSet, out unusedBitCount, out contents, out int headerLength);
+            bool didGet = TryGetBitStringBytes(out unusedBitCount, out contents, out int headerLength);
 
             if (didGet)
             {
@@ -1044,13 +1042,11 @@ namespace System.Security.Cryptography.Asn1
         }
 
         public bool TryCopyBitStringBytes(
-            AsnEncodingRules ruleSet,
             Span<byte> destination,
             out int unusedBitCount,
             out int bytesWritten)
         {
             if (TryGetBitStringBytes(
-                ruleSet,
                 out unusedBitCount,
                 out ReadOnlySpan<byte> contents,
                 out int headerLength))
@@ -1070,18 +1066,18 @@ namespace System.Security.Cryptography.Asn1
             }
 
             // Either constructed, or a BER payload with "unused" bits not set to 0.
-            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out headerLength);
+            (Asn1Tag tag, int? length) = ReadTagAndLength(out headerLength);
 
             if (!tag.IsConstructed)
             {
-                Debug.Assert(ruleSet == AsnEncodingRules.BER);
+                Debug.Assert(_ruleSet == AsnEncodingRules.BER);
 
                 return TryCopyPrimitiveBitStringValue(
                     Slice(_data, headerLength, length),
                     destination,
                     true,
                     false,
-                    ruleSet,
+                    _ruleSet,
                     out unusedBitCount,
                     out bytesWritten);
             }
@@ -1089,7 +1085,7 @@ namespace System.Security.Cryptography.Asn1
             bool read = TryCopyConstructedBitStringValue(
                 Slice(_data, headerLength, length),
                 destination,
-                ruleSet,
+                _ruleSet,
                 length == null,
                 out unusedBitCount,
                 out int bytesRead,
@@ -1103,17 +1099,17 @@ namespace System.Security.Cryptography.Asn1
             return read;
         }
 
-        public ReadOnlySpan<byte> GetEnumeratedBytes(AsnEncodingRules ruleSet)
+        public ReadOnlySpan<byte> GetEnumeratedBytes()
         {
             // T-REC-X.690-201508 sec 8.4 says the contents are the same as for integers.
             ReadOnlySpan<byte> contents =
-                GetIntegerContents(ruleSet, UniversalTagNumber.Enumerated, out int headerLength);
+                GetIntegerContents(UniversalTagNumber.Enumerated, out int headerLength);
 
             _data = _data.Slice(headerLength + contents.Length);
             return contents;
         }
 
-        public TEnum GetEnumeratedValue<TEnum>(AsnEncodingRules ruleSet) where TEnum : struct
+        public TEnum GetEnumeratedValue<TEnum>() where TEnum : struct
         {
             Type tEnum = typeof(TEnum);
             const UniversalTagNumber tagNumber = UniversalTagNumber.Enumerated;
@@ -1137,7 +1133,7 @@ namespace System.Security.Cryptography.Asn1
                 backingType == typeof(short) ||
                 backingType == typeof(sbyte))
             {
-                if (!TryReadSignedInteger(ruleSet, sizeLimit, tagNumber, out long value))
+                if (!TryReadSignedInteger(sizeLimit, tagNumber, out long value))
                 {
                     throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
                 }
@@ -1150,7 +1146,7 @@ namespace System.Security.Cryptography.Asn1
                 backingType == typeof(ushort) ||
                 backingType == typeof(byte))
             {
-                if (!TryReadUnsignedInteger(ruleSet, sizeLimit, tagNumber, out ulong value))
+                if (!TryReadUnsignedInteger(sizeLimit, tagNumber, out ulong value))
                 {
                     throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
                 }
@@ -1163,17 +1159,16 @@ namespace System.Security.Cryptography.Asn1
         }
 
         private bool TryGetOctetStringBytes(
-            AsnEncodingRules ruleSet,
             out ReadOnlySpan<byte> contents,
             out int headerLength,
             UniversalTagNumber universalTagNumber = UniversalTagNumber.OctetString)
         {
-            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out headerLength);
+            (Asn1Tag tag, int? length) = ReadTagAndLength(out headerLength);
             CheckTagIfUniversal(tag, universalTagNumber);
 
             if (tag.IsConstructed)
             {
-                if (ruleSet == AsnEncodingRules.DER)
+                if (_ruleSet == AsnEncodingRules.DER)
                 {
                     throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
                 }
@@ -1185,7 +1180,7 @@ namespace System.Security.Cryptography.Asn1
             Debug.Assert(length.HasValue);
             ReadOnlySpan<byte> encodedValue = Slice(_data, headerLength, length.Value);
 
-            if (ruleSet == AsnEncodingRules.CER && encodedValue.Length > MaxCERSegmentSize)
+            if (_ruleSet == AsnEncodingRules.CER && encodedValue.Length > MaxCERSegmentSize)
             {
                 throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
             }
@@ -1195,11 +1190,10 @@ namespace System.Security.Cryptography.Asn1
         }
 
         private bool TryGetOctetStringBytes(
-            AsnEncodingRules ruleSet,
             UniversalTagNumber universalTagNumber,
             out ReadOnlySpan<byte> contents)
         {
-            if (TryGetOctetStringBytes(ruleSet, out contents, out int headerLength, universalTagNumber))
+            if (TryGetOctetStringBytes(out contents, out int headerLength, universalTagNumber))
             {
                 _data = _data.Slice(headerLength + contents.Length);
                 return true;
@@ -1211,7 +1205,6 @@ namespace System.Security.Cryptography.Asn1
         /// <summary>
         /// Gets the source data for an OctetString under a primitive encoding.
         /// </summary>
-        /// <param name="ruleSet">The encoding rules for the reader.</param>
         /// <param name="contents">The content bytes for the OctetString payload.</param>
         /// <returns>
         ///   <c>true</c> if the octet string uses a primitive encoding, <c>false</c> otherwise.
@@ -1224,11 +1217,9 @@ namespace System.Security.Cryptography.Asn1
         ///   <li>A CER encoding was chosen and the primitive content length exceeds the maximum allowed</li>
         /// </ul>
         /// </exception>
-        public bool TryGetOctetStringBytes(
-            AsnEncodingRules ruleSet,
-            out ReadOnlySpan<byte> contents)
+        public bool TryGetOctetStringBytes(out ReadOnlySpan<byte> contents)
         {
-            return TryGetOctetStringBytes(ruleSet, UniversalTagNumber.OctetString, out contents);
+            return TryGetOctetStringBytes(UniversalTagNumber.OctetString, out contents);
         }
 
         private static int CopyConstructedOctetString(
@@ -1257,8 +1248,8 @@ namespace System.Security.Cryptography.Asn1
 
             while (!cur.IsEmpty)
             {
-                AsnReader reader = new AsnReader(cur);
-                (Asn1Tag tag, int? length) = reader.ReadTagAndLength(ruleSet, out int headerLength);
+                AsnReader reader = new AsnReader(cur, ruleSet);
+                (Asn1Tag tag, int? length) = reader.ReadTagAndLength(out int headerLength);
                 
                 if (tag.TagClass != TagClass.Universal)
                 {
@@ -1414,12 +1405,10 @@ namespace System.Security.Cryptography.Asn1
         }
 
         public bool TryCopyOctetStringBytes(
-            AsnEncodingRules ruleSet,
             Span<byte> destination,
             out int bytesWritten)
         {
             if (TryGetOctetStringBytes(
-                ruleSet,
                 out ReadOnlySpan<byte> contents,
                 out int headerLength))
             {
@@ -1435,13 +1424,13 @@ namespace System.Security.Cryptography.Asn1
                 return true;
             }
 
-            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out headerLength);
+            (Asn1Tag tag, int? length) = ReadTagAndLength(out headerLength);
 
             bool copied = TryCopyConstructedOctetStringValue(
                 Slice(_data, headerLength, length),
                 destination,
                 true,
-                ruleSet,
+                _ruleSet,
                 length == null,
                 out int bytesRead,
                 out bytesWritten);
@@ -1454,9 +1443,9 @@ namespace System.Security.Cryptography.Asn1
             return copied;
         }
 
-        public void ReadNull(AsnEncodingRules ruleSet)
+        public void ReadNull()
         {
-            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out int headerLength);
+            (Asn1Tag tag, int? length) = ReadTagAndLength(out int headerLength);
             CheckTagIfUniversal(tag, UniversalTagNumber.Null);
 
             // T-REC-X.690-201508 sec 8.8.1
@@ -1501,9 +1490,9 @@ namespace System.Security.Cryptography.Asn1
             throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
         }
 
-        private string ReadObjectIdentifierAsString(AsnEncodingRules ruleSet, out int totalBytesRead)
+        private string ReadObjectIdentifierAsString(out int totalBytesRead)
         {
-            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out int headerLength);
+            (Asn1Tag tag, int? length) = ReadTagAndLength(out int headerLength);
             CheckTagIfUniversal(tag, UniversalTagNumber.ObjectIdentifier);
 
             // T-REC-X.690-201508 sec 8.19.1
@@ -1560,18 +1549,18 @@ namespace System.Security.Cryptography.Asn1
             return builder.ToString();
         }
 
-        public string ReadObjectIdentifierAsString(AsnEncodingRules ruleSet)
+        public string ReadObjectIdentifierAsString()
         {
-            string oidValue = ReadObjectIdentifierAsString(ruleSet, out int bytesRead);
+            string oidValue = ReadObjectIdentifierAsString(out int bytesRead);
 
             _data = _data.Slice(bytesRead);
 
             return oidValue;
         }
 
-        public Oid ReadObjectIdentifier(AsnEncodingRules ruleSet, bool skipFriendlyName=false)
+        public Oid ReadObjectIdentifier(bool skipFriendlyName=false)
         {
-            string oidValue = ReadObjectIdentifierAsString(ruleSet, out int bytesRead);
+            string oidValue = ReadObjectIdentifierAsString(out int bytesRead);
             Oid oid = skipFriendlyName ? new Oid(oidValue, oidValue) : new Oid(oidValue);
 
             _data = _data.Slice(bytesRead);
@@ -1580,7 +1569,6 @@ namespace System.Security.Cryptography.Asn1
         }
 
         private bool TryCopyCharacterStringBytes(
-            AsnEncodingRules ruleSet,
             UniversalTagNumber universalTagNumber,
             Span<byte> destination,
             bool write,
@@ -1588,7 +1576,6 @@ namespace System.Security.Cryptography.Asn1
             out int bytesWritten)
         {
             if (TryGetOctetStringBytes(
-                ruleSet,
                 out ReadOnlySpan<byte> contents,
                 out int headerLength,
                 universalTagNumber))
@@ -1611,13 +1598,13 @@ namespace System.Security.Cryptography.Asn1
                 return true;
             }
 
-            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out headerLength);
+            (Asn1Tag tag, int? length) = ReadTagAndLength(out headerLength);
 
             bool copied = TryCopyConstructedOctetStringValue(
                 Slice(_data, headerLength, length),
                 destination,
                 write,
-                ruleSet,
+                _ruleSet,
                 length == null,
                 out int contentBytesRead,
                 out bytesWritten);
@@ -1658,14 +1645,12 @@ namespace System.Security.Cryptography.Asn1
         }
 
         private bool TryCopyCharacterString(
-            AsnEncodingRules ruleSet,
             UniversalTagNumber universalTagNumber,
             Text.Encoding encoding,
             Span<char> destination,
             out int charsWritten)
         {
             if (TryGetOctetStringBytes(
-                ruleSet,
                 out ReadOnlySpan<byte> contents,
                 out int headerLength,
                 universalTagNumber))
@@ -1681,7 +1666,6 @@ namespace System.Security.Cryptography.Asn1
             }
 
             bool parsed = TryCopyCharacterStringBytes(
-                ruleSet,
                 universalTagNumber,
                 Span<byte>.Empty,
                 false,
@@ -1694,7 +1678,7 @@ namespace System.Security.Cryptography.Asn1
 
             try
             {
-                if (!TryCopyCharacterStringBytes(ruleSet, universalTagNumber, rented, true, out bytesRead, out bytesWritten))
+                if (!TryCopyCharacterStringBytes(universalTagNumber, rented, true, out bytesRead, out bytesWritten))
                 {
                     Debug.Fail("TryCopyCharacterStringBytes failed with a precomputed size");
                     throw new CryptographicException();
@@ -1722,7 +1706,6 @@ namespace System.Security.Cryptography.Asn1
         /// <summary>
         /// Gets the source data for a UTF8String under a primitive encoding.
         /// </summary>
-        /// <param name="ruleSet">The encoding rules for the reader.</param>
         /// <param name="contents">The content bytes for the UTF8String payload.</param>
         /// <returns>
         ///   <c>true</c> if the octet string uses a primitive encoding, <c>false</c> otherwise.
@@ -1735,15 +1718,14 @@ namespace System.Security.Cryptography.Asn1
         ///   <li>A CER encoding was chosen and the primitive content length exceeds the maximum allowed</li>
         /// </ul>
         /// </exception>
-        public bool TryGetUTF8StringBytes(AsnEncodingRules ruleSet, out ReadOnlySpan<byte> contents)
+        public bool TryGetUTF8StringBytes(out ReadOnlySpan<byte> contents)
         {
-            return TryGetOctetStringBytes(ruleSet, UniversalTagNumber.UTF8String, out contents);
+            return TryGetOctetStringBytes(UniversalTagNumber.UTF8String, out contents);
         }
 
-        public bool TryCopyUTF8StringBytes(AsnEncodingRules ruleSet, Span<byte> destination, out int bytesWritten)
+        public bool TryCopyUTF8StringBytes(Span<byte> destination, out int bytesWritten)
         {
             bool copied = TryCopyCharacterStringBytes(
-                ruleSet,
                 UniversalTagNumber.UTF8String,
                 destination,
                 true,
@@ -1758,19 +1740,18 @@ namespace System.Security.Cryptography.Asn1
             return copied;
         }
 
-        public bool TryCopyUTF8String(AsnEncodingRules ruleSet, Span<char> destination, out int charsWritten)
+        public bool TryCopyUTF8String(Span<char> destination, out int charsWritten)
         {
             return TryCopyCharacterString(
-                ruleSet,
                 UniversalTagNumber.UTF8String,
                 s_utf8Encoding,
                 destination,
                 out charsWritten);
         }
 
-        public AsnReader ReadSequence(AsnEncodingRules ruleSet)
+        public AsnReader ReadSequence()
         {
-            (Asn1Tag tag, int? length) = ReadTagAndLength(ruleSet, out int headerLength);
+            (Asn1Tag tag, int? length) = ReadTagAndLength(out int headerLength);
             CheckTagIfUniversal(tag, UniversalTagNumber.Sequence);
 
             // T-REC-X.690-201508 sec 8.9.1
@@ -1789,18 +1770,17 @@ namespace System.Security.Cryptography.Asn1
             }
             else
             {
-                contents = SeekEndOfContents(_data.Slice(headerLength), ruleSet);
+                contents = SeekEndOfContents(_data.Slice(headerLength), _ruleSet);
                 suffix = EndOfContentsEncodedLength;
             }
 
             _data = _data.Slice(headerLength + contents.Length + suffix);
-            return new AsnReader(contents);
+            return new AsnReader(contents, _ruleSet);
         }
 
         /// <summary>
         /// Gets the source data for a BMPString under a primitive encoding.
         /// </summary>
-        /// <param name="ruleSet">The encoding rules for the reader.</param>
         /// <param name="contents">The content bytes for the BMPString payload.</param>
         /// <returns>
         ///   <c>true</c> if the octet string uses a primitive encoding, <c>false</c> otherwise.
@@ -1813,15 +1793,14 @@ namespace System.Security.Cryptography.Asn1
         ///   <li>A CER encoding was chosen and the primitive content length exceeds the maximum allowed</li>
         /// </ul>
         /// </exception>
-        public bool TryGetBMPStringBytes(AsnEncodingRules ruleSet, out ReadOnlySpan<byte> contents)
+        public bool TryGetBMPStringBytes(out ReadOnlySpan<byte> contents)
         {
-            return TryGetOctetStringBytes(ruleSet, UniversalTagNumber.BMPString, out contents);
+            return TryGetOctetStringBytes(UniversalTagNumber.BMPString, out contents);
         }
 
-        public bool TryCopyBMPStringBytes(AsnEncodingRules ruleSet, Span<byte> destination, out int bytesWritten)
+        public bool TryCopyBMPStringBytes(Span<byte> destination, out int bytesWritten)
         {
             bool copied = TryCopyCharacterStringBytes(
-                ruleSet,
                 UniversalTagNumber.BMPString,
                 destination,
                 true,
@@ -1836,10 +1815,9 @@ namespace System.Security.Cryptography.Asn1
             return copied;
         }
 
-        public bool TryCopyBMPString(AsnEncodingRules ruleSet, Span<char> destination, out int charsWritten)
+        public bool TryCopyBMPString(Span<char> destination, out int charsWritten)
         {
             return TryCopyCharacterString(
-                ruleSet,
                 UniversalTagNumber.BMPString,
                 s_bmpEncoding,
                 destination,

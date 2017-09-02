@@ -202,7 +202,7 @@ namespace System.Security.Cryptography.Tests.Asn1
         {
             // SEQUENCE(NULL)
             byte[] data = { 0x30, 0x02, 0x05, 0x00 };
-            AsnReader reader = new AsnReader(data);
+            AsnReader reader = new AsnReader(data, AsnEncodingRules.BER);
             Asn1Tag tag = reader.PeekTag();
 
             Assert.Equal((int)UniversalTagNumber.Sequence, tag.TagValue);
@@ -213,9 +213,9 @@ namespace System.Security.Cryptography.Tests.Asn1
         [Fact]
         public static void ReaderPeekTag_Invalid()
         {
-            // (UNIVERSAL CONSTRUCTED [continue into next byte])
+            // (UNIVERSAL [continue into next byte])
             byte[] data = { 0x1F };
-            AsnReader reader = new AsnReader(data);
+            AsnReader reader = new AsnReader(data, AsnEncodingRules.BER);
 
             try
             {

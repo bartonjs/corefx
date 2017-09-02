@@ -128,7 +128,7 @@ namespace System.Security.Cryptography.Tests.Asn1
             byte[] inputData = inputHex.HexToByteArray();
             char[] output = new char[expectedValue.Length];
 
-            AsnReader reader = new AsnReader(inputData);
+            AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
             bool copied;
             int charsWritten;
 
@@ -137,7 +137,6 @@ namespace System.Security.Cryptography.Tests.Asn1
                 output[0] = 'a';
 
                 copied = reader.TryCopyBMPString(
-                    (AsnEncodingRules)ruleSet,
                     output.AsSpan().Slice(0, expectedValue.Length - 1),
                     out charsWritten);
 
@@ -147,7 +146,6 @@ namespace System.Security.Cryptography.Tests.Asn1
             }
 
             copied = reader.TryCopyBMPString(
-                (AsnEncodingRules)ruleSet,
                 output,
                 out charsWritten);
 
@@ -168,7 +166,7 @@ namespace System.Security.Cryptography.Tests.Asn1
             string expectedHex = Text.Encoding.BigEndianUnicode.GetBytes(expectedString).ByteArrayToHex();
             byte[] output = new byte[expectedHex.Length / 2];
 
-            AsnReader reader = new AsnReader(inputData);
+            AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
             bool copied;
             int bytesWritten;
 
@@ -176,9 +174,7 @@ namespace System.Security.Cryptography.Tests.Asn1
             {
                 output[0] = 32;
 
-                copied = reader.TryCopyBMPStringBytes(
-                    (AsnEncodingRules)ruleSet,
-                    output.AsSpan().Slice(0, output.Length - 1),
+                copied = reader.TryCopyBMPStringBytes(output.AsSpan().Slice(0, output.Length - 1),
                     out bytesWritten);
 
                 Assert.False(copied, "reader.TryCopyBMPStringBytes - too short");
@@ -186,9 +182,7 @@ namespace System.Security.Cryptography.Tests.Asn1
                 Assert.Equal(32, output[0]);
             }
 
-            copied = reader.TryCopyBMPStringBytes(
-                (AsnEncodingRules)ruleSet,
-                output,
+            copied = reader.TryCopyBMPStringBytes(output,
                 out bytesWritten);
 
             Assert.True(copied, "reader.TryCopyBMPStringBytes");
@@ -210,11 +204,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             bool expectSuccess)
         {
             byte[] inputData = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(inputData);
+            AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
 
-            bool got = reader.TryGetBMPStringBytes(
-                (AsnEncodingRules)ruleSet,
-                out ReadOnlySpan<byte> contents);
+            bool got = reader.TryGetBMPStringBytes(out ReadOnlySpan<byte> contents);
 
             if (expectSuccess)
             {
@@ -260,11 +252,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(inputData);
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
 
-                    reader.TryGetBMPStringBytes(
-                        (AsnEncodingRules)ruleSet,
-                        out ReadOnlySpan<byte> contents);
+                    reader.TryGetBMPStringBytes(out ReadOnlySpan<byte> contents);
                 });
         }
 
@@ -325,12 +315,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(inputData);
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
 
-                    reader.TryCopyBMPStringBytes(
-                        (AsnEncodingRules)ruleSet,
-                        outputData,
-                        out bytesWritten);
+                    reader.TryCopyBMPStringBytes(outputData, out bytesWritten);
                 });
 
             Assert.Equal(-1, bytesWritten);
@@ -347,10 +334,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(inputData);
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
 
                     reader.TryCopyBMPString(
-                        (AsnEncodingRules)ruleSet,
                         outputData,
                         out bytesWritten);
                 });
@@ -505,13 +491,8 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             byte[] output = new byte[1000];
 
-            const AsnEncodingRules ruleSet = AsnEncodingRules.CER;
-            AsnReader reader = new AsnReader(input);
-
-            bool success = reader.TryCopyBMPStringBytes(
-                ruleSet,
-                output,
-                out int bytesWritten);
+            AsnReader reader = new AsnReader(input, AsnEncodingRules.CER);
+            bool success = reader.TryCopyBMPStringBytes(output, out int bytesWritten);
 
             Assert.True(success, "reader.TryCopyBMPStringBytes");
             Assert.Equal(1000, bytesWritten);
@@ -574,13 +555,8 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             byte[] output = new byte[1001];
 
-            const AsnEncodingRules ruleSet = AsnEncodingRules.CER;
-            AsnReader reader = new AsnReader(input);
-
-            bool success = reader.TryCopyBMPStringBytes(
-                ruleSet,
-                output,
-                out int bytesWritten);
+            AsnReader reader = new AsnReader(input, AsnEncodingRules.CER);
+            bool success = reader.TryCopyBMPStringBytes(output, out int bytesWritten);
 
             Assert.True(success, "reader.TryCopyBMPStringBytes");
             Assert.Equal(1001, bytesWritten);

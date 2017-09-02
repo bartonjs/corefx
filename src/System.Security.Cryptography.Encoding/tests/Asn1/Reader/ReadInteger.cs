@@ -36,9 +36,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(data);
+                    AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
 
-                    reader.GetIntegerBytes((AsnEncodingRules)ruleSet);
+                    reader.GetIntegerBytes();
                 });
         }
 
@@ -62,9 +62,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             int expectedValue)
         {
             byte[] data = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(data);
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
 
-            bool didRead = reader.TryReadInt32((AsnEncodingRules)ruleSet, out int value);
+            bool didRead = reader.TryReadInt32(out int value);
 
             Assert.True(didRead, "reader.TryReadInt32");
             Assert.Equal(expectedValue, value);
@@ -79,9 +79,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             string inputHex)
         {
             byte[] data = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(data);
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
 
-            bool didRead = reader.TryReadInt32((AsnEncodingRules)ruleSet, out int value);
+            bool didRead = reader.TryReadInt32(out int value);
 
             Assert.False(didRead, "reader.TryReadInt32");
             Assert.Equal(0, value);
@@ -103,9 +103,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             uint expectedValue)
         {
             byte[] data = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(data);
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
 
-            bool didRead = reader.TryReadUInt32((AsnEncodingRules)ruleSet, out uint value);
+            bool didRead = reader.TryReadUInt32(out uint value);
 
             Assert.True(didRead, "reader.TryReadUInt32");
             Assert.Equal(expectedValue, value);
@@ -125,9 +125,9 @@ namespace System.Security.Cryptography.Tests.Asn1
         public static void ReadUInt32_Failure(PublicEncodingRules ruleSet, string inputHex)
         {
             byte[] data = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(data);
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
 
-            bool didRead = reader.TryReadUInt32((AsnEncodingRules)ruleSet, out uint value);
+            bool didRead = reader.TryReadUInt32(out uint value);
 
             Assert.False(didRead, "reader.TryReadUInt32");
             Assert.Equal((uint)0, value);
@@ -166,9 +166,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             long expectedValue)
         {
             byte[] data = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(data);
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
 
-            bool didRead = reader.TryReadInt64((AsnEncodingRules)ruleSet, out long value);
+            bool didRead = reader.TryReadInt64(out long value);
 
             Assert.True(didRead, "reader.TryReadInt64");
             Assert.Equal(expectedValue, value);
@@ -183,9 +183,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             string inputHex)
         {
             byte[] data = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(data);
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
 
-            bool didRead = reader.TryReadInt64((AsnEncodingRules)ruleSet, out long value);
+            bool didRead = reader.TryReadInt64(out long value);
 
             Assert.False(didRead, "reader.TryReadInt64");
             Assert.Equal(0, value);
@@ -215,9 +215,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             ulong expectedValue)
         {
             byte[] data = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(data);
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
 
-            bool didRead = reader.TryReadUInt64((AsnEncodingRules)ruleSet, out ulong value);
+            bool didRead = reader.TryReadUInt64(out ulong value);
 
             Assert.True(didRead, "reader.TryReadUInt64");
             Assert.Equal(expectedValue, value);
@@ -241,9 +241,9 @@ namespace System.Security.Cryptography.Tests.Asn1
         public static void ReadUInt64_Failure(PublicEncodingRules ruleSet, string inputHex)
         {
             byte[] data = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(data);
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
 
-            bool didRead = reader.TryReadUInt64((AsnEncodingRules)ruleSet, out ulong value);
+            bool didRead = reader.TryReadUInt64(out ulong value);
 
             Assert.False(didRead, "reader.TryReadUInt64");
             Assert.Equal((uint)0, value);
@@ -256,9 +256,9 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             // INTEGER (payload) followed by INTEGER (0)
             byte[] data = ("0210" + Payload + "020100").HexToByteArray();
-            AsnReader reader = new AsnReader(data);
+            AsnReader reader = new AsnReader(data, AsnEncodingRules.DER);
 
-            ReadOnlySpan<byte> contents = reader.GetIntegerBytes(AsnEncodingRules.DER);
+            ReadOnlySpan<byte> contents = reader.GetIntegerBytes();
             Assert.Equal(0x10, contents.Length);
             Assert.Equal(Payload, contents.ByteArrayToHex());
         }

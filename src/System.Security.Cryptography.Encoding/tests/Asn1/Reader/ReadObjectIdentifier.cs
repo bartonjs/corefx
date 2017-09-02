@@ -42,8 +42,8 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(inputData);
-                    reader.ReadObjectIdentifier((AsnEncodingRules)ruleSet, true);
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
+                    reader.ReadObjectIdentifier(true);
                 });
         }
 
@@ -69,9 +69,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             string expectedValue)
         {
             byte[] inputData = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(inputData);
+            AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
 
-            string oidValue = reader.ReadObjectIdentifierAsString((AsnEncodingRules)ruleSet);
+            string oidValue = reader.ReadObjectIdentifierAsString();
             Assert.Equal(expectedValue, oidValue);
         }
 
@@ -87,9 +87,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             string expectedFriendlyName)
         {
             byte[] inputData = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(inputData);
+            AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
 
-            Oid oid = reader.ReadObjectIdentifier((AsnEncodingRules)ruleSet, skipFriendlyName);
+            Oid oid = reader.ReadObjectIdentifier(skipFriendlyName);
             Assert.Equal(expectedFriendlyName, oid.FriendlyName);
         }
     }

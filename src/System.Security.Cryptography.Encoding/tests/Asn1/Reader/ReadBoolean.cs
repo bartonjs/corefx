@@ -11,58 +11,6 @@ namespace System.Security.Cryptography.Tests.Asn1
     public sealed class ReadBoolean : Asn1ReaderTests
     {
         [Theory]
-        [InlineData(PublicEncodingRules.BER, 0x00)]
-        [InlineData(PublicEncodingRules.CER, 0x00)]
-        [InlineData(PublicEncodingRules.DER, 0x00)]
-        [InlineData(PublicEncodingRules.BER, 0x01)]
-        [InlineData(PublicEncodingRules.BER, 0x7F)]
-        [InlineData(PublicEncodingRules.BER, 0xAA)]
-        [InlineData(PublicEncodingRules.BER, 0xFE)]
-        [InlineData(PublicEncodingRules.BER, 0xFF)]
-        [InlineData(PublicEncodingRules.CER, 0xFF)]
-        [InlineData(PublicEncodingRules.DER, 0xFF)]
-        public static void ReadBooleanValue_Valid(PublicEncodingRules ruleSet, byte value)
-        {
-            byte[] data = { value };
-            bool val = AsnReader.ReadBooleanValue(data, (AsnEncodingRules)ruleSet);
-
-            Assert.Equal(value != 0, val);
-        }
-
-        [Theory]
-        [InlineData(PublicEncodingRules.CER, 0x01)]
-        [InlineData(PublicEncodingRules.CER, 0x7F)]
-        [InlineData(PublicEncodingRules.CER, 0xAA)]
-        [InlineData(PublicEncodingRules.CER, 0xFE)]
-        [InlineData(PublicEncodingRules.DER, 0x01)]
-        [InlineData(PublicEncodingRules.DER, 0x7F)]
-        [InlineData(PublicEncodingRules.DER, 0xAA)]
-        [InlineData(PublicEncodingRules.DER, 0xFE)]
-        public static void ReadBooleanValue_InvalidValue(PublicEncodingRules ruleSet, byte value)
-        {
-            byte[] data = { value };
-            Assert.Throws<CryptographicException>(
-                () => AsnReader.ReadBooleanValue(data, (AsnEncodingRules)ruleSet));
-        }
-
-        [Theory]
-        [InlineData(PublicEncodingRules.BER)]
-        [InlineData(PublicEncodingRules.CER)]
-        [InlineData(PublicEncodingRules.DER)]
-        public static void ReadBooleanValue_WrongSize(PublicEncodingRules ruleSet)
-        {
-            byte[] data = new byte[2];
-
-            Assert.Throws<CryptographicException>(
-                () => AsnReader.ReadBooleanValue(
-                    new ReadOnlySpan<byte>(data, 0, 0),
-                    (AsnEncodingRules)ruleSet));
-
-            Assert.Throws<CryptographicException>(
-                () => AsnReader.ReadBooleanValue(data, (AsnEncodingRules)ruleSet));
-        }
-
-        [Theory]
         [InlineData(PublicEncodingRules.BER, false, 3, "010100")]
         [InlineData(PublicEncodingRules.BER, true, 3, "010101")]
         // Padded length
@@ -85,9 +33,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             string inputHex)
         {
             byte[] inputData = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(inputData);
+            AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
 
-            bool value = reader.ReadBoolean((AsnEncodingRules)ruleSet);
+            bool value = reader.ReadBoolean();
 
             if (inputData.Length == expectedBytesRead)
             {
@@ -149,11 +97,12 @@ namespace System.Security.Cryptography.Tests.Asn1
             string inputHex)
         {
             byte[] inputData = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(inputData);
+
+            AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
 
             try
             {
-                reader.ReadBoolean((AsnEncodingRules)ruleSet);
+                reader.ReadBoolean();
                 Assert.True(false, "CryptographicException was thrown");
             }
             catch (CryptographicException)

@@ -29,8 +29,8 @@ namespace System.Security.Cryptography.Tests.Asn1
         {
             byte[] inputData = inputHex.HexToByteArray();
 
-            AsnReader reader = new AsnReader(inputData);
-            AsnReader sequence = reader.ReadSequence((AsnEncodingRules)ruleSet);
+            AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
+            AsnReader sequence = reader.ReadSequence();
 
             if (expectDataRemaining)
             {
@@ -93,33 +93,33 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(inputData);
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
 
-                    reader.ReadSequence((AsnEncodingRules)ruleSet);
+                    reader.ReadSequence();
                 });
         }
 
         private static void ReadEcPublicKey(AsnEncodingRules ruleSet, byte[] inputData)
         {
-            AsnReader mainReader = new AsnReader(inputData);
+            AsnReader mainReader = new AsnReader(inputData, ruleSet);
 
-            AsnReader spkiReader = mainReader.ReadSequence(ruleSet);
+            AsnReader spkiReader = mainReader.ReadSequence();
             Assert.False(mainReader.HasData, "mainReader.HasData after reading SPKI");
 
-            AsnReader algorithmReader = spkiReader.ReadSequence(ruleSet);
+            AsnReader algorithmReader = spkiReader.ReadSequence();
             Assert.True(spkiReader.HasData, "spkiReader.HasData after reading algorithm");
 
             ReadOnlySpan<byte> publicKeyValue;
             int unusedBitCount;
 
-            if (!spkiReader.TryGetBitStringBytes(ruleSet, out unusedBitCount, out publicKeyValue))
+            if (!spkiReader.TryGetBitStringBytes(out unusedBitCount, out publicKeyValue))
             {
                 // The correct answer is 65 bytes.
                 for (int i = 10; ; i *= 2)
                 {
                     byte[] buf = new byte[i];
 
-                    if (spkiReader.TryCopyBitStringBytes(ruleSet, buf, out unusedBitCount, out int bytesWritten))
+                    if (spkiReader.TryCopyBitStringBytes(buf, out unusedBitCount, out int bytesWritten))
                     {
                         publicKeyValue = new ReadOnlySpan<byte>(buf, 0, bytesWritten);
                         break;
@@ -130,12 +130,12 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.False(spkiReader.HasData, "spkiReader.HasData after reading subjectPublicKey");
             Assert.True(algorithmReader.HasData, "algorithmReader.HasData before reading");
 
-            Oid algorithmOid = algorithmReader.ReadObjectIdentifier(ruleSet, true);
+            Oid algorithmOid = algorithmReader.ReadObjectIdentifier(true);
             Assert.True(algorithmReader.HasData, "algorithmReader.HasData after reading first OID");
 
             Assert.Equal("1.2.840.10045.2.1", algorithmOid.Value);
 
-            Oid curveOid = algorithmReader.ReadObjectIdentifier(ruleSet, true);
+            Oid curveOid = algorithmReader.ReadObjectIdentifier(true);
             Assert.False(algorithmReader.HasData, "algorithmReader.HasData after reading second OID");
 
             Assert.Equal("1.2.840.10045.3.1.7", curveOid.Value);

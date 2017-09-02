@@ -71,8 +71,8 @@ namespace System.Security.Cryptography.Tests.Asn1
             where TEnum : struct
         {
             byte[] inputData = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(inputData);
-            TEnum value = reader.GetEnumeratedValue<TEnum>((AsnEncodingRules)ruleSet);
+            AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
+            TEnum value = reader.GetEnumeratedValue<TEnum>();
             Assert.Equal(expectedValue, value);
         }
 
@@ -286,8 +286,8 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(inputData);
-                    reader.GetEnumeratedValue<ByteBacked>((AsnEncodingRules)ruleSet);
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
+                    reader.GetEnumeratedValue<ByteBacked>();
                 });
         }
 
@@ -342,8 +342,8 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(inputData);
-                    reader.GetEnumeratedValue<SByteBacked>((AsnEncodingRules)ruleSet);
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
+                    reader.GetEnumeratedValue<SByteBacked>();
                 });
         }
 
@@ -395,8 +395,8 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(inputData);
-                    reader.GetEnumeratedValue<ShortBacked>((AsnEncodingRules)ruleSet);
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
+                    reader.GetEnumeratedValue<ShortBacked>();
                 });
         }
 
@@ -451,8 +451,8 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(inputData);
-                    reader.GetEnumeratedValue<UShortBacked>((AsnEncodingRules)ruleSet);
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
+                    reader.GetEnumeratedValue<UShortBacked>();
                 });
         }
 
@@ -499,8 +499,8 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(inputData);
-                    reader.GetEnumeratedValue<IntBacked>((AsnEncodingRules)ruleSet);
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
+                    reader.GetEnumeratedValue<IntBacked>();
                 });
         }
 
@@ -546,12 +546,11 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(inputData);
-                    reader.GetEnumeratedValue<UIntBacked>((AsnEncodingRules)ruleSet);
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
+                    reader.GetEnumeratedValue<UIntBacked>();
                 });
         }
-
-
+        
         [Theory]
         [InlineData(PublicEncodingRules.BER, "")]
         [InlineData(PublicEncodingRules.CER, "")]
@@ -588,8 +587,8 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(inputData);
-                    reader.GetEnumeratedValue<LongBacked>((AsnEncodingRules)ruleSet);
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
+                    reader.GetEnumeratedValue<LongBacked>();
                 });
         }
 
@@ -629,8 +628,8 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(inputData);
-                    reader.GetEnumeratedValue<ULongBacked>((AsnEncodingRules)ruleSet);
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
+                    reader.GetEnumeratedValue<ULongBacked>();
                 });
         }
 
@@ -645,8 +644,8 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<ArgumentException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(data);
-                    reader.GetEnumeratedValue<Guid>((AsnEncodingRules)ruleSet);
+                    AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
+                    reader.GetEnumeratedValue<Guid>();
                 });
         }
 
@@ -661,8 +660,8 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<ArgumentException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(data);
-                    reader.GetEnumeratedValue<AssemblyFlags>((AsnEncodingRules)ruleSet);
+                    AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
+                    reader.GetEnumeratedValue<AssemblyFlags>();
                 });
         }
 
@@ -676,14 +675,13 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             // ENUMERATED (payload) followed by INTEGER (0)
             byte[] data = ("0A10" + Payload + "020100").HexToByteArray();
-            AsnReader reader = new AsnReader(data);
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
 
-            ReadOnlySpan<byte> contents = reader.GetEnumeratedBytes((AsnEncodingRules)ruleSet);
+            ReadOnlySpan<byte> contents = reader.GetEnumeratedBytes();
             Assert.Equal(0x10, contents.Length);
             Assert.Equal(Payload, contents.ByteArrayToHex());
         }
-
-
+        
         [Theory]
         [InlineData(PublicEncodingRules.BER, "")]
         [InlineData(PublicEncodingRules.CER, "")]
@@ -713,9 +711,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Throws<CryptographicException>(
                 () =>
                 {
-                    AsnReader reader = new AsnReader(inputData);
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
 
-                    reader.GetEnumeratedBytes((AsnEncodingRules)ruleSet);
+                    reader.GetEnumeratedBytes();
                 });
         }
     }

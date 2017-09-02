@@ -21,12 +21,12 @@ namespace System.Security.Cryptography.Tests.Asn1
         public static void MinimalPrimitiveLength(int tagValue, int length, string inputHex)
         {
             byte[] inputBytes = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(inputBytes);
-
+            
             foreach (PublicEncodingRules rules in Enum.GetValues(typeof(PublicEncodingRules)))
             {
-                (Asn1Tag tag, int? parsedLength) =
-                    reader.ReadTagAndLength((AsnEncodingRules)rules, out int bytesRead);
+                AsnReader reader = new AsnReader(inputBytes, (AsnEncodingRules)rules);
+
+                (Asn1Tag tag, int? parsedLength) = reader.ReadTagAndLength(out int bytesRead);
 
                 Assert.Equal(inputBytes.Length, bytesRead);
                 Assert.False(tag.IsConstructed, "tag.IsConstructed");
@@ -38,33 +38,18 @@ namespace System.Security.Cryptography.Tests.Asn1
             }
         }
 
-        [Fact]
-        public static void ReadWithUnknownRuleSet()
+        [Theory]
+        [InlineData(-1)]
+        [InlineData(3)]
+        public static void ReadWithUnknownRuleSet(int invalidRuleSetValue)
         {
             byte[] data = { 0x05, 0x00 };
-            AsnReader reader = new AsnReader(data);
 
-            int bytesRead;
-
-            try
-            {
-                reader.ReadTagAndLength((AsnEncodingRules)(-1), out bytesRead);
-                Assert.True(false, "ArgumentOutOfRangeException was thrown");
-            }
-            catch (ArgumentOutOfRangeException e)
-            {
-                Assert.Equal("ruleSet", e.ParamName);
-            }
-
-            try
-            {
-                reader.ReadTagAndLength((AsnEncodingRules)3, out bytesRead);
-                Assert.True(false, "ArgumentOutOfRangeException was thrown");
-            }
-            catch (ArgumentOutOfRangeException e)
-            {
-                Assert.Equal("ruleSet", e.ParamName);
-            }
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () =>
+                {
+                    AsnReader reader = new AsnReader(data, (AsnEncodingRules)invalidRuleSetValue);
+                });
         }
 
         [Theory]
@@ -77,11 +62,11 @@ namespace System.Security.Cryptography.Tests.Asn1
         public static void ReadWithInsufficientData(string inputHex)
         {
             byte[] inputData = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(inputData);
+            AsnReader reader = new AsnReader(inputData, AsnEncodingRules.DER);
 
             try
             {
-                reader.ReadTagAndLength(AsnEncodingRules.DER, out int _);
+                reader.ReadTagAndLength(out int _);
                 Assert.True(false, "CryptographicException was thrown");
             }
             catch (CryptographicException)
@@ -122,11 +107,11 @@ namespace System.Security.Cryptography.Tests.Asn1
             string inputHex)
         {
             byte[] inputData = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(inputData);
+            AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)rules);
 
             try
             {
-                reader.ReadTagAndLength((AsnEncodingRules)rules, out int _);
+                reader.ReadTagAndLength(out int _);
                 Assert.True(false, "CryptographicException was thrown");
             }
             catch (CryptographicException)
@@ -143,9 +128,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             //   NULL
             //   End-of-Contents
             byte[] data = { 0x30, 0x80, 0x05, 0x00, 0x00, 0x00 };
-            AsnReader reader = new AsnReader(data);
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
 
-            (Asn1Tag tag, int? length) = reader.ReadTagAndLength((AsnEncodingRules)ruleSet, out int bytesRead);
+            (Asn1Tag tag, int? length) = reader.ReadTagAndLength(out int bytesRead);
 
             Assert.Equal(2, bytesRead);
             Assert.False(length.HasValue, "length.HasValue");
@@ -160,9 +145,9 @@ namespace System.Security.Cryptography.Tests.Asn1
         public static void BerNonMinimalLength(int expectedLength, string inputHex)
         {
             byte[] inputData = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(inputData);
+            AsnReader reader = new AsnReader(inputData, AsnEncodingRules.BER);
 
-            (Asn1Tag _, int? length) = reader.ReadTagAndLength(AsnEncodingRules.BER, out int bytesRead);
+            (Asn1Tag _, int? length) = reader.ReadTagAndLength(out int bytesRead);
 
             Assert.Equal(inputData.Length, bytesRead);
             Assert.Equal(expectedLength, length.Value);
@@ -182,9 +167,9 @@ namespace System.Security.Cryptography.Tests.Asn1
             string inputHex)
         {
             byte[] inputData = inputHex.HexToByteArray();
-            AsnReader reader = new AsnReader(inputData);
+            AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
 
-            (Asn1Tag tag, int? length) = reader.ReadTagAndLength((AsnEncodingRules)ruleSet, out int bytesRead);
+            (Asn1Tag tag, int? length) = reader.ReadTagAndLength(out int bytesRead);
 
             Assert.Equal(expectedBytesRead, bytesRead);
             Assert.Equal(tagValue, tag.TagValue);
