@@ -3,8 +3,12 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Buffers;
+using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics;
+using System.Linq;
 using System.Numerics;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -692,6 +696,54 @@ namespace System.Security.Cryptography.Asn1
             return TryReadUnsignedInteger(sizeof(ulong), UniversalTagNumber.Integer, out value);
         }
 
+        public bool TryReadInt16(out short value)
+        {
+            if (TryReadSignedInteger(sizeof(short), UniversalTagNumber.Integer, out long longValue))
+            {
+                value = (short)longValue;
+                return true;
+            }
+
+            value = 0;
+            return false;
+        }
+
+        public bool TryReadUInt16(out ushort value)
+        {
+            if (TryReadUnsignedInteger(sizeof(ushort), UniversalTagNumber.Integer, out ulong ulongValue))
+            {
+                value = (ushort)ulongValue;
+                return true;
+            }
+
+            value = 0;
+            return false;
+        }
+
+        public bool TryReadInt8(out sbyte value)
+        {
+            if (TryReadSignedInteger(sizeof(sbyte), UniversalTagNumber.Integer, out long longValue))
+            {
+                value = (sbyte)longValue;
+                return true;
+            }
+
+            value = 0;
+            return false;
+        }
+
+        public bool TryReadUInt8(out byte value)
+        {
+            if (TryReadUnsignedInteger(sizeof(byte), UniversalTagNumber.Integer, out ulong ulongValue))
+            {
+                value = (byte)ulongValue;
+                return true;
+            }
+
+            value = 0;
+            return false;
+        }
+
         private static bool TryCopyPrimitiveBitStringValue(
             ReadOnlySpan<byte> source,
             Span<byte> destination,
@@ -1123,6 +1175,12 @@ namespace System.Security.Cryptography.Asn1
         public TEnum GetEnumeratedValue<TEnum>() where TEnum : struct
         {
             Type tEnum = typeof(TEnum);
+
+            return (TEnum)Enum.ToObject(tEnum, GetEnumeratedValue(tEnum));
+        }
+
+        public Enum GetEnumeratedValue(Type tEnum)
+        {
             const UniversalTagNumber tagNumber = UniversalTagNumber.Enumerated;
             
             // This will throw an ArgumentException if TEnum isn't an enum type,
@@ -1149,7 +1207,7 @@ namespace System.Security.Cryptography.Asn1
                     throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
                 }
 
-                return (TEnum)Enum.ToObject(tEnum, value);
+                return (Enum)Enum.ToObject(tEnum, value);
             }
 
             if (backingType == typeof(uint) ||
@@ -1162,7 +1220,7 @@ namespace System.Security.Cryptography.Asn1
                     throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
                 }
 
-                return (TEnum)Enum.ToObject(tEnum, value);
+                return (Enum)Enum.ToObject(tEnum, value);
             }
 
             Debug.Fail($"No handler for type {backingType.Name}");
@@ -1624,6 +1682,23 @@ namespace System.Security.Cryptography.Asn1
             return copied;
         }
 
+        private static unsafe string GetCharacterString(
+            ReadOnlySpan<byte> source,
+            Text.Encoding encoding)
+        {
+            fixed (byte* bytePtr = &source.DangerousGetPinnableReference())
+            {
+                try
+                {
+                    return encoding.GetString(bytePtr, source.Length);
+                }
+                catch (DecoderFallbackException e)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding, e);
+                }
+            }
+        }
+
         private static unsafe bool TryCopyCharacterString(
             ReadOnlySpan<byte> source,
             Text.Encoding encoding,
@@ -1652,6 +1727,55 @@ namespace System.Security.Cryptography.Asn1
                 }
 
                 return true;
+            }
+        }
+
+        private string GetCharacterString(
+            UniversalTagNumber universalTagNumber,
+            Text.Encoding encoding)
+        {
+            if (TryGetOctetStringBytes(
+                out ReadOnlySpan<byte> contents,
+                out int headerLength,
+                universalTagNumber))
+            {
+                string s = GetCharacterString(contents, encoding);
+
+                _data = _data.Slice(headerLength + contents.Length);
+
+                return s;
+            }
+
+            bool parsed = TryCopyCharacterStringBytes(
+                universalTagNumber,
+                Span<byte>.Empty,
+                false,
+                out int bytesRead,
+                out int bytesWritten);
+
+            Debug.Assert(parsed, "TryCopyCharacterStringBytes returned false in counting mode");
+
+            byte[] rented = ArrayPool<byte>.Shared.Rent(bytesWritten);
+
+            try
+            {
+                if (!TryCopyCharacterStringBytes(universalTagNumber, rented, true, out bytesRead, out bytesWritten))
+                {
+                    Debug.Fail("TryCopyCharacterStringBytes failed with a precomputed size");
+                    throw new CryptographicException();
+                }
+
+                string s = GetCharacterString(
+                    rented.AsReadOnlySpan().Slice(0, bytesWritten),
+                    encoding);
+
+                _data = _data.Slice(bytesRead);
+
+                return s;
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(rented, clearArray: true);
             }
         }
 
@@ -1696,7 +1820,7 @@ namespace System.Security.Cryptography.Asn1
                 }
 
                 bool copied = TryCopyCharacterString(
-                    rented.AsSpan().Slice(0, bytesWritten),
+                    rented.AsReadOnlySpan().Slice(0, bytesWritten),
                     encoding,
                     destination,
                     out charsWritten);
@@ -1749,6 +1873,28 @@ namespace System.Security.Cryptography.Asn1
             }
 
             return copied;
+        }
+
+        public string GetCharacterString(UniversalTagNumber encodingType)
+        {
+            Text.Encoding encoding;
+
+            switch (encodingType)
+            {
+                case UniversalTagNumber.UTF8String:
+                    encoding = s_utf8Encoding;
+                    break;
+                case UniversalTagNumber.IA5String:
+                    encoding = s_ia5Encoding;
+                    break;
+                case UniversalTagNumber.BMPString:
+                    encoding = s_bmpEncoding;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(encodingType), encodingType, null);
+            }
+
+            return GetCharacterString(encodingType, encoding);
         }
 
         public bool TryCopyUTF8String(Span<char> destination, out int charsWritten)
@@ -2025,6 +2171,532 @@ namespace System.Security.Cryptography.Asn1
                 throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
             }
         }
+    }
+
+    internal static class AsnSerializer
+    {
+        private delegate object Deserializer(ref AsnReader reader);
+
+        private static object DeserializeCustomType(ref AsnReader reader, Type typeT)
+        {
+            object target = Activator.CreateInstance(typeT);
+
+            AsnReader sequence = reader.ReadSequence();
+
+            const BindingFlags FieldFlags =
+                BindingFlags.Public |
+                BindingFlags.NonPublic |
+                BindingFlags.Instance;
+
+            foreach (FieldInfo fieldInfo in typeT.GetFields(FieldFlags))
+            {
+                Deserializer deserializer = GetDeserializer(fieldInfo.FieldType, fieldInfo);
+                fieldInfo.SetValue(target, deserializer(ref sequence));
+            }
+
+            if (sequence.HasData)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            return target;
+        }
+
+        private static Deserializer GetDeserializer(Type typeT, FieldInfo fieldInfo)
+        {
+            if (typeT.IsAbstract || typeT.ContainsGenericParameters)
+            {
+                // TODO/Review: Exception type and message?
+                throw new CryptographicException(typeT.FullName);
+            }
+
+            object[] typeAttrs = fieldInfo?.GetCustomAttributes(typeof(AsnTypeAttribute), false) ??
+                                 Array.Empty<object>();
+
+            if (typeAttrs.Length > 1)
+            {
+                // TODO/Review: Exception type and message?
+                throw new CryptographicException();
+            }
+
+            UniversalTagNumber tagType = 0;
+            ObjectIdentifierAttribute oidAttr = null;
+            bool isAny = false;
+
+            if (typeAttrs.Length == 1)
+            {
+                Type[] expectedTypes;
+                object attr = typeAttrs[0];
+
+                if (attr is AnyValueAttribute)
+                {
+                    isAny = true;
+                    expectedTypes = new[] { typeof(byte[]) };
+                }
+                else if (attr is IntegerAttribute)
+                {
+                    expectedTypes = new[] { typeof(byte[]) };
+                    tagType = UniversalTagNumber.Integer;
+                }
+                else if (attr is BitStringAttribute)
+                {
+                    expectedTypes = new[] { typeof(byte[]) };
+                    tagType = UniversalTagNumber.BitString;
+                }
+                else if (attr is OctetStringAttribute)
+                {
+                    expectedTypes = new[] { typeof(byte[]) };
+                    tagType = UniversalTagNumber.OctetString;
+                }
+                else if (attr is ObjectIdentifierAttribute oid)
+                {
+                    oidAttr = oid;
+                    expectedTypes = new[] { typeof(Oid), typeof(string) };
+                    tagType = UniversalTagNumber.ObjectIdentifier;
+                }
+                else if (attr is BMPStringAttribute)
+                {
+                    expectedTypes = new[] { typeof(string) };
+                    tagType = UniversalTagNumber.BMPString;
+                }
+                else if (attr is IA5StringAttribute)
+                {
+                    expectedTypes = new[] { typeof(string) };
+                    tagType = UniversalTagNumber.IA5String;
+                }
+                else if (attr is UTF8StringAttribute)
+                {
+                    expectedTypes = new[] { typeof(string) };
+                    tagType = UniversalTagNumber.UTF8String;
+                }
+                else if (attr is SetOfAttribute)
+                {
+                    expectedTypes = null;
+                    tagType = UniversalTagNumber.SetOf;
+                }
+                else
+                {
+                    Debug.Fail($"Unregistered {nameof(AsnTypeAttribute)} kind: {attr.GetType().FullName}");
+                    // TODO/Review: Exception type and message?
+                    throw new CryptographicException();
+                }
+
+                if (tagType != UniversalTagNumber.SetOf &&
+                    Array.IndexOf(expectedTypes, typeT) < 0)
+                {
+                    // TODO/Review: Exception type and message?
+                    throw new CryptographicException();
+                }
+            }
+            
+            if (typeT.IsPrimitive)
+            {
+                if (typeAttrs.Length != 0)
+                {
+                    // TODO/Review: Exception type and message?
+                    throw new CryptographicException();
+                }
+
+                return GetPrimitiveDeserializer(typeT);
+            }
+
+            if (typeT.IsEnum)
+            {
+                if (typeT.GetCustomAttributes(typeof(FlagsAttribute), false).Length > 0)
+                {
+                    // TODO: Flags enums from BitString.
+                    throw new NotImplementedException();
+                }
+
+                return (ref AsnReader reader) => reader.GetEnumeratedValue(typeT);
+            }
+
+            if (typeT == typeof(string))
+            {
+
+                if (tagType == 0)
+                {
+                    // TODO/Review: Exception type and message?
+                    throw new CryptographicException(
+                        $"Field {fieldInfo.Name} of type {fieldInfo.DeclaringType.FullName} has ambiguous type 'string', an attribute derived from {nameof(AsnTypeAttribute)} is required.");
+                }
+
+                if (tagType == UniversalTagNumber.ObjectIdentifier)
+                {
+                    if ((oidAttr?.PopulateFriendlyName).GetValueOrDefault())
+                    {
+                        // TODO/Review: Exception type and message?
+                        // Friendly name requested on a string output.
+                        throw new CryptographicException();
+                    }
+
+                    return (ref AsnReader reader) => reader.ReadObjectIdentifierAsString();
+                }
+
+                return (ref AsnReader reader) => reader.GetCharacterString(tagType);
+            }
+
+            if (typeT == typeof(byte[]))
+            {
+                if (isAny)
+                {
+                    return (ref AsnReader reader) => reader.GetEncodedValue().ToArray();
+                }
+
+                if (tagType == 0)
+                {
+                    // TODO/Review: Exception type and message?
+                    throw new CryptographicException(
+                        $"Field {fieldInfo.Name} of type {fieldInfo.DeclaringType.FullName} has ambiguous type 'byte[]', an attribute derived from {nameof(AsnTypeAttribute)} is required.");
+                }
+
+                if (tagType == UniversalTagNumber.BitString)
+                {
+                    return (ref AsnReader reader) =>
+                    {
+                        if (reader.TryGetBitStringBytes(out int unusedBitCount, out ReadOnlySpan<byte> contents))
+                        {
+                            return contents.ToArray();
+                        }
+
+                        // Guaranteed too big, because it has the tag and length.
+                        byte[] rented = ArrayPool<byte>.Shared.Rent(reader.PeekEncodedValue().Length);
+
+                        try
+                        {
+                            if (reader.TryCopyBitStringBytes(rented, out unusedBitCount, out int bytesWritten))
+                            {
+                                return rented.AsReadOnlySpan().Slice(0, bytesWritten).ToArray();
+                            }
+
+                            Debug.Fail("TryCopyBitStringBytes produced more data than the encoded size");
+                            throw new CryptographicException();
+                        }
+                        finally
+                        {
+                            ArrayPool<byte>.Shared.Return(rented, clearArray: true);
+                        }
+                    };
+                }
+
+                if (tagType == UniversalTagNumber.OctetString)
+                {
+                    return (ref AsnReader reader) =>
+                    {
+                        if (reader.TryGetOctetStringBytes(out ReadOnlySpan<byte> contents))
+                        {
+                            return contents.ToArray();
+                        }
+
+                        // Guaranteed too big, because it has the tag and length.
+                        byte[] rented = ArrayPool<byte>.Shared.Rent(reader.PeekEncodedValue().Length);
+
+                        try
+                        {
+                            if (reader.TryCopyOctetStringBytes(rented, out int bytesWritten))
+                            {
+                                return rented.AsReadOnlySpan().Slice(0, bytesWritten).ToArray();
+                            }
+
+                            Debug.Fail("TryCopyOctetStringBytes produced more data than the encoded size");
+                            throw new CryptographicException();
+                        }
+                        finally
+                        {
+                            ArrayPool<byte>.Shared.Return(rented, clearArray: true);
+                        }
+                    };
+                }
+
+                if (tagType == UniversalTagNumber.Integer)
+                {
+                    return (ref AsnReader reader) => reader.GetIntegerBytes().ToArray();
+                }
+
+                Debug.Fail($"No byte[] handler for {tagType}");
+                throw new CryptographicException();
+            }
+
+            if (typeT == typeof(Oid))
+            {
+                bool skipFriendlyName = !(oidAttr?.PopulateFriendlyName).GetValueOrDefault();
+                return (ref AsnReader reader) => reader.ReadObjectIdentifier(skipFriendlyName);
+            }
+
+            if (typeT.IsLayoutSequential)
+            {
+                return (ref AsnReader reader) => DeserializeCustomType(ref reader, typeT);
+            }
+
+            if (typeT.IsArray)
+            {
+                Type baseType = typeT.GetElementType();
+
+                if (typeT.GetArrayRank() != 1 || baseType.IsArray)
+                {
+                    // TODO/Review: Exception type and message?
+                    throw new CryptographicException();
+                }
+
+                return (ref AsnReader reader) =>
+                {
+                    LinkedList<object> linkedList = new LinkedList<object>();
+
+                    AsnReader collectionReader;
+
+                    if (tagType == UniversalTagNumber.SetOf)
+                    {
+                        collectionReader = reader.ReadSetOf();
+                    }
+                    else
+                    {
+                        collectionReader = reader.ReadSequence();
+                    }
+
+                    Deserializer deserializer = GetDeserializer(baseType, null);
+
+                    while (collectionReader.HasData)
+                    {
+                        object elem = deserializer(ref collectionReader);
+                        LinkedListNode<object> node = new LinkedListNode<object>(elem);
+                        linkedList.AddLast(node);
+                    }
+
+                    object[] objArr = linkedList.ToArray();
+                    Array arr = Array.CreateInstance(baseType, objArr.Length);
+                    Array.Copy(objArr, arr, objArr.Length);
+                    return arr;
+                };
+            }
+
+            // TODO/Review: Exception type and message?
+            throw new CryptographicException();
+        }
+
+        private static Deserializer GetPrimitiveDeserializer(Type typeT)
+        {
+            if (typeT == typeof(bool))
+            {
+                return (ref AsnReader reader) => reader.ReadBoolean();
+            }
+
+            if (typeT == typeof(int))
+            {
+                return (ref AsnReader reader) =>
+                {
+                    if (reader.TryReadInt32(out int value))
+                    {
+                        return value;
+                    }
+
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                };
+            }
+
+            if (typeT == typeof(uint))
+            {
+                return (ref AsnReader reader) =>
+                {
+                    if (reader.TryReadUInt32(out uint value))
+                    {
+                        return value;
+                    }
+
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                };
+            }
+
+            if (typeT == typeof(short))
+            {
+                return (ref AsnReader reader) =>
+                {
+                    if (reader.TryReadInt16(out short value))
+                    {
+                        return value;
+                    }
+
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                };
+            }
+
+            if (typeT == typeof(ushort))
+            {
+                return (ref AsnReader reader) =>
+                {
+                    if (reader.TryReadUInt16(out ushort value))
+                    {
+                        return value;
+                    }
+
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                };
+            }
+
+            if (typeT == typeof(byte))
+            {
+                return (ref AsnReader reader) =>
+                {
+                    if (reader.TryReadUInt8(out byte value))
+                    {
+                        return value;
+                    }
+
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                };
+            }
+
+            if (typeT == typeof(sbyte))
+            {
+                return (ref AsnReader reader) =>
+                {
+                    if (reader.TryReadInt8(out sbyte value))
+                    {
+                        return value;
+                    }
+
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                };
+            }
+
+            if (typeT == typeof(long))
+            {
+                return (ref AsnReader reader) =>
+                {
+                    if (reader.TryReadInt64(out long value))
+                    {
+                        return value;
+                    }
+
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                };
+            }
+
+            if (typeT == typeof(ulong))
+            {
+                return (ref AsnReader reader) =>
+                {
+                    if (reader.TryReadUInt64(out ulong value))
+                    {
+                        return value;
+                    }
+
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                };
+            }
+
+            // TODO/Review: Exception type and message?
+            throw new CryptographicException();
+        }
+
+        public static T Deserialize<T>(ReadOnlySpan<byte> source, AsnEncodingRules ruleSet, out int bytesRead)
+        {
+            Deserializer deserializer = GetDeserializer(typeof(T), null);
+
+            AsnReader reader = new AsnReader(source, ruleSet);
+
+            bytesRead = 0;
+            return (T)deserializer(ref reader);
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Field)]
+    internal sealed class ExpectedTagAttribute : Attribute
+    {
+        public TagClass TagClass { get; }
+        public int TagValue { get; }
+
+        public ExpectedTagAttribute(int tagValue)
+            : this(TagClass.ContextSpecific, tagValue)
+        {
+        }
+
+        public ExpectedTagAttribute(TagClass tagClass, int tagValue)
+        {
+            TagClass = tagClass;
+            TagValue = tagValue;
+        }
+    }
+
+    internal abstract class AsnTypeAttribute : Attribute
+    {
+        internal AsnTypeAttribute()
+        {
+        }
+    }
+
+    internal abstract class AsnEncodingRuleAttribute : Attribute
+    {
+        internal AsnEncodingRuleAttribute()
+        {
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Field)]
+    internal sealed class OctetStringAttribute : AsnTypeAttribute
+    {
+    }
+
+    [AttributeUsage(AttributeTargets.Field)]
+    internal sealed class BitStringAttribute : AsnTypeAttribute
+    {
+    }
+
+    [AttributeUsage(AttributeTargets.Field)]
+    internal sealed class AnyValueAttribute : AsnTypeAttribute
+    {
+    }
+
+    [AttributeUsage(AttributeTargets.Field)]
+    internal sealed class ObjectIdentifierAttribute : AsnTypeAttribute
+    {
+        public ObjectIdentifierAttribute()
+        {
+        }
+
+        public bool PopulateFriendlyName { get; set; }
+    }
+
+    [AttributeUsage(AttributeTargets.Field)]
+    internal sealed class BMPStringAttribute : AsnTypeAttribute
+    {
+    }
+
+    [AttributeUsage(AttributeTargets.Field)]
+    internal sealed class IA5StringAttribute : AsnTypeAttribute
+    {
+    }
+
+    [AttributeUsage(AttributeTargets.Field)]
+    internal sealed class UTF8StringAttribute : AsnTypeAttribute
+    {
+    }
+
+    [AttributeUsage(AttributeTargets.Field)]
+    internal sealed class SetOfAttribute : AsnTypeAttribute
+    {
+    }
+
+    [AttributeUsage(AttributeTargets.Field)]
+    internal sealed class IntegerAttribute : AsnTypeAttribute
+    {
+    }
+
+    [AttributeUsage(AttributeTargets.Field)]
+    internal sealed class OptionalValueAttribute : AsnEncodingRuleAttribute
+    {
+    }
+
+    [AttributeUsage(AttributeTargets.Field)]
+    internal sealed class DefaultValueAttribute : AsnEncodingRuleAttribute
+    {
+        private readonly byte[] _encodedValue;
+
+        public DefaultValueAttribute(params byte[] encodedValue)
+        {
+            _encodedValue = encodedValue;
+        }
+
+        public ReadOnlySpan<byte> EncodedValue => _encodedValue;
     }
 
     internal abstract class SpanBasedEncoding : Text.Encoding

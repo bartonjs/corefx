@@ -25,6 +25,7 @@
     <Compile Include="Asn1\Reader\ReadNull.cs" />
     <Compile Include="Asn1\Reader\ReadObjectIdentifier.cs" />
     <Compile Include="Asn1\Reader\ReadOctetString.cs" />
+    <Compile Include="Asn1\Serializer\SimpleDeserialize.cs" />
     <Compile Include="AsnEncodedData.cs" />
     <Compile Include="AsnEncodedDataCollectionTests.cs" />
     <Compile Include="Base64TransformsTests.cs" />
