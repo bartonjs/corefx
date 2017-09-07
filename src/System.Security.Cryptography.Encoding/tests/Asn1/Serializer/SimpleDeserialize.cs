@@ -12,7 +12,7 @@ using PublicEncodingRules=System.Security.Cryptography.Tests.Asn1.Asn1ReaderTest
 
 namespace System.Security.Cryptography.Tests.Asn1
 {
-    public class SimpleDeserialize
+    public static class SimpleDeserialize
     {
         [Theory]
         [InlineData(

@@ -2278,7 +2278,14 @@ namespace System.Security.Cryptography.Asn1
                         out _,
                         out _,
                         out _,
+                        out byte[] defaultContents,
                         out Asn1Tag expectedTag);
+
+                    if (defaultContents != null)
+                    {
+                        // TODO/Review: This might be legal?
+                        throw new CryptographicException($"Field '{fieldInfo.Name}' on [{nameof(ChoiceAttribute)}] type '{fieldInfo.DeclaringType.FullName}' has a default value.");
+                    }
 
                     var key = (expectedTag.TagClass, expectedTag.TagValue);
 
@@ -2383,6 +2390,7 @@ namespace System.Security.Cryptography.Asn1
                 out ObjectIdentifierAttribute oidAttr,
                 out bool isAny,
                 out bool isCollection,
+                out byte[] defaultContents,
                 out Asn1Tag expectedTag);
             
             if (typeT.IsPrimitive)
@@ -2393,7 +2401,11 @@ namespace System.Security.Cryptography.Asn1
                     throw new CryptographicException();
                 }
 
-                return GetPrimitiveDeserializer(typeT);
+                return DefaultValueDeserializer(
+                    expectedTag,
+                    tagType,
+                    defaultContents,
+                    GetPrimitiveDeserializer(typeT));
             }
 
             if (typeT.IsEnum)
@@ -2575,6 +2587,67 @@ namespace System.Security.Cryptography.Asn1
             throw new CryptographicException();
         }
 
+        private static Deserializer DefaultValueDeserializer(
+            Asn1Tag expectedTag,
+            UniversalTagNumber tagType,
+            byte[] defaultContents,
+            Deserializer literalValueDeserializer)
+        {
+            if (expectedTag.TagClass == TagClass.Universal && defaultContents == null)
+            {
+                return literalValueDeserializer;
+            }
+
+            if (defaultContents != null)
+            {
+                return (ref AsnReader reader) =>
+                {
+                    if (reader.HasData)
+                    {
+                        Asn1Tag actualTag = reader.PeekTag();
+
+                        if (actualTag.TagClass == expectedTag.TagClass &&
+                            actualTag.TagValue == expectedTag.TagValue)
+                        {
+                            return literalValueDeserializer(ref reader);
+                        }
+                    }
+
+                    return DefaultValue(tagType, defaultContents);
+                };
+            }
+
+            return (ref AsnReader reader) =>
+            {
+                Asn1Tag actualTag = reader.PeekTag();
+
+                if (actualTag.TagClass == expectedTag.TagClass &&
+                    actualTag.TagValue == expectedTag.TagValue)
+                {
+                    return literalValueDeserializer(ref reader);
+                }
+
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            };
+        }
+
+        private static object DefaultValue(UniversalTagNumber tagType, byte[] defaultContents)
+        {
+            Debug.Assert(defaultContents != null);
+
+            // TODO: WRITE THIS FOR REAL!
+            if (tagType == UniversalTagNumber.Boolean)
+            {
+                return defaultContents[0] != 0;
+            }
+            if (tagType == UniversalTagNumber.Integer)
+            {
+                return (int)defaultContents[0];
+            }
+
+            throw new NotImplementedException(tagType.ToString());
+        }
+
         private static void GetFieldInfo(
             Type typeT,
             FieldInfo fieldInfo,
@@ -2583,6 +2656,7 @@ namespace System.Security.Cryptography.Asn1
             out ObjectIdentifierAttribute oidAttr,
             out bool isAny,
             out bool isCollection,
+            out byte[] defaultContents,
             out Asn1Tag expectedTag)
         {
             object[] typeAttrs = fieldInfo?.GetCustomAttributes(typeof(AsnTypeAttribute), false) ??
@@ -2675,17 +2749,12 @@ namespace System.Security.Cryptography.Asn1
                 }
             }
 
-            // Custom tag lookup attribute retrival goes here.
-
-            if (tagType != 0)
-            {
-                expectedTag = new Asn1Tag(tagType);
-                return;
-            }
+            var defaultValueAttr = fieldInfo?.GetCustomAttribute<DefaultValueAttribute>(false);
+            defaultContents = defaultValueAttr?.EncodedBytes;
 
             if (typeT == typeof(bool))
             {
-                expectedTag = new Asn1Tag(UniversalTagNumber.Boolean);
+                tagType = UniversalTagNumber.Boolean;
             }
             else if (typeT == typeof(sbyte) ||
                 typeT == typeof(byte) ||
@@ -2696,12 +2765,19 @@ namespace System.Security.Cryptography.Asn1
                 typeT == typeof(long) ||
                 typeT == typeof(ulong))
             {
-                expectedTag = new Asn1Tag(UniversalTagNumber.Integer);
+                tagType = UniversalTagNumber.Integer;
             }
-            else
+
+            var tagOverride = fieldInfo?.GetCustomAttribute<TagOverrideAttribute>(false);
+
+            if (tagOverride != null)
             {
-                expectedTag = Asn1Tag.EndOfContents;
+                // This will throw for unmapped TagClass values and specifying Universal.
+                expectedTag = new Asn1Tag(tagOverride.TagClass, tagOverride.Value);
+                return;
             }
+
+            expectedTag = new Asn1Tag(tagType);
         }
 
         private static Type UnpackNullable(Type typeT)
@@ -2934,20 +3010,38 @@ namespace System.Security.Cryptography.Asn1
     [AttributeUsage(AttributeTargets.Field)]
     internal sealed class DefaultValueAttribute : AsnEncodingRuleAttribute
     {
-        private readonly byte[] _encodedValue;
+        internal byte[] EncodedBytes { get; }
 
         public DefaultValueAttribute(params byte[] encodedValue)
         {
-            _encodedValue = encodedValue;
+            EncodedBytes = encodedValue;
         }
 
-        public ReadOnlySpan<byte> EncodedValue => _encodedValue;
+        public ReadOnlySpan<byte> EncodedValue => EncodedBytes;
     }
 
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
     internal sealed class ChoiceAttribute : Attribute
     {
         public bool AllowNull { get; set; }
+    }
+
+    [AttributeUsage(AttributeTargets.Field)]
+    internal sealed class TagOverrideAttribute : Attribute
+    {
+        public TagClass TagClass { get; }
+        public int Value { get; }
+
+        public TagOverrideAttribute(int value)
+            : this(TagClass.ContextSpecific, value)
+        {
+        }
+
+        public TagOverrideAttribute(TagClass tagClass, int value)
+        {
+            TagClass = tagClass;
+            Value = value;
+        }
     }
 
     internal abstract class SpanBasedEncoding : Text.Encoding
