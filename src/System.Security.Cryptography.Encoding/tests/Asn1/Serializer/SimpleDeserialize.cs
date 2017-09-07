@@ -81,6 +81,13 @@ namespace System.Security.Cryptography.Tests.Asn1
                     "0201FF" +
                     "02020100" +
                     "0000" +
+                  "3080" +
+                    "020100" +
+                    "020101" +
+                    "020200FE" +
+                    "02017F" +
+                    "020200FF" +
+                    "0000" +
                   "0000";
 
             byte[] inputData = InputHex.HexToByteArray();
@@ -117,6 +124,7 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Equal(UnicodeVerifier, atst.BmpEncoded);
             Assert.Equal(new[] { false, false, true, true, false }, atst.Bools);
             Assert.Equal(new[] { 0, 1, -2, -1, 256 }, atst.Ints);
+            Assert.Equal(new byte[] { 0, 1, 254, 127, 255 }, atst.LittleUInts);
         }
 
         [Fact]
@@ -143,7 +151,6 @@ namespace System.Security.Cryptography.Tests.Asn1
                 AsnEncodingRules.DER,
                 out _);
 
-            
             Assert.Equal("1.2.840.10045.2.1", spki.AlgorithmIdentifier.Algorithm.Value);
             Assert.Equal(PublicKeyValue, spki.PublicKey.ByteArrayToHex());
 
@@ -151,6 +158,193 @@ namespace System.Security.Cryptography.Tests.Asn1
             string curveOid = reader.ReadObjectIdentifierAsString();
             Assert.False(reader.HasData, "reader.HasData");
             Assert.Equal("1.2.840.10045.3.1.7", curveOid);
+        }
+
+        [Fact]
+        public static void ReadDirectoryString()
+        {
+            const string BmpInputHex = "1E0400480069";
+            const string Utf8InputHex = "0C024869";
+
+            var ds1 = AsnSerializer.Deserialize<DirectoryString>(
+                BmpInputHex.HexToByteArray(),
+                AsnEncodingRules.DER,
+                out _);
+
+            var ds2 = AsnSerializer.Deserialize<DirectoryString>(
+                Utf8InputHex.HexToByteArray(),
+                AsnEncodingRules.DER,
+                out _);
+
+            Assert.NotNull(ds1);
+            Assert.NotNull(ds2);
+            Assert.Null(ds1.Utf8String);
+            Assert.Null(ds2.BmpString);
+            Assert.Equal("Hi", ds1.BmpString);
+            Assert.Equal("Hi", ds2.Utf8String);
+        }
+
+        [Fact]
+        public static void ReadFlexibleString()
+        {
+            const string BmpInputHex = "1E0400480069";
+            const string Utf8InputHex = "0C024869";
+            const string Ia5InputHex = "16024869";
+
+            var fs1 = AsnSerializer.Deserialize<FlexibleString>(
+                BmpInputHex.HexToByteArray(),
+                AsnEncodingRules.DER,
+                out _);
+
+            var fs2 = AsnSerializer.Deserialize<FlexibleString>(
+                Utf8InputHex.HexToByteArray(),
+                AsnEncodingRules.DER,
+                out _);
+
+            var fs3 = AsnSerializer.Deserialize<FlexibleString>(
+                Ia5InputHex.HexToByteArray(),
+                AsnEncodingRules.DER,
+                out _);
+
+            Assert.Null(fs1.DirectoryString?.Utf8String);
+            Assert.Null(fs1.Ascii);
+            Assert.Null(fs2.DirectoryString?.BmpString);
+            Assert.Null(fs2.Ascii);
+            Assert.Null(fs3.DirectoryString?.BmpString);
+            Assert.Null(fs3.DirectoryString?.Utf8String);
+            Assert.False(fs3.DirectoryString.HasValue, "fs3.DirectoryString.HasValue");
+            Assert.Equal("Hi", fs1.DirectoryString?.BmpString);
+            Assert.Equal("Hi", fs2.DirectoryString?.Utf8String);
+            Assert.Equal("Hi", fs3.Ascii);
+        }
+
+        [Fact]
+        public static void ReadFlexibleString_Class()
+        {
+            const string BmpInputHex = "1E0400480069";
+            const string Utf8InputHex = "0C024869";
+            const string Ia5InputHex = "16024869";
+
+            var fs1 = AsnSerializer.Deserialize<FlexibleStringClass>(
+                BmpInputHex.HexToByteArray(),
+                AsnEncodingRules.DER,
+                out _);
+
+            var fs2 = AsnSerializer.Deserialize<FlexibleStringClass>(
+                Utf8InputHex.HexToByteArray(),
+                AsnEncodingRules.DER,
+                out _);
+
+            var fs3 = AsnSerializer.Deserialize<FlexibleStringClass>(
+                Ia5InputHex.HexToByteArray(),
+                AsnEncodingRules.DER,
+                out _);
+
+            Assert.Null(fs1.DirectoryString?.Utf8String);
+            Assert.Null(fs1.Ascii);
+            Assert.Null(fs2.DirectoryString?.BmpString);
+            Assert.Null(fs2.Ascii);
+            Assert.Null(fs3.DirectoryString?.BmpString);
+            Assert.Null(fs3.DirectoryString?.Utf8String);
+            Assert.Null(fs3.DirectoryString);
+            Assert.Equal("Hi", fs1.DirectoryString?.BmpString);
+            Assert.Equal("Hi", fs2.DirectoryString?.Utf8String);
+            Assert.Equal("Hi", fs3.Ascii);
+        }
+
+        [Fact]
+        public static void ReadFlexibleString_ClassHybrid()
+        {
+            const string BmpInputHex = "1E0400480069";
+            const string Utf8InputHex = "0C024869";
+            const string Ia5InputHex = "16024869";
+
+            var fs1 = AsnSerializer.Deserialize<FlexibleStringClassHybrid>(
+                BmpInputHex.HexToByteArray(),
+                AsnEncodingRules.DER,
+                out _);
+
+            var fs2 = AsnSerializer.Deserialize<FlexibleStringClassHybrid>(
+                Utf8InputHex.HexToByteArray(),
+                AsnEncodingRules.DER,
+                out _);
+
+            var fs3 = AsnSerializer.Deserialize<FlexibleStringClassHybrid>(
+                Ia5InputHex.HexToByteArray(),
+                AsnEncodingRules.DER,
+                out _);
+
+            Assert.Null(fs1.DirectoryString?.Utf8String);
+            Assert.Null(fs1.Ascii);
+            Assert.Null(fs2.DirectoryString?.BmpString);
+            Assert.Null(fs2.Ascii);
+            Assert.Null(fs3.DirectoryString?.BmpString);
+            Assert.Null(fs3.DirectoryString?.Utf8String);
+            Assert.False(fs3.DirectoryString.HasValue, "fs3.DirectoryString.HasValue");
+            Assert.Equal("Hi", fs1.DirectoryString?.BmpString);
+            Assert.Equal("Hi", fs2.DirectoryString?.Utf8String);
+            Assert.Equal("Hi", fs3.Ascii);
+        }
+
+        [Fact]
+        public static void ReadFlexibleString_StructHybrid()
+        {
+            const string BmpInputHex = "1E0400480069";
+            const string Utf8InputHex = "0C024869";
+            const string Ia5InputHex = "16024869";
+
+            var fs1 = AsnSerializer.Deserialize<FlexibleStringStructHybrid>(
+                BmpInputHex.HexToByteArray(),
+                AsnEncodingRules.DER,
+                out _);
+
+            var fs2 = AsnSerializer.Deserialize<FlexibleStringStructHybrid>(
+                Utf8InputHex.HexToByteArray(),
+                AsnEncodingRules.DER,
+                out _);
+
+            var fs3 = AsnSerializer.Deserialize<FlexibleStringStructHybrid>(
+                Ia5InputHex.HexToByteArray(),
+                AsnEncodingRules.DER,
+                out _);
+
+            Assert.Null(fs1.DirectoryString?.Utf8String);
+            Assert.Null(fs1.Ascii);
+            Assert.Null(fs2.DirectoryString?.BmpString);
+            Assert.Null(fs2.Ascii);
+            Assert.Null(fs3.DirectoryString?.BmpString);
+            Assert.Null(fs3.DirectoryString?.Utf8String);
+            Assert.Null(fs3.DirectoryString);
+            Assert.Equal("Hi", fs1.DirectoryString?.BmpString);
+            Assert.Equal("Hi", fs2.DirectoryString?.Utf8String);
+            Assert.Equal("Hi", fs3.Ascii);
+        }
+
+        [Fact]
+        public static void Choice_CycleRoot_Throws()
+        {
+            byte[] inputBytes = { 0x01, 0x01, 0x00 };
+
+            Assert.Throws<CryptographicException>(
+                () =>
+                    AsnSerializer.Deserialize<CycleRoot>(
+                        inputBytes,
+                        AsnEncodingRules.DER,
+                        out _)
+            );
+        }
+
+        [Fact]
+        public static void DirectoryStringClass_AsNull()
+        {
+            byte[] inputBytes = { 0x05, 0x00 };
+
+            DirectoryStringClass ds = AsnSerializer.Deserialize<DirectoryStringClass>(
+                inputBytes,
+                AsnEncodingRules.DER,
+                out _);
+
+            Assert.Null(ds);
         }
     }
 
@@ -206,6 +400,8 @@ namespace System.Security.Cryptography.Tests.Asn1
         private bool[] _bools;
         [SetOf]
         private int[] _ints;
+        [SequenceOf]
+        private byte[] _littleUInts;
         //private byte[] _something;
         //private byte[] _openDrain;
 
@@ -231,5 +427,87 @@ namespace System.Security.Cryptography.Tests.Asn1
         public string BmpEncoded => _bmpString;
         public bool[] Bools => _bools;
         public int[] Ints => _ints;
+        public byte[] LittleUInts => _littleUInts;
+    }
+
+    [Choice]
+    [StructLayout(LayoutKind.Sequential)]
+    public struct DirectoryString
+    {
+        [UTF8String]
+        public string Utf8String;
+        [BMPString]
+        public string BmpString;
+    }
+
+    [Choice]
+    [StructLayout(LayoutKind.Sequential)]
+    public struct FlexibleString
+    {
+        public DirectoryString? DirectoryString;
+
+        [IA5String]
+        public string Ascii;
+    }
+
+    [Choice(AllowNull = true)]
+    [StructLayout(LayoutKind.Sequential)]
+    public class DirectoryStringClass
+    {
+        [UTF8String]
+        public string Utf8String;
+        [BMPString]
+        public string BmpString;
+    }
+
+    [Choice]
+    [StructLayout(LayoutKind.Sequential)]
+    public class FlexibleStringClass
+    {
+        public DirectoryStringClass DirectoryString;
+
+        [IA5String]
+        public string Ascii;
+    }
+
+    [Choice]
+    [StructLayout(LayoutKind.Sequential)]
+    public class FlexibleStringClassHybrid
+    {
+        public DirectoryString? DirectoryString;
+
+        [IA5String]
+        public string Ascii;
+    }
+
+    [Choice]
+    [StructLayout(LayoutKind.Sequential)]
+    public struct FlexibleStringStructHybrid
+    {
+        public DirectoryStringClass DirectoryString;
+
+        [IA5String]
+        public string Ascii;
+    }
+
+    [Choice]
+    [StructLayout(LayoutKind.Sequential)]
+    public class CycleRoot
+    {
+        public Cycle2 C2;
+    }
+
+    [Choice]
+    [StructLayout(LayoutKind.Sequential)]
+    public class Cycle2
+    {
+        public Cycle3 C3;
+    }
+
+    [Choice]
+    [StructLayout(LayoutKind.Sequential)]
+    public class Cycle3
+    {
+        public CycleRoot CycleRoot;
     }
 }
