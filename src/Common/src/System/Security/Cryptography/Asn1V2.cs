@@ -2155,6 +2155,195 @@ namespace System.Security.Cryptography.Asn1
                 out charsWritten);
         }
 
+        private static byte GetDigit(byte b)
+        {
+            if (b >= '0' && b <= '9')
+                return (byte)(b - '0');
+
+            throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+        }
+
+        private static DateTimeOffset ParseUtcTime(ReadOnlySpan<byte> contentOctets, int twoDigitYearMax)
+        {
+            // The full allowed formats (T-REC-X.680-201510 sec 47.3)
+            // YYMMDDhhmmZ  (a, b1, c1)
+            // YYMMDDhhmm+hhmm (a, b1, c2+)
+            // YYMMDDhhmm-hhmm (a, b1, c2-)
+            // YYMMDDhhmmssZ (a, b2, c1)
+            // YYMMDDhhmmss+hhmm (a, b2, c2+)
+            // YYMMDDhhmmss-hhmm (a, b2, c2-)
+
+            const int AB1C1Length = 11;
+            const int AB1C2Length = AB1C1Length + 4;
+            const int AB2C1Length = AB1C1Length + 2;
+            const int AB2C2Length = AB2C1Length + 4;
+
+            // 11, 13, 15, 17 are legal.
+            // Range check + odd.
+            if (contentOctets.Length < AB1C1Length ||
+                contentOctets.Length > AB2C2Length ||
+                (contentOctets.Length & 1) != 1)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            int year = 10 * GetDigit(contentOctets[0]) + GetDigit(contentOctets[1]);
+            int month = 10 * GetDigit(contentOctets[2]) + GetDigit(contentOctets[3]);
+            int day = 10 * GetDigit(contentOctets[4]) + GetDigit(contentOctets[5]);
+            int hour = 10 * GetDigit(contentOctets[6]) + GetDigit(contentOctets[7]);
+            int minute = 10 * GetDigit(contentOctets[8]) + GetDigit(contentOctets[9]);
+            int second = 0;
+            int offsetHour = 0;
+            int offsetMinute = 0;
+            bool minus = false;
+
+            if (contentOctets.Length == AB1C1Length)
+            {
+                if (contentOctets[10] != 'Z')
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+            }
+            else if (contentOctets.Length == AB1C2Length)
+            {
+                if (contentOctets[10] == '-')
+                {
+                    minus = true;
+                }
+                else if (contentOctets[10] != '+')
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+
+                offsetHour = 10 * GetDigit(contentOctets[11]) + GetDigit(contentOctets[12]);
+                offsetMinute = 10 * GetDigit(contentOctets[13]) + GetDigit(contentOctets[14]);
+            }
+            else
+            {
+                second = 10 * GetDigit(contentOctets[10]) + GetDigit(contentOctets[11]);
+
+                if (contentOctets.Length == AB2C1Length)
+                {
+                    if (contentOctets[12] != 'Z')
+                    {
+                        throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                    }
+                }
+                else
+                {
+                    Debug.Assert(contentOctets.Length == AB2C2Length);
+
+                    if (contentOctets[12] == '-')
+                    {
+                        minus = true;
+                    }
+                    else if (contentOctets[12] != '+')
+                    {
+                        throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                    }
+
+                    offsetHour = 10 * GetDigit(contentOctets[13]) + GetDigit(contentOctets[14]);
+                    offsetMinute = 10 * GetDigit(contentOctets[15]) + GetDigit(contentOctets[16]);
+                }
+            }
+
+            TimeSpan offset = new TimeSpan(offsetHour, offsetMinute, 0);
+
+            if (minus)
+            {
+                offset = TimeSpan.Zero - offset;
+            }
+
+            int y = year % 100;
+            int scaledYear = ((twoDigitYearMax / 100 - (y > twoDigitYearMax % 100 ? 1 : 0)) * 100 + y);
+
+            try
+            {
+                return new DateTimeOffset(scaledYear, month, day, hour, minute, second, offset);
+            }
+            catch (Exception e)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding, e);
+            }
+        }
+
+        /// <summary>
+        /// Gets the DateTimeOffset represented by a UTCTime value.
+        /// </summary>
+        /// <param name="twoDigitYearMax">
+        /// The largest year to represent with this value.
+        /// The default value, 2049, represents the 1950-2049 range for X.509 certificates.
+        /// </param>
+        /// <returns>
+        /// A DateTimeOffset representing the value encoded in the UTCTime.
+        /// </returns>
+        /// <seealso cref="System.Globalization.Calendar.TwoDigitYearMax"/>
+        public DateTimeOffset GetUtcTime(int twoDigitYearMax = 2049)
+        {
+            // T-REC-X.680-201510 sec 47.3 says it is IMPLICIT VisibleString, which means
+            // that BER is allowed to do complex constructed forms.
+
+            // The full allowed formats (T-REC-X.680-201510 sec 47.3)
+            // YYMMDDhhmmZ  (a, b1, c1)
+            // YYMMDDhhmm+hhmm (a, b1, c2+)
+            // YYMMDDhhmm-hhmm (a, b1, c2-)
+            // YYMMDDhhmmssZ (a, b2, c1)
+            // YYMMDDhhmmss+hhmm (a, b2, c2+)
+            // YYMMDDhhmmss-hhmm (a, b2, c2-)
+
+            // CER and DER are restricted to YYMMDDhhmmssZ
+            // T-REC-X.690-201510 sec 11.8
+            
+            // Optimize for the CER/DER primitive encoding:
+            if (TryGetOctetStringBytes(
+                out ReadOnlySpan<byte> primitiveOctets,
+                out int headerLength,
+                UniversalTagNumber.UtcTime))
+            {
+                if (primitiveOctets.Length == 13)
+                {
+                    DateTimeOffset value = ParseUtcTime(primitiveOctets, twoDigitYearMax);
+                    _data = _data.Slice(headerLength + primitiveOctets.Length);
+                    return value;
+                }
+            }
+
+            // T-REC-X.690-201510 sec 11.8
+            if (_ruleSet == AsnEncodingRules.DER || _ruleSet == AsnEncodingRules.CER)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            // The longest legal format is (a, b2, c2), which comes out to 17 characters/bytes.
+            byte[] rented = ArrayPool<byte>.Shared.Rent(17);
+            ReadOnlySpan<byte> contentOctets = ReadOnlySpan<byte>.Empty;
+
+            try
+            {
+                if (TryCopyCharacterStringBytes(
+                    UniversalTagNumber.UtcTime,
+                    rented,
+                    true,
+                    out int bytesRead,
+                    out int contentLength))
+                {
+                    contentOctets = Slice(rented, 0, contentLength);
+
+                    DateTimeOffset value = ParseUtcTime(contentOctets, twoDigitYearMax);
+                    // Includes the header
+                    _data = _data.Slice(bytesRead);
+                    return value;
+                }
+            }
+            finally
+            {
+                Array.Clear(rented, 0, contentOctets.Length);
+                ArrayPool<byte>.Shared.Return(rented);
+            }
+
+            throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+        }
+
         private static ReadOnlySpan<byte> Slice(ReadOnlySpan<byte> source, int offset, int length)
         {
             Debug.Assert(offset >= 0);
