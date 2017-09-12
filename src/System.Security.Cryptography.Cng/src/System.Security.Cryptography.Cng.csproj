@@ -301,10 +301,11 @@
     <Reference Include="System.Runtime.Handles" />
   </ItemGroup>
   <ItemGroup Condition="'$(IsPartialFacadeAssembly)' != 'true'">
-    <ProjectReference Include="..\..\System.Security.Cryptography.Algorithms\src\System.Security.Cryptography.Algorithms.csproj">
+    <ProjectReference Condition="'($TargetsWindows)' == 'true'" Include="..\..\System.Security.Cryptography.Algorithms\src\System.Security.Cryptography.Algorithms.csproj">
       <Project>{81A05E2E-E3AE-4246-B4E6-DD5F31FB71F9}</Project>
       <Name>System.Security.Cryptography.Algorithms</Name>
     </ProjectReference>
+    <Reference Condition="'($TargetsWindows)' != 'true'" Include="System.Security.Cryptography.Algorithms" />
     <Reference Include="System.Buffers" />
     <Reference Include="System.Diagnostics.Contracts" />
     <Reference Include="System.Diagnostics.Debug" />
