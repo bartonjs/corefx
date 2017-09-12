@@ -52,15 +52,3 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         }
     }
 }
-
-internal static partial class Interop
-{
-    internal static partial class Crypto
-    {
-        [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_EcKeyCreateByOid")]
-        internal static extern System.IntPtr EcKeyCreateByOid(string oid);
-
-        [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_EcKeyDestroy")]
-        internal static extern void EcKeyDestroy(System.IntPtr r);
-    }
-}
