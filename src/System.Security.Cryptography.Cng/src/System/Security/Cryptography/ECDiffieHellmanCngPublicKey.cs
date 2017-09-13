@@ -14,8 +14,7 @@ namespace System.Security.Cryptography
         private CngKeyBlobFormat _format;
         private string _curveName;
 
-        //TODO: I may want to ignore the error for this instead of providing a default base constructor.
-        public ECDiffieHellmanCngPublicKey() : base() { }
+        private ECDiffieHellmanCngPublicKey() : base() { }
 
         /// <summary>
         /// Wrap a CNG key
