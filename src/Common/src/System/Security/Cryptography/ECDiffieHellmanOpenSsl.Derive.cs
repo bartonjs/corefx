@@ -117,7 +117,14 @@ namespace System.Security.Cryptography
 
                     using (SafeEvpPKeyHandle localHandle = _key.DuplicateKeyHandle())
                     {
-                        return Interop.Crypto.EvpPkeyDeriveSecretAgreement(localHandle, otherPartyHandle);
+                        //return Interop.Crypto.EvpPkeyDeriveSecretAgreement(localHandle, otherPartyHandle);
+                        int secretLength;
+                        using (SafeEvpPkeyCtxHandle ctx = Interop.Crypto.EvpPkeyCtxCreate(localHandle, otherPartyHandle, out secretLength))
+                        {
+                            byte[] secret = ArrayPool<Byte>.Shared.Rent(secretLength);
+                            Interop.Crypto.EvpPkeyDeriveSecretAgreement(secret, secretLength, ctx);
+                            return secret;
+                        }
                     }
                 }
             }

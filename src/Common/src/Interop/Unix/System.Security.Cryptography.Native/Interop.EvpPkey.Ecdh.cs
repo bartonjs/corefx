@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Win32.SafeHandles;
 using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
@@ -11,22 +12,13 @@ internal static partial class Interop
 {
     internal static partial class Crypto
     {
+        [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_EvpPkeyCtxCreate")]
+        internal static extern SafeEvpPkeyCtxHandle EvpPkeyCtxCreate(SafeEvpPKeyHandle pkey, SafeEvpPKeyHandle peerkey, out int secretLength);
+
         [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_EvpPkeyDeriveSecretAgreement")]
-        private static extern void CryptoNative_EvpPkeyDeriveSecretAgreement(byte[] secret, int secretLength, IntPtr ctx);
+        internal static extern void EvpPkeyDeriveSecretAgreement(byte[] secret, int secretLength, SafeEvpPkeyCtxHandle ctx);
 
-        [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_EvpPkeyNewCtx")]
-        private static extern IntPtr CryptoNative_EvpPkeyNewCtx(SafeEvpPKeyHandle pkey, SafeEvpPKeyHandle peerkey, out int secretLength);
-
-        internal static byte[] EvpPkeyDeriveSecretAgreement(SafeEvpPKeyHandle key, SafeEvpPKeyHandle peerkey)
-        {
-            int secretLength;
-            IntPtr ctx = CryptoNative_EvpPkeyNewCtx(key, peerkey, out secretLength);
-            byte[] secret = ArrayPool<Byte>.Shared.Rent(secretLength);
-            unsafe
-            {
-                CryptoNative_EvpPkeyDeriveSecretAgreement(secret, secretLength, ctx);
-            }
-            return secret;
-        }
+        [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_EvpPKeyCtxDestroy")]
+        internal static extern void EvpPKeyCtxDestroy(IntPtr ctx);
     }
 }
