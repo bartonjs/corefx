@@ -12,11 +12,6 @@ namespace System.Security.Cryptography
     {
         public sealed partial class ECDiffieHellmanCng : ECDiffieHellman
         {
-            // For the public ECDiffieHellmanCng this is exposed as the HashAlgorithm property
-            // which is a CngAlgorithm type. We're not doing that, but we do need the default value
-            // for DeriveKeyMaterial.
-            private static readonly HashAlgorithmName _hashAlgorithm = HashAlgorithmName.SHA256;
-
             private void ImportFullKeyBlob(byte[] ecfullKeyBlob, bool includePrivateParameters)
             {
                 string blobType = includePrivateParameters ?

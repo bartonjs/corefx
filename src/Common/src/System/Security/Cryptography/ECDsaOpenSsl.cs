@@ -249,7 +249,7 @@ namespace System.Security.Cryptography
                 _key = new Lazy<SafeEcKeyHandle>(newKey);
             }
 
-                    /// <summary>
+            /// <summary>
             ///         ImportParameters will replace the existing key that ECDsaOpenSsl is working with by creating a
             ///         new key. If the parameters contains only Q, then only a public key will be imported.
             ///         If the parameters also contains D, then a full key pair will be imported. 

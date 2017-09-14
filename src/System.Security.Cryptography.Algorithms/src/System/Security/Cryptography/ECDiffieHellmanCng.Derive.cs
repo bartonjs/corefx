@@ -13,27 +13,12 @@ namespace System.Security.Cryptography
     {
         public sealed partial class ECDiffieHellmanCng : ECDiffieHellman
         {
-            private byte[] DeriveKeyMaterialFromCngKey(ECDiffieHellmanCngPublicKey otherPartyPublicKey)
-            {
-                using (SafeNCryptKeyHandle otherKeyHandle = CngKeyLite.ImportKeyBlob(Interop.BCrypt.KeyBlobType.BCRYPT_ECCPUBLIC_BLOB, otherPartyPublicKey.ToByteArray(), otherPartyPublicKey._curveName))
-                {
-                    string importedKeyAlgorithmGroup = CngKeyLite.GetPropertyAsString(otherKeyHandle, CngKeyLite.KeyPropertyName.AlgorithmGroup, CngPropertyOptions.None);
-                    if (importedKeyAlgorithmGroup == null || importedKeyAlgorithmGroup != "ECDH")
-                    {
-                        throw new ArgumentException(SR.Cryptography_ArgECDHRequiresECDHKey, "otherPartyPublicKey");
-                    }
-                    if (CngKeyLite.GetKeyLength(otherKeyHandle) != KeySize)
-                    {
-                        throw new ArgumentException(SR.Cryptography_ArgECDHKeySizeMismatch, "otherPartyPublicKey");
-                    }
+            // For the public ECDiffieHellmanCng this is exposed as the HashAlgorithm property
+            // which is a CngAlgorithm type. We're not doing that, but we do need the default value
+            // for DeriveKeyMaterial.
+            private static readonly HashAlgorithmName _hashAlgorithm = HashAlgorithmName.SHA256;
 
-                    using (SafeNCryptKeyHandle localKey = GetDuplicatedKeyHandle())
-                    using (SafeNCryptSecretHandle secretAgreement = Interop.NCrypt.DeriveSecretAgreement(localKey, otherKeyHandle))
-                    {
-                        return Interop.NCrypt.DeriveKeyMaterialHash(secretAgreement, _hashAlgorithm.Name, null, null, Interop.NCrypt.SecretAgreementFlags.UseSecretAsHmacKey);
-                    }
-                }
-            }
+            private byte[] DeriveKeyMaterialFromCngKey(ECDiffieHellmanCngPublicKey otherPartyPublicKey) => DeriveKeyFromHash(otherPartyPublicKey, _hashAlgorithm);
 
             /// <summary>
             ///     Get a handle to the secret agreement generated between two parties
@@ -46,7 +31,7 @@ namespace System.Security.Cryptography
                 }
 
                 ECParameters otherPartyParameters = otherPartyPublicKey.ExportParameters();
-                using (ECDiffieHellmanCng otherPartyCng = (ECDiffieHellmanCng)Create(otherPartyParameters)) //TODO: catch this if it fails and throw exception that the otherpartyPublicKey must be CNG
+                using (ECDiffieHellmanCng otherPartyCng = (ECDiffieHellmanCng)Create(otherPartyParameters))
                 using (SafeNCryptKeyHandle otherPartyHandle = otherPartyCng.GetDuplicatedKeyHandle())
                 {
                     string importedKeyAlgorithmGroup = CngKeyLite.GetPropertyAsString(otherPartyHandle, CngKeyLite.KeyPropertyName.AlgorithmGroup, CngPropertyOptions.None);

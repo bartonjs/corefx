@@ -130,7 +130,6 @@ namespace System.Security.Cryptography
 
             private SafeEcKeyHandle GenerateKeyLazy() => ECOpenSsl.GenerateKeyByKeySize(_keySize);
 
-
             internal void FreeKey()
             {
                 if (_key != null)

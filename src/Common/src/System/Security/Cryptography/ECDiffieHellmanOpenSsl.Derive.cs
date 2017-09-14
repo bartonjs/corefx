@@ -16,45 +16,15 @@ namespace System.Security.Cryptography
 #endif
         public sealed partial class ECDiffieHellmanOpenSsl : ECDiffieHellman
         {
+            // For the public ECDiffieHellmanCng this is exposed as the HashAlgorithm property
+            // which is a CngAlgorithm type. We're not doing that, but we do need the default value
+            // for DeriveKeyMaterial.
+            private static readonly HashAlgorithmName _hashAlgorithm = HashAlgorithmName.SHA256;
+
             /// <summary>
             /// Given a second party's public key, derive shared key material
             /// </summary>
-            public override byte[] DeriveKeyMaterial(ECDiffieHellmanPublicKey otherPartyPublicKey)
-            {
-                Contract.Ensures(Contract.Result<byte[]>() != null);
-
-                if (otherPartyPublicKey == null)
-                {
-                    throw new ArgumentNullException("otherPartyPublicKey");
-                }
-
-                //TODO: this may not make sense anymore for openssl
-                ECDiffieHellmanOpenSslPublicKey otherKey = otherPartyPublicKey as ECDiffieHellmanOpenSslPublicKey;
-                if (otherKey == null)
-                {
-                    // We may be able to create a ECDiffieHellmanOpenSslPublicKey from the otherPartyPublicKey. Note that this is a change from previous
-                    // netfx behavior where a failed cast results in a CryptoException immediately. This is to account for when the 
-                    // otherPartyPublicKey was created by ECDiffieHellman.Create().PublicKey in which case the type is the internal
-                    // Algorithms ECDiffieHellmanOpenSslPublicKey implementation.
-                    ECParameters otherPartyParameters = otherPartyPublicKey.ExportParameters();
-                    using (ECDiffieHellmanOpenSsl otherPartyOpenSsl = new ECDiffieHellmanOpenSsl())
-                    {
-                        try
-                        {
-                            // If the otherkey doesn't represent an object that can be loaded as a openssl key then ImportParameters throws a CryptoException.
-                            otherPartyOpenSsl.ImportParameters(otherPartyParameters);
-                            otherKey = otherPartyOpenSsl.PublicKey as ECDiffieHellmanOpenSslPublicKey;
-                        }
-                        catch (CryptographicException)
-                        {
-                            throw new ArgumentException(/* TODO ADD SR SR.Cryptography_ArgExpectedECDiffieHellmanOpenSslPublicKey */);
-                        }
-                    }
-                }
-
-                // TODO: do derivation
-                throw new NotImplementedException();
-            }
+            public override byte[] DeriveKeyMaterial(ECDiffieHellmanPublicKey otherPartyPublicKey) => DeriveKeyFromHash(otherPartyPublicKey, _hashAlgorithm, null, null);
 
             public override byte[] DeriveKeyFromHash(
                 ECDiffieHellmanPublicKey otherPartyPublicKey,
@@ -69,17 +39,8 @@ namespace System.Security.Cryptography
                 if (string.IsNullOrEmpty(hashAlgorithm.Name))
                     throw new ArgumentException(SR.Cryptography_HashAlgorithmNameNullOrEmpty, "hashAlgorithm");
 
-                // TODO: do derivation
-                //using (SafeNCryptSecretHandle secretAgreement = DeriveSecretAgreementHandle(otherPartyPublicKey))
-                //{
-                //    return Interop.NCrypt.DeriveKeyMaterialHash(
-                //        secretAgreement,
-                //        hashAlgorithm.Name,
-                //        secretPrepend,
-                //        secretAppend,
-                //        Interop.NCrypt.SecretAgreementFlags.None);
-                //}
-                throw new NotImplementedException();
+                byte[] secretAgreement = DeriveSecretAgreement(otherPartyPublicKey);
+                return AssymetricAlgorithmHelpers.Hash(secretAgreement, 0, secretAgreement.Length, hashAlgorithm);
             }
 
             public override byte[] DeriveKeyFromHmac(
@@ -112,9 +73,9 @@ namespace System.Security.Cryptography
                 //        flags);
                 throw new NotImplementedException();
             //}
-        }
+            }
 
-        public override byte[] DeriveKeyTls(ECDiffieHellmanPublicKey otherPartyPublicKey, byte[] prfLabel, byte[] prfSeed)
+            public override byte[] DeriveKeyTls(ECDiffieHellmanPublicKey otherPartyPublicKey, byte[] prfLabel, byte[] prfSeed)
             {
                 Contract.Ensures(Contract.Result<byte[]>() != null);
 
@@ -127,6 +88,38 @@ namespace System.Security.Cryptography
 
                 // TODO: do derivation
                 throw new PlatformNotSupportedException("OpenSSL does not support DeriveKeyTls.");
+            }
+
+            /// <summary>
+            /// Get the secret agreement generated between two parties
+            /// </summary>
+            private byte[] DeriveSecretAgreement(ECDiffieHellmanPublicKey otherPartyPublicKey)
+            {
+                if (otherPartyPublicKey == null)
+                {
+                    throw new ArgumentNullException("otherPartyPublicKey");
+                }
+
+                ECDiffieHellmanOpenSslPublicKey otherKey = otherPartyPublicKey as ECDiffieHellmanOpenSslPublicKey;
+                if (otherKey == null)
+                {
+                    ECParameters otherPartyParameters = otherPartyPublicKey.ExportParameters();
+                    otherKey = new ECDiffieHellmanOpenSslPublicKey(0);
+                    otherKey.ImportParameters(otherPartyParameters);
+                }
+
+                using (SafeEvpPKeyHandle otherPartyHandle = otherKey.DuplicateKeyHandle())
+                {
+                    if (otherKey._keySize != _keySize)
+                    {
+                        throw new ArgumentException(SR.Cryptography_ArgECDHKeySizeMismatch, "otherPartyPublicKey");
+                    }
+
+                    using (SafeEvpPKeyHandle localHandle = GetDuplicatedKeyHandle())
+                    {
+                        return Interop.Crypto.DeriveSecretAgreement(localHandle, otherPartyHandle);
+                    }
+                }
             }
         }
 #if INTERNAL_ASYMMETRIC_IMPLEMENTATIONS
