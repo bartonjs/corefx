@@ -11,6 +11,6 @@ internal static partial class Interop
     internal static partial class Crypto
     {
         [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_EvpPkeyDeriveSecretAgreement")]
-        internal static extern byte[] EvpPkeyDeriveSecretAgreement();
+        internal static extern byte[] EvpPkeyDeriveSecretAgreement(SafeEvpPKeyHandle key, SafeEvpPKeyHandle peerkey);
     }
 }

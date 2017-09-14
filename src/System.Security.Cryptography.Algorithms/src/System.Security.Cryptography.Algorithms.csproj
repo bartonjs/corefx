@@ -337,6 +337,9 @@
     <Compile Include="$(CommonPath)\Interop\Unix\System.Security.Cryptography.Native\Interop.EvpPkey.EcKey.cs">
       <Link>Common\Interop\Unix\System.Security.Cryptography.Native\Interop.EvpPkey.EcKey.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\Interop\Unix\System.Security.Cryptography.Native\Interop.EvpPkey.Ecdh.cs">
+      <Link>Common\Interop\Unix\System.Security.Cryptography.Native\Interop.EvpPkey.Ecdh.cs</Link>
+    </Compile>
     <Compile Include="$(CommonPath)\Interop\Unix\System.Security.Cryptography.Native\Interop.ERR.cs">
       <Link>Common\Interop\Unix\System.Security.Cryptography.Native\Interop.ERR.cs</Link>
     </Compile>

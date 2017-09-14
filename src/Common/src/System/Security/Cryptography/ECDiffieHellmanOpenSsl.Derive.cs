@@ -40,7 +40,7 @@ namespace System.Security.Cryptography
                     throw new ArgumentException(SR.Cryptography_HashAlgorithmNameNullOrEmpty, "hashAlgorithm");
 
                 byte[] secretAgreement = DeriveSecretAgreement(otherPartyPublicKey);
-                return AssymetricAlgorithmHelpers.Hash(secretAgreement, 0, secretAgreement.Length, hashAlgorithm);
+                return AsymmetricAlgorithmHelpers.HashData(secretAgreement, 0, secretAgreement.Length, hashAlgorithm);
             }
 
             public override byte[] DeriveKeyFromHmac(
@@ -110,14 +110,14 @@ namespace System.Security.Cryptography
 
                 using (SafeEvpPKeyHandle otherPartyHandle = otherKey.DuplicateKeyHandle())
                 {
-                    if (otherKey._keySize != _keySize)
+                    if (otherKey._keySize != _key._keySize)
                     {
                         throw new ArgumentException(SR.Cryptography_ArgECDHKeySizeMismatch, "otherPartyPublicKey");
                     }
 
-                    using (SafeEvpPKeyHandle localHandle = GetDuplicatedKeyHandle())
+                    using (SafeEvpPKeyHandle localHandle = _key.DuplicateKeyHandle())
                     {
-                        return Interop.Crypto.DeriveSecretAgreement(localHandle, otherPartyHandle);
+                        return Interop.Crypto.EvpPkeyDeriveSecretAgreement(localHandle, otherPartyHandle);
                     }
                 }
             }
