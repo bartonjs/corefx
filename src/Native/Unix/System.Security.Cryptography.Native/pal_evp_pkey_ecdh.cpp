@@ -54,31 +54,35 @@ extern "C" EVP_PKEY_CTX* CryptoNative_EvpPkeyNewCtx(EVP_PKEY* pkey, EVP_PKEY* pe
     //peerkey = get_peerkey(pkey);
 
     /* Create the context for the shared secret derivation */
-    if (NULL == (ctx = EVP_PKEY_CTX_new(pkey, NULL)))
-        return 0;
+    EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(pkey, NULL);
+    if (ctx == nullptr)
+        return nullptr;
 
     /* Initialise */
     if (1 != EVP_PKEY_derive_init(ctx))
-        return 0;
+        return nullptr;
 
     /* Provide the peer public key */
     if (1 != EVP_PKEY_derive_set_peer(ctx, peerkey))
-        return 0;
+        return nullptr;
 
     /* Determine buffer length for shared secret */
     if (1 != EVP_PKEY_derive(ctx, NULL, secretLength))
-        return 0;
+        return nullptr;
 
     return ctx;
 }
 
-extern "C" EVP_PKEY_CTX* CryptoNative_EvpPkeyDeriveSecretAgreement(uint8_t *secret, size_t *secretLength, EVP_PKEY_CTX *ctx)
+extern "C" void CryptoNative_EvpPkeyDeriveSecretAgreement(uint8_t *secret, size_t secretLength, EVP_PKEY_CTX *ctx)
 {
-    if (1 != (EVP_PKEY_derive(ctx, secret, secretLength)))
-        return 0;
-
-    EVP_PKEY_CTX_free(ctx);
-
-    return secret;
+    if (ctx != nullptr)
+        EVP_PKEY_derive(ctx, secret, &secretLength);
 }
 
+extern "C" void CryptoNative_EvpPkeyCtxDestroy(EVP_PKEY_CTX* ctx)
+{
+    if (ctx != nullptr)
+    {
+        EVP_PKEY_CTX_free(ctx);
+    }
+}
