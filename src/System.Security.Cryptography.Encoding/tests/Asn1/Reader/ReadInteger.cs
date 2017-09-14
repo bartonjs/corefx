@@ -46,6 +46,163 @@ namespace System.Security.Cryptography.Tests.Asn1
         [InlineData(PublicEncodingRules.BER, "020100", 0)]
         [InlineData(PublicEncodingRules.CER, "020100", 0)]
         [InlineData(PublicEncodingRules.DER, "020100", 0)]
+        [InlineData(PublicEncodingRules.DER, "02017F", sbyte.MaxValue)]
+        [InlineData(PublicEncodingRules.DER, "020180", sbyte.MinValue)]
+        [InlineData(PublicEncodingRules.DER, "0201FF", -1)]
+        public static void ReadInt8_Success(
+            PublicEncodingRules ruleSet,
+            string inputHex,
+            sbyte expectedValue)
+        {
+            byte[] data = inputHex.HexToByteArray();
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
+
+            bool didRead = reader.TryReadInt8(out sbyte value);
+
+            Assert.True(didRead, "reader.TryReadInt8");
+            Assert.Equal(expectedValue, value);
+        }
+
+        [Theory]
+        [InlineData(PublicEncodingRules.BER, "02020102")]
+        [InlineData(PublicEncodingRules.CER, "02020102")]
+        [InlineData(PublicEncodingRules.DER, "02020102")]
+        public static void ReadInt8_TooMuchData(
+            PublicEncodingRules ruleSet,
+            string inputHex)
+        {
+            byte[] data = inputHex.HexToByteArray();
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
+
+            bool didRead = reader.TryReadInt8(out sbyte value);
+
+            Assert.False(didRead, "reader.TryReadInt8");
+            Assert.Equal(0, value);
+        }
+
+        [Theory]
+        [InlineData(PublicEncodingRules.BER, "020100", 0)]
+        [InlineData(PublicEncodingRules.CER, "02017F", 0x7F)]
+        [InlineData(PublicEncodingRules.CER, "02020080", 0x80)]
+        [InlineData(PublicEncodingRules.CER, "020200FF", 0xFF)]
+        public static void ReadUInt8_Success(
+            PublicEncodingRules ruleSet,
+            string inputHex,
+            byte expectedValue)
+        {
+            byte[] data = inputHex.HexToByteArray();
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
+
+            bool didRead = reader.TryReadUInt8(out byte value);
+
+            Assert.True(didRead, "reader.TryReadUInt8");
+            Assert.Equal(expectedValue, value);
+        }
+
+        [Theory]
+        [InlineData(PublicEncodingRules.BER, "020180")]
+        [InlineData(PublicEncodingRules.CER, "020180")]
+        [InlineData(PublicEncodingRules.DER, "020180")]
+        [InlineData(PublicEncodingRules.BER, "0201FF")]
+        [InlineData(PublicEncodingRules.CER, "0201FF")]
+        [InlineData(PublicEncodingRules.DER, "0201FF")]
+        public static void ReadUInt8_Failure(PublicEncodingRules ruleSet, string inputHex)
+        {
+            byte[] data = inputHex.HexToByteArray();
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
+
+            bool didRead = reader.TryReadUInt8(out byte value);
+
+            Assert.False(didRead, "reader.TryReadUInt8");
+            Assert.Equal((byte)0, value);
+        }
+
+        [Theory]
+        [InlineData(PublicEncodingRules.BER, "020100", 0)]
+        [InlineData(PublicEncodingRules.CER, "020100", 0)]
+        [InlineData(PublicEncodingRules.DER, "020100", 0)]
+        [InlineData(PublicEncodingRules.DER, "0201FF", -1)]
+        [InlineData(PublicEncodingRules.CER, "0202FEFF", unchecked((short)0xFEFF))]
+        [InlineData(PublicEncodingRules.BER, "028102FEEF", unchecked((short)0xFEEF))]
+        [InlineData(PublicEncodingRules.BER, "0281028000", short.MinValue)]
+        [InlineData(PublicEncodingRules.CER, "02028000", short.MinValue)]
+        [InlineData(PublicEncodingRules.DER, "02027FFF", short.MaxValue)]
+        [InlineData(PublicEncodingRules.DER, "02026372", 0x6372)]
+        [InlineData(PublicEncodingRules.CER, "0202008A", 0x8A)]
+        [InlineData(PublicEncodingRules.CER, "02028ACE", unchecked((short)0x8ACE))]
+        public static void ReadInt16_Success(
+            PublicEncodingRules ruleSet,
+            string inputHex,
+            short expectedValue)
+        {
+            byte[] data = inputHex.HexToByteArray();
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
+
+            bool didRead = reader.TryReadInt16(out short value);
+
+            Assert.True(didRead, "reader.TryReadInt16");
+            Assert.Equal(expectedValue, value);
+        }
+
+        [Theory]
+        [InlineData(PublicEncodingRules.BER, "0203010203")]
+        [InlineData(PublicEncodingRules.CER, "0203010203")]
+        [InlineData(PublicEncodingRules.DER, "0203010203")]
+        public static void ReadInt16_TooMuchData(
+            PublicEncodingRules ruleSet,
+            string inputHex)
+        {
+            byte[] data = inputHex.HexToByteArray();
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
+
+            bool didRead = reader.TryReadInt16(out short value);
+
+            Assert.False(didRead, "reader.TryReadInt16");
+            Assert.Equal(0, value);
+        }
+
+        [Theory]
+        [InlineData(PublicEncodingRules.BER, "020100", 0)]
+        [InlineData(PublicEncodingRules.CER, "02020080", 0x80)]
+        [InlineData(PublicEncodingRules.DER, "02027F80", 0x7F80)]
+        [InlineData(PublicEncodingRules.DER, "0203008180", 0x8180)]
+        public static void ReadUInt16_Success(
+            PublicEncodingRules ruleSet,
+            string inputHex,
+            ushort expectedValue)
+        {
+            byte[] data = inputHex.HexToByteArray();
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
+
+            bool didRead = reader.TryReadUInt16(out ushort value);
+
+            Assert.True(didRead, "reader.TryReadUInt16");
+            Assert.Equal(expectedValue, value);
+        }
+
+        [Theory]
+        [InlineData(PublicEncodingRules.BER, "020180")]
+        [InlineData(PublicEncodingRules.CER, "020180")]
+        [InlineData(PublicEncodingRules.DER, "020180")]
+        [InlineData(PublicEncodingRules.BER, "0201FF")]
+        [InlineData(PublicEncodingRules.CER, "0201FF")]
+        [InlineData(PublicEncodingRules.DER, "0201FF")]
+        [InlineData(PublicEncodingRules.DER, "02028000")]
+        public static void ReadUInt16_Failure(PublicEncodingRules ruleSet, string inputHex)
+        {
+            byte[] data = inputHex.HexToByteArray();
+            AsnReader reader = new AsnReader(data, (AsnEncodingRules)ruleSet);
+
+            bool didRead = reader.TryReadUInt16(out ushort value);
+
+            Assert.False(didRead, "reader.TryReadUInt16");
+            Assert.Equal((ushort)0, value);
+        }
+
+        [Theory]
+        [InlineData(PublicEncodingRules.BER, "020100", 0)]
+        [InlineData(PublicEncodingRules.CER, "020100", 0)]
+        [InlineData(PublicEncodingRules.DER, "020100", 0)]
         [InlineData(PublicEncodingRules.DER, "0201FF", -1)]
         [InlineData(PublicEncodingRules.CER, "0202FEFF", unchecked((int)0xFFFF_FEFF))]
         [InlineData(PublicEncodingRules.BER, "028102FEEF", unchecked((int)0xFFFF_FEEF))]
