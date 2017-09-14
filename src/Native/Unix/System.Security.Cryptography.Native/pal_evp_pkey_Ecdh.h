@@ -4,9 +4,7 @@
 
 #include "pal_types.h"
 #include "opensslshim.h"
-/*
-Generates the shared agreement secret from the two given keys.
 
-No-op if pkey or peerkey is null.
-*/
-extern "C" byte* CryptoNative_EvpPkeyDeriveSecretAgreement(EVP_PKEY* pkey, EVP_PKEY* peerkey);
+extern "C" EVP_PKEY_CTX* CryptoNative_EvpPkeyDeriveSecretAgreement(uint8_t *secret, size_t *secretLength, EVP_PKEY_CTX *ctx)
+
+extern "C" EVP_PKEY_CTX* CryptoNative_EvpPkeyNewCtx(EVP_PKEY* pkey, EVP_PKEY* peerkey, size_t *secretLength)
