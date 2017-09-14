@@ -7,8 +7,6 @@ using System.Security.Cryptography.Asn1;
 using Test.Cryptography;
 using Xunit;
 
-using PublicEncodingRules = System.Security.Cryptography.Tests.Asn1.Asn1ReaderTests.PublicEncodingRules;
-
 namespace System.Security.Cryptography.Tests.Asn1
 {
     public static class X509DeserializeTests
@@ -23,8 +21,62 @@ namespace System.Security.Cryptography.Tests.Asn1
                 AsnEncodingRules.DER,
                 out _);
 
+            ref TbsCertificate tbsCertificate = ref cert.TbsCertificate;
+            ref SubjectPublicKeyInfo spki = ref tbsCertificate.SubjectPublicKeyInfo;
+
+            Assert.Equal(2, tbsCertificate.Version);
+            Assert.Equal("3DF70C5D9903F8D8868B9B8CCF20DF69", tbsCertificate.SerialNumber.ByteArrayToHex());
+
+            Assert.Equal("1.2.840.113549.1.1.11", tbsCertificate.Signature.Algorithm.Value);
+            Assert.Equal("0500", tbsCertificate.Signature.Parameters.ByteArrayToHex());
+            
+            // Issuer goes here
+
+            Assert.Equal(new DateTimeOffset(2014, 10, 15, 0, 0, 0, TimeSpan.Zero), tbsCertificate.Validity.NotBefore.Value);
+            Assert.Equal(new DateTimeOffset(2016, 10, 15, 23, 59, 59, TimeSpan.Zero), tbsCertificate.Validity.NotAfter.Value);
+            
+            // Subject goes here
+
+            Assert.Equal("1.2.840.113549.1.1.1", spki.AlgorithmIdentifier.Algorithm.Value);
+            Assert.Equal("0500", spki.AlgorithmIdentifier.Parameters.ByteArrayToHex());
+            Assert.Equal(
+                "3082010A0282010100A46861FA9D5DB763633BF5A64EF6E7C2C2367F48D2D466" +
+                "43A22DFCFCCB24E58A14D0F06BDC956437F2A56BA4BEF70BA361BF12964A0D66" +
+                "5AFD84B0F7494C8FA4ABC5FCA2E017C06178AEF2CDAD1B5F18E997A14B965C07" +
+                "4E8F564970607276B00583932240FE6E2DD013026F9AE13D7C91CC07C4E1E8E8" +
+                "7737DC06EF2B575B89D62EFE46859F8255A123692A706C68122D4DAFE11CB205" +
+                "A7B3DE06E553F7B95F978EF8601A8DF819BF32040BDF92A0DE0DF269B4514282" +
+                "E17AC69934E8440A48AB9D1F5DF89A502CEF6DFDBE790045BD45E0C94E5CA8AD" +
+                "D76A013E9C978440FC8A9E2A9A4940B2460819C3E302AA9C9F355AD754C86D3E" +
+                "D77DDAA3DA13810B4D0203010001",
+                spki.PublicKey.ByteArrayToHex());
+
+            Assert.Null(tbsCertificate.IssuerUniqueId);
+            Assert.Null(tbsCertificate.SubjectUniqueId);
+            
+            Assert.Equal(8, tbsCertificate.Extensions.Length);
+            Assert.Equal("2.5.29.17", tbsCertificate.Extensions[0].ExtnId);
+            Assert.Equal("2.5.29.19", tbsCertificate.Extensions[1].ExtnId);
+            Assert.Equal("2.5.29.15", tbsCertificate.Extensions[2].ExtnId);
+            Assert.Equal("2.5.29.37", tbsCertificate.Extensions[3].ExtnId);
+            Assert.Equal("2.5.29.32", tbsCertificate.Extensions[4].ExtnId);
+            Assert.Equal("2.5.29.35", tbsCertificate.Extensions[5].ExtnId);
+            Assert.Equal("2.5.29.31", tbsCertificate.Extensions[6].ExtnId);
+            Assert.Equal("1.3.6.1.5.5.7.1.1", tbsCertificate.Extensions[7].ExtnId);
+
             Assert.Equal("1.2.840.113549.1.1.11", cert.SignatureAlgorithm.Algorithm.Value);
-            Assert.False(true, "Test passed");
+            Assert.Equal("0500", cert.SignatureAlgorithm.Parameters.ByteArrayToHex());
+
+            Assert.Equal(
+                "15F8505B627ED7F9F96707097E93A51E7A7E05A3D420A5C258EC7A1CFE1843EC" +
+                "20ACF728AAFA7A1A1BC222A7CDBF4AF90AA26DEEB3909C0B3FB5C78070DAE3D6" +
+                "45BFCF840A4A3FDD988C7B3308BFE4EB3FD66C45641E96CA3352DBE2AEB4488A" +
+                "64A9C5FB96932BA70059CE92BD278B41299FD213471BD8165F924285AE3ECD66" +
+                "6C703885DCA65D24DA66D3AFAE39968521995A4C398C7DF38DFA82A20372F13D" +
+                "4A56ADB21B5822549918015647B5F8AC131CC5EB24534D172BC60218A88B65BC" +
+                "F71C7F388CE3E0EF697B4203720483BB5794455B597D80D48CD3A1D73CBBC609" +
+                "C058767D1FF060A609D7E3D4317079AF0CD0A8A49251AB129157F9894A036487",
+                cert.Signature.ByteArrayToHex());
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -39,7 +91,7 @@ namespace System.Security.Cryptography.Tests.Asn1
         [StructLayout(LayoutKind.Sequential)]
         internal struct TbsCertificate
         {
-            [TagOverride(0)]
+            [ExpectedTag(0, ExplicitTag = true)]
             [DefaultValue(0x01)]
             public int Version;
 
@@ -48,52 +100,24 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             public AlgorithmIdentifier Signature;
 
-            public Name Issuer;
+            [AnyValue]
+            public byte[] Issuer;
 
             public Validity Validity;
 
-            public Name Subject;
+            [AnyValue]
+            public byte[] Subject;
 
             public SubjectPublicKeyInfo SubjectPublicKeyInfo;
 
-            [TagOverride(1), BitString, OptionalValue]
+            [ExpectedTag(1), BitString, OptionalValue]
             public byte[] IssuerUniqueId;
 
-            [TagOverride(2), BitString, OptionalValue]
+            [ExpectedTag(2), BitString, OptionalValue]
             public byte[] SubjectUniqueId;
 
-            [TagOverride(3), OptionalValue]
+            [ExpectedTag(3, ExplicitTag = true), OptionalValue]
             public Extension[] Extensions;
-        }
-
-        [Choice]
-        [StructLayout(LayoutKind.Sequential)]
-        public struct Name
-        {
-            public RelativeDistinguishedName[] RdnSequence;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct RelativeDistinguishedName
-        {
-            [SetOf]
-            public AttributeTypeAndValue[] Values;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct AttributeTypeAndValue
-        {
-            [ObjectIdentifier]
-            public string AttributeType;
-
-            public AttributeValue Value;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct AttributeValue
-        {
-            [AnyValue]
-            public byte[] Any;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -102,7 +126,6 @@ namespace System.Security.Cryptography.Tests.Asn1
             [ObjectIdentifier]
             public string ExtnId;
 
-            [OptionalValue]
             [DefaultValue(0x00)]
             public bool Critical;
 
@@ -121,8 +144,12 @@ namespace System.Security.Cryptography.Tests.Asn1
         [StructLayout(LayoutKind.Sequential)]
         public struct Time
         {
-            public DateTimeOffset UtcTime;
-            public DateTimeOffset GeneralTime;
+            [UtcTime]
+            public DateTimeOffset? UtcTime;
+            [GeneralizedTime(DisallowFractions = true)]
+            public DateTimeOffset? GeneralTime;
+
+            public DateTimeOffset Value => UtcTime ?? GeneralTime.Value;
         }
 
         private const string MicrosoftDotComBase64 =

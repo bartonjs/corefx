@@ -325,7 +325,7 @@ namespace System.Security.Cryptography.Tests.Asn1
         {
             byte[] inputBytes = { 0x01, 0x01, 0x00 };
 
-            Assert.Throws<CryptographicException>(
+            Assert.Throws<AsnSerializationConstraintException>(
                 () =>
                     AsnSerializer.Deserialize<CycleRoot>(
                         inputBytes,

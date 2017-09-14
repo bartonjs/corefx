@@ -10,6 +10,31 @@ using System.Reflection;
 
 namespace System.Security.Cryptography.Asn1
 {
+    internal class AsnSerializationConstraintException : CryptographicException
+    {
+        public AsnSerializationConstraintException()
+        {
+        }
+
+        public AsnSerializationConstraintException(string message)
+            : base(message)
+        {
+        }
+
+        public AsnSerializationConstraintException(string message, Exception inner)
+            : base(message, inner)
+        {
+        }
+    }
+
+    internal class AsnAmbiguousFieldTypeException : AsnSerializationConstraintException
+    {
+        public AsnAmbiguousFieldTypeException(FieldInfo fieldInfo, Type ambiguousType)
+            : base($"Field {fieldInfo.Name} of type {fieldInfo.DeclaringType.FullName} has ambiguous type '{ambiguousType.Name}', an attribute derived from {nameof(AsnTypeAttribute)} is required.")
+        {
+        }
+    }
+
     internal static class AsnSerializer
     {
         private const BindingFlags FieldFlags =
@@ -18,6 +43,18 @@ namespace System.Security.Cryptography.Asn1
             BindingFlags.Instance;
 
         private delegate object Deserializer(ref AsnReader reader);
+        private delegate bool TryDeserializer<T>(ref AsnReader reader, out T value);
+
+        private static Deserializer TryOrFail<T>(TryDeserializer<T> tryDeserializer)
+        {
+            return (ref AsnReader reader) =>
+            {
+                if (tryDeserializer(ref reader, out T value))
+                    return value;
+
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            };
+        }
 
         private static ChoiceAttribute GetChoiceAttribute(Type typeT)
         {
@@ -32,7 +69,7 @@ namespace System.Security.Cryptography.Asn1
             {
                 if (!CanBeNull(typeT))
                 {
-                    throw new CryptographicException($"{nameof(ChoiceAttribute)}.{nameof(ChoiceAttribute.AllowNull)} is not valid because type {typeT.FullName} cannot be assigned to null");
+                    throw new AsnSerializationConstraintException($"{nameof(ChoiceAttribute)}.{nameof(ChoiceAttribute.AllowNull)} is not valid because type {typeT.FullName} cannot be assigned to null");
                 }
             }
 
@@ -58,14 +95,14 @@ namespace System.Security.Cryptography.Asn1
 
                 if (!CanBeNull(fieldType))
                 {
-                    throw new CryptographicException($"Field '{fieldInfo.Name}' on [{nameof(ChoiceAttribute)}] type '{fieldInfo.DeclaringType.FullName}' can not be assigned a null value.");
+                    throw new AsnSerializationConstraintException($"Field '{fieldInfo.Name}' on [{nameof(ChoiceAttribute)}] type '{fieldInfo.DeclaringType.FullName}' can not be assigned a null value.");
                 }
 
                 fieldType = UnpackNullable(fieldType);
 
                 if (currentSet.Contains(fieldInfo))
                 {
-                    throw new CryptographicException($"Field '{fieldInfo.Name}' on [{nameof(ChoiceAttribute)}] type '{fieldInfo.DeclaringType.FullName}' has introduced a type chain cycle.");
+                    throw new AsnSerializationConstraintException($"Field '{fieldInfo.Name}' on [{nameof(ChoiceAttribute)}] type '{fieldInfo.DeclaringType.FullName}' has introduced a type chain cycle.");
                 }
 
                 LinkedListNode<FieldInfo> newNode = new LinkedListNode<FieldInfo>(fieldInfo);
@@ -86,12 +123,14 @@ namespace System.Security.Cryptography.Asn1
                         out _,
                         out _,
                         out byte[] defaultContents,
+                        out _,
+                        out _,
                         out Asn1Tag expectedTag);
 
                     if (defaultContents != null)
                     {
                         // TODO/Review: This might be legal?
-                        throw new CryptographicException($"Field '{fieldInfo.Name}' on [{nameof(ChoiceAttribute)}] type '{fieldInfo.DeclaringType.FullName}' has a default value.");
+                        throw new AsnSerializationConstraintException($"Field '{fieldInfo.Name}' on [{nameof(ChoiceAttribute)}] type '{fieldInfo.DeclaringType.FullName}' has a default value.");
                     }
 
                     var key = (expectedTag.TagClass, expectedTag.TagValue);
@@ -101,7 +140,7 @@ namespace System.Security.Cryptography.Asn1
                         FieldInfo existing = existingSet.Last.Value;
 
                         // TODO/Review: Exception type and message?
-                        throw new CryptographicException(
+                        throw new AsnSerializationConstraintException(
                             $"{expectedTag.TagClass} {expectedTag.TagValue} for field {fieldInfo.Name} on type {fieldInfo.DeclaringType.FullName} already is associated in context with field {existing.Name} on type {existing.DeclaringType.FullName}");
                     }
 
@@ -181,7 +220,129 @@ namespace System.Security.Cryptography.Asn1
             return target;
         }
 
+        private static Deserializer ExplicitValueDeserializer(Deserializer valueDeserializer)
+        {
+            return (ref AsnReader reader) => ExplicitValueDeserializer(ref reader, valueDeserializer);
+        }
+
+        private static object ExplicitValueDeserializer(
+            ref AsnReader reader,
+            Deserializer valueDeserializer)
+        {
+            AsnReader innerReader = reader.ReadSequence();
+            object val = valueDeserializer(ref innerReader);
+
+            if (innerReader.HasData)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            return val;
+        }
+
+        private static Deserializer CheckTagDeserializer(Deserializer valueDeserializer, Asn1Tag expectedTag)
+        {
+            return (ref AsnReader reader) =>
+            {
+                Asn1Tag actualTag = reader.PeekTag();
+
+                if (actualTag.TagClass == expectedTag.TagClass &&
+                    actualTag.TagValue == expectedTag.TagValue)
+                {
+                    return valueDeserializer(ref reader);
+                }
+
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            };
+        }
+
+        private static Deserializer DefaultValueDeserializer(
+            Deserializer valueDeserializer,
+            bool isOptional,
+            byte[] defaultContents,
+            UniversalTagNumber tagType,
+            Asn1Tag expectedTag)
+        {
+            return (ref AsnReader reader) =>
+                DefaultValueDeserializer(
+                    ref reader,
+                    expectedTag,
+                    tagType,
+                    valueDeserializer,
+                    defaultContents,
+                    isOptional);
+        }
+
+        private static object DefaultValueDeserializer(
+            ref AsnReader reader,
+            Asn1Tag expectedTag,
+            UniversalTagNumber tagType,
+            Deserializer valueDeserializer,
+            byte[] defaultContents,
+            bool isOptional)
+        {
+            if (reader.HasData)
+            {
+                Asn1Tag actualTag = reader.PeekTag();
+
+                if (actualTag.TagClass == expectedTag.TagClass &&
+                    actualTag.TagValue == expectedTag.TagValue)
+                {
+                    return valueDeserializer(ref reader);
+                }
+            }
+
+            if (isOptional)
+            {
+                return null;
+            }
+
+            if (defaultContents != null)
+            {
+                return DefaultValue(tagType, defaultContents);
+            }
+
+            throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+        }
+
         private static Deserializer GetDeserializer(Type typeT, FieldInfo fieldInfo)
+        {
+            Deserializer literalValueDeserializer = GetSimpleDeserializer(
+                typeT,
+                fieldInfo,
+                out UniversalTagNumber tagType,
+                out byte[] defaultContents,
+                out bool isExplicitTag,
+                out bool isOptional,
+                out Asn1Tag expectedTag);
+
+            Deserializer deserializer = literalValueDeserializer;
+
+            if (isExplicitTag)
+            {
+                deserializer = ExplicitValueDeserializer(deserializer);
+            }
+
+            if (isOptional || defaultContents != null)
+            {
+                deserializer = DefaultValueDeserializer(deserializer, isOptional, defaultContents, tagType, expectedTag);
+            }
+            else if (expectedTag.TagClass != TagClass.Universal)
+            {
+                deserializer = CheckTagDeserializer(deserializer, expectedTag);
+            }
+
+            return deserializer;
+        }
+
+        private static Deserializer GetSimpleDeserializer(
+            Type typeT,
+            FieldInfo fieldInfo,
+            out UniversalTagNumber tagType2,
+            out byte[] defaultContents,
+            out bool isExplicitTag,
+            out bool isOptional,
+            out Asn1Tag expectedTag)
         {
             if (typeT.IsAbstract || typeT.ContainsGenericParameters)
             {
@@ -197,22 +358,23 @@ namespace System.Security.Cryptography.Asn1
                 out ObjectIdentifierAttribute oidAttr,
                 out bool isAny,
                 out bool isCollection,
-                out byte[] defaultContents,
-                out Asn1Tag expectedTag);
+                out defaultContents,
+                out isExplicitTag,
+                out isOptional,
+                out expectedTag);
+
+            tagType2 = tagType;
+            typeT = UnpackNullable(typeT);
 
             if (typeT.IsPrimitive)
             {
                 if (wasCustomized)
                 {
                     // TODO/Review: Exception type and message?
-                    throw new CryptographicException();
+                    throw new AsnSerializationConstraintException();
                 }
 
-                return DefaultValueDeserializer(
-                    expectedTag,
-                    tagType,
-                    defaultContents,
-                    GetPrimitiveDeserializer(typeT));
+                return GetPrimitiveDeserializer(typeT);
             }
 
             if (typeT.IsEnum)
@@ -228,21 +390,13 @@ namespace System.Security.Cryptography.Asn1
 
             if (typeT == typeof(string))
             {
-
-                if (tagType == 0)
-                {
-                    // TODO/Review: Exception type and message?
-                    throw new CryptographicException(
-                        $"Field {fieldInfo.Name} of type {fieldInfo.DeclaringType.FullName} has ambiguous type 'string', an attribute derived from {nameof(AsnTypeAttribute)} is required.");
-                }
-
                 if (tagType == UniversalTagNumber.ObjectIdentifier)
                 {
                     if ((oidAttr?.PopulateFriendlyName).GetValueOrDefault())
                     {
                         // TODO/Review: Exception type and message?
                         // Friendly name requested on a string output.
-                        throw new CryptographicException();
+                        throw new AsnSerializationConstraintException();
                     }
 
                     return (ref AsnReader reader) => reader.ReadObjectIdentifierAsString();
@@ -256,13 +410,6 @@ namespace System.Security.Cryptography.Asn1
                 if (isAny)
                 {
                     return (ref AsnReader reader) => reader.GetEncodedValue().ToArray();
-                }
-
-                if (tagType == 0)
-                {
-                    // TODO/Review: Exception type and message?
-                    throw new CryptographicException(
-                        $"Field {fieldInfo.Name} of type {fieldInfo.DeclaringType.FullName} has ambiguous type 'byte[]', an attribute derived from {nameof(AsnTypeAttribute)} is required.");
                 }
 
                 if (tagType == UniversalTagNumber.BitString)
@@ -345,7 +492,7 @@ namespace System.Security.Cryptography.Asn1
                 if (typeT.GetArrayRank() != 1 || baseType.IsArray)
                 {
                     // TODO/Review: Exception type and message?
-                    throw new CryptographicException();
+                    throw new AsnSerializationConstraintException();
                 }
 
                 return (ref AsnReader reader) =>
@@ -380,6 +527,22 @@ namespace System.Security.Cryptography.Asn1
                 };
             }
 
+            if (typeT == typeof(DateTimeOffset))
+            {
+                if (tagType == UniversalTagNumber.UtcTime)
+                {
+                    return (ref AsnReader reader) => reader.GetUtcTime();
+                }
+
+                if (tagType == UniversalTagNumber.GeneralizedTime)
+                {
+                    return (ref AsnReader reader) => reader.GetGeneralizedTime();
+                }
+
+                Debug.Fail($"No DateTimeOffset handler for {tagType}");
+                throw new CryptographicException();
+            }
+
             if (typeT.IsLayoutSequential)
             {
                 if (GetChoiceAttribute(typeT) != null)
@@ -387,57 +550,16 @@ namespace System.Security.Cryptography.Asn1
                     return (ref AsnReader reader) => DeserializeChoice(ref reader, typeT);
                 }
 
-                return (ref AsnReader reader) => DeserializeCustomType(ref reader, typeT);
+                if (tagType == UniversalTagNumber.Sequence)
+                {
+                    return (ref AsnReader reader) => DeserializeCustomType(ref reader, typeT);
+                }
             }
 
             // TODO/Review: Exception type and message?
-            throw new CryptographicException();
+            throw new AsnSerializationConstraintException($"No deserializer for {typeT.FullName} was found");
         }
-
-        private static Deserializer DefaultValueDeserializer(
-            Asn1Tag expectedTag,
-            UniversalTagNumber tagType,
-            byte[] defaultContents,
-            Deserializer literalValueDeserializer)
-        {
-            if (expectedTag.TagClass == TagClass.Universal && defaultContents == null)
-            {
-                return literalValueDeserializer;
-            }
-
-            if (defaultContents != null)
-            {
-                return (ref AsnReader reader) =>
-                {
-                    if (reader.HasData)
-                    {
-                        Asn1Tag actualTag = reader.PeekTag();
-
-                        if (actualTag.TagClass == expectedTag.TagClass &&
-                            actualTag.TagValue == expectedTag.TagValue)
-                        {
-                            return literalValueDeserializer(ref reader);
-                        }
-                    }
-
-                    return DefaultValue(tagType, defaultContents);
-                };
-            }
-
-            return (ref AsnReader reader) =>
-            {
-                Asn1Tag actualTag = reader.PeekTag();
-
-                if (actualTag.TagClass == expectedTag.TagClass &&
-                    actualTag.TagValue == expectedTag.TagValue)
-                {
-                    return literalValueDeserializer(ref reader);
-                }
-
-                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
-            };
-        }
-
+        
         private static object DefaultValue(UniversalTagNumber tagType, byte[] defaultContents)
         {
             Debug.Assert(defaultContents != null);
@@ -464,6 +586,8 @@ namespace System.Security.Cryptography.Asn1
             out bool isAny,
             out bool isCollection,
             out byte[] defaultContents,
+            out bool isExplicitTag,
+            out bool isOptional,
             out Asn1Tag expectedTag)
         {
             object[] typeAttrs = fieldInfo?.GetCustomAttributes(typeof(AsnTypeAttribute), false) ??
@@ -472,10 +596,10 @@ namespace System.Security.Cryptography.Asn1
             if (typeAttrs.Length > 1)
             {
                 // TODO/Review: Exception type and message?
-                throw new CryptographicException();
+                throw new AsnSerializationConstraintException();
             }
 
-            typeT = UnpackNullable(typeT);
+            Type unpackedType = UnpackNullable(typeT);
 
             tagType = 0;
             oidAttr = null;
@@ -542,6 +666,16 @@ namespace System.Security.Cryptography.Asn1
                     expectedTypes = null;
                     tagType = UniversalTagNumber.SetOf;
                 }
+                else if (attr is UtcTimeAttribute)
+                {
+                    expectedTypes = new[] { typeof(DateTimeOffset) };
+                    tagType = UniversalTagNumber.UtcTime;
+                }
+                else if (attr is GeneralizedTimeAttribute)
+                {
+                    expectedTypes = new[] { typeof(DateTimeOffset) };
+                    tagType = UniversalTagNumber.GeneralizedTime;
+                }
                 else
                 {
                     Debug.Fail($"Unregistered {nameof(AsnTypeAttribute)} kind: {attr.GetType().FullName}");
@@ -549,41 +683,69 @@ namespace System.Security.Cryptography.Asn1
                     throw new CryptographicException();
                 }
 
-                if (!isCollection && Array.IndexOf(expectedTypes, typeT) < 0)
+                if (!isCollection && Array.IndexOf(expectedTypes, unpackedType) < 0)
                 {
                     // TODO/Review: Exception type and message?
-                    throw new CryptographicException();
+                    throw new AsnSerializationConstraintException();
                 }
             }
 
             var defaultValueAttr = fieldInfo?.GetCustomAttribute<DefaultValueAttribute>(false);
             defaultContents = defaultValueAttr?.EncodedBytes;
 
-            if (typeT == typeof(bool))
+            if (tagType == 0 && !isAny)
             {
-                tagType = UniversalTagNumber.Boolean;
-            }
-            else if (typeT == typeof(sbyte) ||
-                     typeT == typeof(byte) ||
-                     typeT == typeof(short) ||
-                     typeT == typeof(ushort) ||
-                     typeT == typeof(int) ||
-                     typeT == typeof(uint) ||
-                     typeT == typeof(long) ||
-                     typeT == typeof(ulong))
-            {
-                tagType = UniversalTagNumber.Integer;
+                if (unpackedType == typeof(bool))
+                {
+                    tagType = UniversalTagNumber.Boolean;
+                }
+                else if (unpackedType == typeof(sbyte) ||
+                         unpackedType == typeof(byte) ||
+                         unpackedType == typeof(short) ||
+                         unpackedType == typeof(ushort) ||
+                         unpackedType == typeof(int) ||
+                         unpackedType == typeof(uint) ||
+                         unpackedType == typeof(long) ||
+                         unpackedType == typeof(ulong))
+                {
+                    tagType = UniversalTagNumber.Integer;
+                }
+                else if (unpackedType.IsLayoutSequential)
+                {
+                    tagType = UniversalTagNumber.Sequence;
+                }
+                else if (unpackedType == typeof(byte[]) ||
+                    unpackedType == typeof(string) ||
+                    unpackedType == typeof(DateTimeOffset))
+                {
+                    // TODO/Review: Exception type and message?
+                    throw new AsnAmbiguousFieldTypeException(fieldInfo, unpackedType);
+                }
+                else if (unpackedType.IsArray)
+                {
+                    tagType = UniversalTagNumber.SequenceOf;
+                }
             }
 
-            var tagOverride = fieldInfo?.GetCustomAttribute<TagOverrideAttribute>(false);
+            isOptional = fieldInfo?.GetCustomAttribute<OptionalValueAttribute>(false) != null;
+
+            if (isOptional && !CanBeNull(typeT))
+            {
+                // TODO/Review: Exception type and message?
+                throw new AsnSerializationConstraintException();
+            }
+
+            var tagOverride = fieldInfo?.GetCustomAttribute<ExpectedTagAttribute>(false);
 
             if (tagOverride != null)
             {
                 // This will throw for unmapped TagClass values and specifying Universal.
-                expectedTag = new Asn1Tag(tagOverride.TagClass, tagOverride.Value);
+                expectedTag = new Asn1Tag(tagOverride.TagClass, tagOverride.TagValue);
+                isExplicitTag = tagOverride.ExplicitTag;
                 return;
             }
 
+            isExplicitTag = false;
             expectedTag = new Asn1Tag(tagType);
         }
 
@@ -593,122 +755,33 @@ namespace System.Security.Cryptography.Asn1
             {
                 typeT = typeT.GetGenericArguments()[0];
             }
+
             return typeT;
         }
 
         private static Deserializer GetPrimitiveDeserializer(Type typeT)
         {
             if (typeT == typeof(bool))
-            {
                 return (ref AsnReader reader) => reader.ReadBoolean();
-            }
-
             if (typeT == typeof(int))
-            {
-                return (ref AsnReader reader) =>
-                {
-                    if (reader.TryReadInt32(out int value))
-                    {
-                        return value;
-                    }
-
-                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
-                };
-            }
-
+                return TryOrFail((ref AsnReader reader, out int value) => reader.TryReadInt32(out value));
             if (typeT == typeof(uint))
-            {
-                return (ref AsnReader reader) =>
-                {
-                    if (reader.TryReadUInt32(out uint value))
-                    {
-                        return value;
-                    }
-
-                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
-                };
-            }
-
+                return TryOrFail((ref AsnReader reader, out uint value) => reader.TryReadUInt32(out value));
             if (typeT == typeof(short))
-            {
-                return (ref AsnReader reader) =>
-                {
-                    if (reader.TryReadInt16(out short value))
-                    {
-                        return value;
-                    }
-
-                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
-                };
-            }
-
+                return TryOrFail((ref AsnReader reader, out short value) => reader.TryReadInt16(out value));
             if (typeT == typeof(ushort))
-            {
-                return (ref AsnReader reader) =>
-                {
-                    if (reader.TryReadUInt16(out ushort value))
-                    {
-                        return value;
-                    }
-
-                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
-                };
-            }
-
+                return TryOrFail((ref AsnReader reader, out ushort value) => reader.TryReadUInt16(out value));
             if (typeT == typeof(byte))
-            {
-                return (ref AsnReader reader) =>
-                {
-                    if (reader.TryReadUInt8(out byte value))
-                    {
-                        return value;
-                    }
-
-                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
-                };
-            }
-
+                return TryOrFail((ref AsnReader reader, out byte value) => reader.TryReadUInt8(out value));
             if (typeT == typeof(sbyte))
-            {
-                return (ref AsnReader reader) =>
-                {
-                    if (reader.TryReadInt8(out sbyte value))
-                    {
-                        return value;
-                    }
-
-                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
-                };
-            }
-
+                return TryOrFail((ref AsnReader reader, out sbyte value) => reader.TryReadInt8(out value));
             if (typeT == typeof(long))
-            {
-                return (ref AsnReader reader) =>
-                {
-                    if (reader.TryReadInt64(out long value))
-                    {
-                        return value;
-                    }
-
-                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
-                };
-            }
-
+                return TryOrFail((ref AsnReader reader, out long value) => reader.TryReadInt64(out value));
             if (typeT == typeof(ulong))
-            {
-                return (ref AsnReader reader) =>
-                {
-                    if (reader.TryReadUInt64(out ulong value))
-                    {
-                        return value;
-                    }
-
-                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
-                };
-            }
+                return TryOrFail((ref AsnReader reader, out ulong value) => reader.TryReadUInt64(out value));
 
             // TODO/Review: Exception type and message?
-            throw new CryptographicException();
+            throw new AsnSerializationConstraintException();
         }
 
         public static T Deserialize<T>(ReadOnlySpan<byte> source, AsnEncodingRules ruleSet, out int bytesRead)
@@ -727,6 +800,7 @@ namespace System.Security.Cryptography.Asn1
     {
         public TagClass TagClass { get; }
         public int TagValue { get; }
+        public bool ExplicitTag { get; set; }
 
         public ExpectedTagAttribute(int tagValue)
             : this(TagClass.ContextSpecific, tagValue)
@@ -810,6 +884,17 @@ namespace System.Security.Cryptography.Asn1
     }
 
     [AttributeUsage(AttributeTargets.Field)]
+    internal sealed class UtcTimeAttribute : AsnTypeAttribute
+    {
+    }
+
+    [AttributeUsage(AttributeTargets.Field)]
+    internal sealed class GeneralizedTimeAttribute : AsnTypeAttribute
+    {
+        public bool DisallowFractions { get; set; }
+    }
+
+    [AttributeUsage(AttributeTargets.Field)]
     internal sealed class OptionalValueAttribute : AsnEncodingRuleAttribute
     {
     }
@@ -832,24 +917,4 @@ namespace System.Security.Cryptography.Asn1
     {
         public bool AllowNull { get; set; }
     }
-
-    [AttributeUsage(AttributeTargets.Field)]
-    internal sealed class TagOverrideAttribute : Attribute
-    {
-        public TagClass TagClass { get; }
-        public int Value { get; }
-
-        public TagOverrideAttribute(int value)
-            : this(TagClass.ContextSpecific, value)
-        {
-        }
-
-        public TagOverrideAttribute(TagClass tagClass, int value)
-        {
-            TagClass = tagClass;
-            Value = value;
-        }
-    }
-
-
 }
