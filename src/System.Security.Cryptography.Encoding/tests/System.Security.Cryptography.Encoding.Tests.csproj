@@ -16,6 +16,7 @@
     <Compile Include="Asn1\Reader\ReadBMPString.cs" />
     <Compile Include="Asn1\Reader\ReadBoolean.cs" />
     <Compile Include="Asn1\Reader\ReadEnumerated.cs" />
+    <Compile Include="Asn1\Reader\ReadGeneralizedTime.cs" />
     <Compile Include="Asn1\Reader\ReadIA5String.cs" />
     <Compile Include="Asn1\Reader\ReadSequence.cs" />
     <Compile Include="Asn1\Reader\ReadSetOf.cs" />

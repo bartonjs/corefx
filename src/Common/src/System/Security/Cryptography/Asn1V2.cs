@@ -50,7 +50,7 @@ namespace System.Security.Cryptography.Asn1
         VideotexString = 21,
         IA5String = 22,
         UtcTime = 23,
-        GenrealizedTime = 24,
+        GeneralizedTime = 24,
         GraphicString = 25,
         VisibleString = 26,
         ISO646String = VisibleString,
@@ -2330,6 +2330,376 @@ namespace System.Security.Cryptography.Asn1
                     contentOctets = Slice(rented, 0, contentLength);
 
                     DateTimeOffset value = ParseUtcTime(contentOctets, twoDigitYearMax);
+                    // Includes the header
+                    _data = _data.Slice(bytesRead);
+                    return value;
+                }
+            }
+            finally
+            {
+                Array.Clear(rented, 0, contentOctets.Length);
+                ArrayPool<byte>.Shared.Return(rented);
+            }
+
+            throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+        }
+
+        private static DateTimeOffset ParseGeneralizedTime(
+            AsnEncodingRules ruleSet,
+            ReadOnlySpan<byte> contentOctets,
+            bool disallowFractions)
+        {
+            // T-REC-X.680-201510 sec 46 defines a lot of formats for GeneralizedTime.
+            //
+            // All formats start with yyyyMMdd.
+            //
+            // "Local time" formats are
+            //   [date]HH.fractionOfAnHourToAnArbitraryPrecision
+            //   [date]HHmm.fractionOfAMinuteToAnArbitraryPrecision
+            //   [date]HHmmss.fractionOfASecondToAnArbitraryPrecision
+            //
+            // "UTC time" formats are the local formats suffixed with 'Z'
+            //
+            // "UTC offset time" formats are the local formats suffixed with
+            //  +HH
+            //  +HHmm
+            //  -HH
+            //  -HHmm
+            // Additionally, it us unclear if the following formats are supposed to be supported,
+            // because the ISO 8601:2004 spec is behind a paywall.
+            //  +HH:mm
+            //  -HH:mm
+            //
+            // Also, every instance of '.' is actually "period or comma".
+
+            // Since DateTimeOffset doesn't have a notion of
+            // "I'm a local time, but with an unknown offset", the computer's current offset will
+            // be used.
+
+            // T-REC-X.690-201510 sec 11.7 binds CER and DER to a much smaller set of inputs:
+            //  * Only the UTC/Z format can be used.
+            //  * HHmmss must always be used
+            //  * If fractions are present they will be separated by period, never comma.
+            //  * If fractions are present the last digit mustn't be 0.
+
+            bool strict = ruleSet == AsnEncodingRules.DER || ruleSet == AsnEncodingRules.CER;
+            if (strict && contentOctets.Length < 15)
+            {
+                // yyyyMMddHHmmssZ
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+            else if (contentOctets.Length < 10)
+            {
+                // yyyyMMddHH
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            int offset = 0;
+            int year =
+                1000 * GetDigit(contentOctets[offset++]) +
+                100 * GetDigit(contentOctets[offset++]) +
+                10 * GetDigit(contentOctets[offset++]) +
+                GetDigit(contentOctets[offset++]);
+
+            int month = 10 * GetDigit(contentOctets[offset++]) + GetDigit(contentOctets[offset++]);
+            int day = 10 * GetDigit(contentOctets[offset++]) + GetDigit(contentOctets[offset++]);
+            int hour = 10 * GetDigit(contentOctets[offset++]) + GetDigit(contentOctets[offset++]);
+            int? minute = null;
+            int? second = null;
+            ulong fraction = 0;
+            ulong fractionScale = 1;
+            TimeSpan? timeOffset = null;
+            bool isZulu = false;
+
+            const byte HmsState = 0;
+            const byte FracState = 1;
+            const byte SuffixState = 2;
+            byte state = HmsState;
+            
+            if (contentOctets.Length > offset)
+            {
+                byte octet = contentOctets[offset];
+
+                if (octet == 'Z' || octet == '-' || octet == '+')
+                {
+                    state = SuffixState;
+                }
+                else if (octet == '.' || octet == ',')
+                {
+                    state = FracState;
+                }
+                else if (contentOctets.Length - 1 <= offset)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+                else
+                {
+                    minute = 10 * GetDigit(contentOctets[offset++]) + GetDigit(contentOctets[offset++]);
+                }
+            }
+
+            if (state == HmsState && contentOctets.Length > offset)
+            {
+                byte octet = contentOctets[offset];
+
+                if (octet == 'Z' || octet == '-' || octet == '+')
+                {
+                    state = SuffixState;
+                }
+                else if (octet == '.' || octet == ',')
+                {
+                    state = FracState;
+                }
+                else if (contentOctets.Length - 1 <= offset)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+                else
+                {
+                    second = 10 * GetDigit(contentOctets[offset++]) + GetDigit(contentOctets[offset++]);
+                }
+            }
+
+            if (state == HmsState && contentOctets.Length > offset)
+            {
+                byte octet = contentOctets[offset];
+
+                if (octet == 'Z' || octet == '-' || octet == '+')
+                {
+                    state = SuffixState;
+                }
+                else if (octet == '.' || octet == ',')
+                {
+                    state = FracState;
+                }
+                else
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+            }
+
+            if (state == FracState)
+            {
+                if (disallowFractions)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+
+                Debug.Assert(contentOctets.Length > offset);
+                byte octet = contentOctets[offset++];
+
+                if (octet == '.')
+                {
+                    // Always valid
+                }
+                else if (octet == ',')
+                {
+                    // Valid for BER, but not CER or DER.
+                    if (strict)
+                    {
+                        throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                    }
+                }
+                else
+                {
+                    Debug.Fail($"Unhandled value '{octet:X2}' in {nameof(FracState)}");
+                    throw new CryptographicException();
+                }
+
+                // There are 36,000,000,000 ticks per hour, and hour is our largest scale.
+                // In case the double -> Ticks conversion allows for rounding up we can allow
+                // for a 12th digit.
+                const ulong MaxScale = 100_000_000_000;
+
+                if (contentOctets.Length <= offset)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+
+                for (; offset < contentOctets.Length; offset++)
+                {
+                    octet = contentOctets[offset];
+
+                    if (octet == 'Z' || octet == '-' || octet == '+')
+                    {
+                        state = SuffixState;
+                        break;
+                    }
+
+                    if (fractionScale < MaxScale)
+                    {
+                        fraction *= 10;
+                        fraction += GetDigit(contentOctets[offset]);
+                        fractionScale *= 10;
+                    }
+                    else
+                    {
+                        GetDigit(contentOctets[offset]);
+                    }
+                }
+            }
+
+            if (state == SuffixState)
+            {
+                Debug.Assert(contentOctets.Length > offset);
+                byte octet = contentOctets[offset++];
+
+                if (octet == 'Z')
+                {
+                    timeOffset = TimeSpan.Zero;
+                    isZulu = true;
+                }
+                else
+                {
+                    bool isMinus;
+
+                    if (octet == '+')
+                    {
+                        isMinus = false;
+                    }
+                    else if (octet == '-')
+                    {
+                        isMinus = true;
+                    }
+                    else
+                    {
+                        Debug.Fail($"Unhandled value '{octet:X2}' in {nameof(SuffixState)}");
+                        throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                    }
+
+                    if (contentOctets.Length - 1 <= offset)
+                    {
+                        throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                    }
+
+                    int offsetHour = 10 * GetDigit(contentOctets[offset++]) + GetDigit(contentOctets[offset++]);
+                    int offsetMinute = 0;
+
+                    if (contentOctets.Length > offset)
+                    {
+                        if (contentOctets[offset] == ':')
+                        {
+                            offset++;
+                        }
+                    }
+
+                    if (contentOctets.Length - 1 > offset)
+                    {
+                        offsetMinute = 10 * GetDigit(contentOctets[offset++]) + GetDigit(contentOctets[offset++]);
+                    }
+
+                    TimeSpan tmp = new TimeSpan(offsetHour, offsetMinute, 0);
+
+                    if (isMinus)
+                    {
+                        tmp = TimeSpan.Zero - tmp;
+                    }
+
+                    timeOffset = tmp;
+                }
+            }
+
+            // Was there data after a suffix?
+            if (offset != contentOctets.Length)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            // T-REC-X.690-201510 sec 11.7
+            if (strict)
+            {
+                if (!isZulu || !second.HasValue)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+
+                if (fraction != 0 && fraction % 10 == 0)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+            }
+
+            double frac = (double)fraction / fractionScale;
+            TimeSpan fractionSpan = TimeSpan.Zero;
+
+            if (!minute.HasValue)
+            {
+                minute = 0;
+                second = 0;
+
+                if (fraction != 0)
+                {
+                    // No minutes means this is fractions of an hour
+                    fractionSpan = TimeSpan.FromHours(frac);
+                }
+            }
+            else if (!second.HasValue)
+            {
+                second = 0;
+
+                if (fraction != 0)
+                {
+                    // No seconds means this is fractions of a minute
+                    fractionSpan = TimeSpan.FromMinutes(frac);
+                }
+            }
+            else if (fraction != 0)
+            {
+                // Both minutes and seconds means fractions of a second.
+                fractionSpan = TimeSpan.FromSeconds(frac);
+            }
+            
+            DateTimeOffset value;
+
+            if (timeOffset == null)
+            {
+                value = new DateTimeOffset(new DateTime(year, month, day, hour, minute.Value, second.Value));
+            }
+            else
+            {
+                value = new DateTimeOffset(year, month, day, hour, minute.Value, second.Value, timeOffset.Value);
+            }
+
+            value += fractionSpan;
+            return value;
+        }
+
+        public DateTimeOffset GetGeneralizedTime(bool disallowFractions=false)
+        {
+            if (TryGetOctetStringBytes(
+                out ReadOnlySpan<byte> primitiveOctets,
+                out int headerLength,
+                UniversalTagNumber.GeneralizedTime))
+            {
+                DateTimeOffset value = ParseGeneralizedTime(_ruleSet, primitiveOctets, disallowFractions);
+                _data = _data.Slice(headerLength + primitiveOctets.Length);
+                return value;
+            }
+
+            // T-REC-X.690-201510 sec 9.2
+            // T-REC-X.690-201510 sec 10.2
+            if (_ruleSet == AsnEncodingRules.DER || _ruleSet == AsnEncodingRules.CER)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            int upperBound = PeekContentSpan().Length;
+
+            byte[] rented = ArrayPool<byte>.Shared.Rent(upperBound);
+            ReadOnlySpan<byte> contentOctets = ReadOnlySpan<byte>.Empty;
+
+            try
+            {
+                if (TryCopyCharacterStringBytes(
+                    UniversalTagNumber.GeneralizedTime,
+                    rented,
+                    true,
+                    out int bytesRead,
+                    out int contentLength))
+                {
+                    contentOctets = Slice(rented, 0, contentLength);
+
+                    DateTimeOffset value = ParseGeneralizedTime(_ruleSet, contentOctets, disallowFractions);
                     // Includes the header
                     _data = _data.Slice(bytesRead);
                     return value;
