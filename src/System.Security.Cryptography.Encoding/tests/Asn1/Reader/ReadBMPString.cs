@@ -120,6 +120,20 @@ namespace System.Security.Cryptography.Tests.Asn1
 
         [Theory]
         [MemberData(nameof(ValidEncodingData))]
+        public static void GetBMPString_Success(
+            PublicEncodingRules ruleSet,
+            string inputHex,
+            string expectedValue)
+        {
+            byte[] inputData = inputHex.HexToByteArray();
+            AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
+            string value = reader.GetCharacterString(UniversalTagNumber.BMPString);
+
+            Assert.Equal(expectedValue, value);
+        }
+
+        [Theory]
+        [MemberData(nameof(ValidEncodingData))]
         public static void TryCopyBMPString(
             PublicEncodingRules ruleSet,
             string inputHex,
@@ -343,6 +357,41 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             Assert.Equal(-1, bytesWritten);
             Assert.Equal('a', outputData[0]);
+        }
+
+        [Theory]
+        [InlineData("Incomplete Tag", PublicEncodingRules.BER, "1F")]
+        [InlineData("Incomplete Tag", PublicEncodingRules.CER, "1F")]
+        [InlineData("Incomplete Tag", PublicEncodingRules.DER, "1F")]
+        [InlineData("Missing Length", PublicEncodingRules.BER, "1E")]
+        [InlineData("Missing Length", PublicEncodingRules.CER, "1E")]
+        [InlineData("Missing Length", PublicEncodingRules.DER, "1E")]
+        [InlineData("Missing Contents", PublicEncodingRules.BER, "1E02")]
+        [InlineData("Missing Contents", PublicEncodingRules.CER, "1E02")]
+        [InlineData("Missing Contents", PublicEncodingRules.DER, "1E02")]
+        [InlineData("Length Too Long", PublicEncodingRules.BER, "1E0600480069")]
+        [InlineData("Length Too Long", PublicEncodingRules.CER, "1E0600480069")]
+        [InlineData("Length Too Long", PublicEncodingRules.DER, "1E0600480069")]
+        [InlineData("Constructed Form", PublicEncodingRules.DER, "3E0404020049")]
+        [InlineData("Bad BMP value (odd length)", PublicEncodingRules.BER, "1E0120")]
+        [InlineData("Bad BMP value (high surrogate)", PublicEncodingRules.BER, "1E02D800")]
+        [InlineData("Bad BMP value (high private surrogate)", PublicEncodingRules.BER, "1E02DB81")]
+        [InlineData("Bad BMP value (low surrogate)", PublicEncodingRules.BER, "1E02DC00")]
+        [InlineData("Wrong Tag", PublicEncodingRules.BER, "04024869")]
+        public static void GetBMPString_Throws(
+            string description,
+            PublicEncodingRules ruleSet,
+            string inputHex)
+        {
+            byte[] inputData = inputHex.HexToByteArray();
+
+            Assert.Throws<CryptographicException>(
+                () =>
+                {
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
+
+                    reader.GetCharacterString(UniversalTagNumber.BMPString);
+                });
         }
 
         [Theory]

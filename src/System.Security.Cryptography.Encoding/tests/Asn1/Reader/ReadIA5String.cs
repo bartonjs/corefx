@@ -116,6 +116,20 @@ namespace System.Security.Cryptography.Tests.Asn1
 
         [Theory]
         [MemberData(nameof(ValidEncodingData))]
+        public static void GetIA5String_Success(
+            PublicEncodingRules ruleSet,
+            string inputHex,
+            string expectedValue)
+        {
+            byte[] inputData = inputHex.HexToByteArray();
+            AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
+            string value = reader.GetCharacterString(UniversalTagNumber.IA5String);
+
+            Assert.Equal(expectedValue, value);
+        }
+
+        [Theory]
+        [MemberData(nameof(ValidEncodingData))]
         public static void TryCopyIA5String(
             PublicEncodingRules ruleSet,
             string inputHex,
@@ -337,6 +351,27 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             Assert.Equal(-1, bytesWritten);
             Assert.Equal('a', outputData[0]);
+        }
+
+        [Theory]
+        [InlineData("Bad IA5 value", PublicEncodingRules.BER, "1602E280")]
+        [InlineData("Bad IA5 value", PublicEncodingRules.CER, "1602E280")]
+        [InlineData("Bad IA5 value", PublicEncodingRules.DER, "1602E280")]
+        [InlineData("Wrong Tag", PublicEncodingRules.BER, "04024869")]
+        public static void GetIA5String_Throws(
+            string description,
+            PublicEncodingRules ruleSet,
+            string inputHex)
+        {
+            byte[] inputData = inputHex.HexToByteArray();
+
+            Assert.Throws<CryptographicException>(
+                () =>
+                {
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
+
+                    reader.GetCharacterString(UniversalTagNumber.IA5String);
+                });
         }
 
         [Theory]

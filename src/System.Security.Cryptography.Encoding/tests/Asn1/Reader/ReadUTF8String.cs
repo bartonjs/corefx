@@ -120,6 +120,20 @@ namespace System.Security.Cryptography.Tests.Asn1
 
         [Theory]
         [MemberData(nameof(ValidEncodingData))]
+        public static void GetUTF8String_Success(
+            PublicEncodingRules ruleSet,
+            string inputHex,
+            string expectedValue)
+        {
+            byte[] inputData = inputHex.HexToByteArray();
+            AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
+            string value = reader.GetCharacterString(UniversalTagNumber.UTF8String);
+
+            Assert.Equal(expectedValue, value);
+        }
+
+        [Theory]
+        [MemberData(nameof(ValidEncodingData))]
         public static void TryCopyUTF8String(
             PublicEncodingRules ruleSet,
             string inputHex,
@@ -341,6 +355,27 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             Assert.Equal(-1, bytesWritten);
             Assert.Equal('a', outputData[0]);
+        }
+
+        [Theory]
+        [InlineData("Bad UTF8 value", PublicEncodingRules.BER, "0C02E280")]
+        [InlineData("Bad UTF8 value", PublicEncodingRules.CER, "0C02E280")]
+        [InlineData("Bad UTF8 value", PublicEncodingRules.DER, "0C02E280")]
+        [InlineData("Wrong Tag", PublicEncodingRules.BER, "04024869")]
+        public static void GetUTF8String_Throws(
+            string description,
+            PublicEncodingRules ruleSet,
+            string inputHex)
+        {
+            byte[] inputData = inputHex.HexToByteArray();
+
+            Assert.Throws<CryptographicException>(
+                () =>
+                {
+                    AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
+
+                    reader.GetCharacterString(UniversalTagNumber.UTF8String);
+                });
         }
 
         [Theory]
