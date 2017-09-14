@@ -2509,7 +2509,7 @@ namespace System.Security.Cryptography.Asn1
                 // There are 36,000,000,000 ticks per hour, and hour is our largest scale.
                 // In case the double -> Ticks conversion allows for rounding up we can allow
                 // for a 12th digit.
-                const ulong MaxScale = 100_000_000_000;
+                const ulong MaxScale = 1_000_000_000_000;
 
                 if (contentOctets.Length <= offset)
                 {
