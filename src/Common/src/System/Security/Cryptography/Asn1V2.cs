@@ -468,7 +468,7 @@ namespace System.Security.Cryptography.Asn1
                 {
                     ValidateEndOfContents(tag, length, bytesRead);
 
-                    return source.Slice(0, totalLen);
+                    return source.Slice(0, totalLen + initialSliceOffset);
                 }
 
                 // If the current value was an indefinite-length-encoded value
@@ -496,7 +496,8 @@ namespace System.Security.Cryptography.Asn1
 
             if (length == null)
             {
-                return SeekEndOfContents(_data, _ruleSet, bytesRead);
+                var tagLengthAndContents = SeekEndOfContents(_data, _ruleSet, bytesRead);
+                return Slice(_data, 0, tagLengthAndContents.Length + EndOfContentsEncodedLength);
             }
 
             return Slice(_data, 0, bytesRead + length.Value);

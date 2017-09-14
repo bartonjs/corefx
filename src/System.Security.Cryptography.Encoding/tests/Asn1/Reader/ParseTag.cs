@@ -196,35 +196,5 @@ namespace System.Security.Cryptography.Tests.Asn1
                 Assert.False(tag.IsConstructed, "tag.IsConstructed");
             }
         }
-
-        [Fact]
-        public static void ReaderPeekTag_Valid()
-        {
-            // SEQUENCE(NULL)
-            byte[] data = { 0x30, 0x02, 0x05, 0x00 };
-            AsnReader reader = new AsnReader(data, AsnEncodingRules.BER);
-            Asn1Tag tag = reader.PeekTag();
-
-            Assert.Equal((int)UniversalTagNumber.Sequence, tag.TagValue);
-            Assert.True(tag.IsConstructed, "tag.IsConstructed");
-            Assert.Equal(TagClass.Universal, tag.TagClass);
-        }
-
-        [Fact]
-        public static void ReaderPeekTag_Invalid()
-        {
-            // (UNIVERSAL [continue into next byte])
-            byte[] data = { 0x1F };
-            AsnReader reader = new AsnReader(data, AsnEncodingRules.BER);
-
-            try
-            {
-                reader.PeekTag();
-                Assert.True(false, "CryptographicException was thrown");
-            }
-            catch (CryptographicException)
-            {
-            }
-        }
     }
 }

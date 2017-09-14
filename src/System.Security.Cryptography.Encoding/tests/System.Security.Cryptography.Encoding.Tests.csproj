@@ -12,6 +12,7 @@
   <ItemGroup>
     <Compile Include="Asn1\Reader\Asn1ReaderTests.cs" />
     <Compile Include="Asn1\Reader\ParseTag.cs" />
+    <Compile Include="Asn1\Reader\PeekTests.cs" />
     <Compile Include="Asn1\Reader\ReadBitString.cs" />
     <Compile Include="Asn1\Reader\ReadBMPString.cs" />
     <Compile Include="Asn1\Reader\ReadBoolean.cs" />
