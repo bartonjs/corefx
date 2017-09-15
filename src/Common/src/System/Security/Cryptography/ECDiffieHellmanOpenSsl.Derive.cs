@@ -41,6 +41,7 @@ namespace System.Security.Cryptography
 
                 byte[] secretAgreement = DeriveSecretAgreement(otherPartyPublicKey);
                 return AsymmetricAlgorithmHelpers.HashData(secretAgreement, 0, secretAgreement.Length, hashAlgorithm);
+                //TODO release secretAgreement to shared pool
             }
 
             public override byte[] DeriveKeyFromHmac(
@@ -56,6 +57,12 @@ namespace System.Security.Cryptography
                     throw new ArgumentNullException("otherPartyPublicKey");
                 if (string.IsNullOrEmpty(hashAlgorithm.Name))
                     throw new ArgumentException(SR.Cryptography_HashAlgorithmNameNullOrEmpty, "hashAlgorithm");
+
+                byte[] secretAgreement = DeriveSecretAgreement(otherPartyPublicKey);
+                HashProvider hasher = HashProviderDispenser.CreateMacProvider(hashAlgorithm.Name, hmacKey);
+                hasher.AppendHashData(secretAgreement, 0, secretAgreement.Length);
+                return hasher.FinalizeHashAndReset();
+                //TODO release secretAgreement to shared pool
 
                 // TODO: do derivation
                 //using (SafeNCryptSecretHandle secretAgreement = DeriveSecretAgreementHandle(otherPartyPublicKey))
