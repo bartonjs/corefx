@@ -18,7 +18,7 @@ internal static partial class Interop
         [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_EvpPkeyDeriveSecretAgreement")]
         internal static extern void EvpPkeyDeriveSecretAgreement(byte[] secret, int secretLength, SafeEvpPkeyCtxHandle ctx);
 
-        [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_EvpPKeyCtxDestroy")]
-        internal static extern void EvpPKeyCtxDestroy(IntPtr ctx);
+        [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_EvpPkeyCtxDestroy")]
+        internal static extern void EvpPkeyCtxDestroy(IntPtr ctx);
     }
 }

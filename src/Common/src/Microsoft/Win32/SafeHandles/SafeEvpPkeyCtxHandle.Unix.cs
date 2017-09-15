@@ -23,7 +23,7 @@ namespace Microsoft.Win32.SafeHandles
 
         protected override bool ReleaseHandle()
         {
-            Interop.Crypto.EvpPKeyCtxDestroy(handle);
+            Interop.Crypto.EvpPkeyCtxDestroy(handle);
             SetHandle(IntPtr.Zero);
             return true;
         }

@@ -33,8 +33,12 @@ namespace System.Security.Cryptography
             ///     Creates a new ECDiffieHellmanOpenSsl object that will use a randomly generated key of the specified size.
             /// </summary>
             /// <param name="keySize">Size of the key to generate, in bits.</param>
-            public ECDiffieHellmanOpenSsl(int keySize) => _key = new ECDiffieHellmanOpenSslPublicKey(keySize);
-
+            public ECDiffieHellmanOpenSsl(int keySize)
+            {
+                base.KeySize = keySize;
+                _key = new ECDiffieHellmanOpenSslPublicKey(keySize);
+            }
+            
             // Return the three sizes that can be explicitly set (for backwards compatibility)
             public override KeySizes[] LegalKeySizes => new[] {
                 new KeySizes(minSize: 256, maxSize: 384, skipSize: 128),
@@ -145,7 +149,7 @@ namespace System.Security.Cryptography
             /// <exception cref="PlatformNotSupportedException">
             ///     if <paramref name="parameters" /> references a curve that is not supported by this platform.
             /// </exception>
-            public override void ImportParameters(ECParameters parameters) => _key.ImportParameters(parameters);
+            public override void ImportParameters(ECParameters parameters) => KeySizeValue = _key.ImportParameters(parameters);
 
             /// <summary>
             ///     Exports the key and explicit curve parameters used by the ECC object into an <see cref="ECParameters"/> object.

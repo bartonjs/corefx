@@ -78,7 +78,7 @@ namespace System.Security.Cryptography
                 throw new PlatformNotSupportedException();
             }
 
-            internal void ImportParameters(ECParameters parameters) => SetKey(ECOpenSsl.ImportParameters(parameters));
+            internal int ImportParameters(ECParameters parameters) => SetKey(ECOpenSsl.ImportParameters(parameters));
             public override ECParameters ExportExplicitParameters() => ECOpenSsl.ExportExplicitParameters(_key.Value, includePrivateParameters: false);
             internal ECParameters ExportExplicitParameters(bool includePrivateParameters) => ECOpenSsl.ExportExplicitParameters(_key.Value, includePrivateParameters);
             public override ECParameters ExportParameters() => ECOpenSsl.ExportParameters(_key.Value, includePrivateParameters: false);

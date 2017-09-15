@@ -90,11 +90,13 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
                         byte[] dh1NamedExp = ecdh1Named.DeriveKeyFromHash(ecdh1ExplicitPub, hash);
                         byte[] dh1ExpNamed = ecdh1Explicit.DeriveKeyFromHash(ecdh1NamedPub, hash);
 
-                        Assert.Equal(dh1ExpNamed, dh1ExpNamed);
+                        Assert.Equal(dh1NamedExp, dh1ExpNamed);
 
                         byte[] dh1NamedDh2 = ecdh1Named.DeriveKeyFromHash(ecdh2Pub, hash);
                         byte[] dh2Dh1Exp = ecdh2.DeriveKeyFromHash(ecdh1ExplicitPub, hash);
+                        byte[] dh1Expdh2 = ecdh1Explicit.DeriveKeyFromHash(ecdh2Pub, hash);
 
+                        Assert.Equal(dh1Expdh2, dh2Dh1Exp);
                         Assert.Equal(dh1NamedDh2, dh2Dh1Exp);
                     }
                 }
