@@ -95,7 +95,7 @@ namespace System.Security.Cryptography
 
                 HashProvider hasher = HashProviderDispenser.CreateMacProvider(hashAlgorithm.Name, hmacKey == null ? secretAgreement : hmacKey);
                 hasher.AppendHashData(modifiedSecretAgreement, 0, modifiedSecretAgreement.Length);
-                byte[] hashedData = hasher.FinalizeHashAndReset();                
+                byte[] hashedData = hasher.FinalizeHashAndReset();
                 ArrayPool<byte>.Shared.Return(secretAgreement);
                 ArrayPool<byte>.Shared.Return(modifiedSecretAgreement);
                 return hashedData;
@@ -126,22 +126,28 @@ namespace System.Security.Cryptography
                     throw new ArgumentNullException("otherPartyPublicKey");
                 }
 
+                // TODO: use named where possible
                 ECDiffieHellmanOpenSslPublicKey otherKey = otherPartyPublicKey as ECDiffieHellmanOpenSslPublicKey;
                 if (otherKey == null)
                 {
-                    ECParameters otherPartyParameters = otherPartyPublicKey.ExportParameters();
+                    ECParameters otherPartyParameters = otherPartyPublicKey.ExportExplicitParameters();
                     otherKey = new ECDiffieHellmanOpenSslPublicKey(0);
                     otherKey.ImportParameters(otherPartyParameters);
                 }
 
+                // If this key is named and the other key is explicit, make this one explicit for the derivation
+                //TODO: don't just do this for all cases, it's wasteful
+                ECDiffieHellmanOpenSslPublicKey thisExplicitKey = new ECDiffieHellmanOpenSslPublicKey(0);
+                thisExplicitKey.ImportParameters(_key.ExportExplicitParameters());
+
                 using (SafeEvpPKeyHandle otherPartyHandle = otherKey.DuplicateKeyHandle())
                 {
-                    if (otherKey._keySize != _key._keySize)
+                    if (otherKey._keySize != thisExplicitKey._keySize)
                     {
                         throw new ArgumentException(SR.Cryptography_ArgECDHKeySizeMismatch, "otherPartyPublicKey");
                     }
 
-                    using (SafeEvpPKeyHandle localHandle = _key.DuplicateKeyHandle())
+                    using (SafeEvpPKeyHandle localHandle = thisExplicitKey.DuplicateKeyHandle())
                     {
                         //return Interop.Crypto.EvpPkeyDeriveSecretAgreement(localHandle, otherPartyHandle);
                         int secretLength;
