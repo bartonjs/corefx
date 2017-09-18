@@ -47,11 +47,6 @@
 extern "C" EVP_PKEY_CTX* CryptoNative_EvpPkeyCtxCreate(EVP_PKEY* pkey, EVP_PKEY* peerkey, size_t *secretLength)
 {
     //TODO: this needs some refactoring
-    //EVP_PKEY_CTX *ctx;
-
-    ///* Get the peer's public key, and provide the peer with our public key -
-    //* how this is done will be specific to your circumstances */
-    //peerkey = get_peerkey(pkey);
 
     /* Create the context for the shared secret derivation */
     EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(pkey, NULL);

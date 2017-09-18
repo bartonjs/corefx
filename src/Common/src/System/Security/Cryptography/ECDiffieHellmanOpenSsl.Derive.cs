@@ -21,6 +21,35 @@ namespace System.Security.Cryptography
             // for DeriveKeyMaterial.
             private static readonly HashAlgorithmName _hashAlgorithm = HashAlgorithmName.SHA256;
 
+            private static byte[] PrependAppendToSecretAgreement(byte[] secretAgreement, byte[] secretPrepend, byte[] secretAppend)
+            {
+                //TODO: I need to figure out if this is *actually* correct, as the docs are somewhat terse. Add some better tests or research more.
+                if (secretAppend == null && secretPrepend == null)
+                {
+                    return secretAgreement;
+                }
+                
+                int newLength = secretAgreement.Length + (secretPrepend == null ?  0: secretPrepend.Length) + (secretAppend == null ? 0 : secretAppend.Length);
+                if (newLength != secretAgreement.Length)
+                {
+                    byte[] newSecretAgreement = ArrayPool<byte>.Shared.Rent(newLength);
+                    int index = 0;
+                    if (secretPrepend != null)
+                    {
+                        Buffer.BlockCopy(secretPrepend, 0, newSecretAgreement, 0, secretPrepend.Length);
+                        index += secretPrepend.Length;
+                    }
+                    Buffer.BlockCopy(secretAgreement, 0, newSecretAgreement, index, secretAgreement.Length);
+                    index += secretAgreement.Length;
+                    if (secretAppend != null)
+                    {
+                        Buffer.BlockCopy(secretAppend, 0, newSecretAgreement, index, secretAppend.Length);
+                    }
+                    return newSecretAgreement;
+                }
+                return secretAgreement;
+            }
+            
             /// <summary>
             /// Given a second party's public key, derive shared key material
             /// </summary>
@@ -40,8 +69,11 @@ namespace System.Security.Cryptography
                     throw new ArgumentException(SR.Cryptography_HashAlgorithmNameNullOrEmpty, "hashAlgorithm");
 
                 byte[] secretAgreement = DeriveSecretAgreement(otherPartyPublicKey);
-                return AsymmetricAlgorithmHelpers.HashData(secretAgreement, 0, secretAgreement.Length, hashAlgorithm);
-                //TODO release secretAgreement to shared pool
+                byte[] modifiedSecretAgreement = PrependAppendToSecretAgreement(secretAgreement, secretPrepend, secretAppend);
+                byte[] hashedData = AsymmetricAlgorithmHelpers.HashData(modifiedSecretAgreement, 0, modifiedSecretAgreement.Length, hashAlgorithm);
+                ArrayPool<byte>.Shared.Return(secretAgreement);
+                ArrayPool<byte>.Shared.Return(modifiedSecretAgreement);
+                return hashedData;
             }
 
             public override byte[] DeriveKeyFromHmac(
@@ -59,27 +91,14 @@ namespace System.Security.Cryptography
                     throw new ArgumentException(SR.Cryptography_HashAlgorithmNameNullOrEmpty, "hashAlgorithm");
 
                 byte[] secretAgreement = DeriveSecretAgreement(otherPartyPublicKey);
-                HashProvider hasher = HashProviderDispenser.CreateMacProvider(hashAlgorithm.Name, hmacKey);
-                hasher.AppendHashData(secretAgreement, 0, secretAgreement.Length);
-                return hasher.FinalizeHashAndReset();
-                //TODO release secretAgreement to shared pool
+                byte[] modifiedSecretAgreement = PrependAppendToSecretAgreement(secretAgreement, secretPrepend, secretAppend);
 
-                // TODO: do derivation
-                //using (SafeNCryptSecretHandle secretAgreement = DeriveSecretAgreementHandle(otherPartyPublicKey))
-                //{
-                //    Interop.NCrypt.SecretAgreementFlags flags = hmacKey == null ?
-                //        Interop.NCrypt.SecretAgreementFlags.UseSecretAsHmacKey :
-                //        Interop.NCrypt.SecretAgreementFlags.None;
-
-                //    return Interop.NCrypt.DeriveKeyMaterialHmac(
-                //        secretAgreement,
-                //        hashAlgorithm.Name,
-                //        hmacKey,
-                //        secretPrepend,
-                //        secretAppend,
-                //        flags);
-                throw new NotImplementedException();
-            //}
+                HashProvider hasher = HashProviderDispenser.CreateMacProvider(hashAlgorithm.Name, hmacKey == null ? secretAgreement : hmacKey);
+                hasher.AppendHashData(modifiedSecretAgreement, 0, modifiedSecretAgreement.Length);
+                byte[] hashedData = hasher.FinalizeHashAndReset();                
+                ArrayPool<byte>.Shared.Return(secretAgreement);
+                ArrayPool<byte>.Shared.Return(modifiedSecretAgreement);
+                return hashedData;
             }
 
             public override byte[] DeriveKeyTls(ECDiffieHellmanPublicKey otherPartyPublicKey, byte[] prfLabel, byte[] prfSeed)

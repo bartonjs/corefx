@@ -29,6 +29,30 @@ namespace System.Security.Cryptography.EcDsa.Tests
             ComparePublicKey(toImport.Q, publicParams.Q);
             Assert.Null(publicParams.D);
         }
+        
+        [Fact]
+        [PlatformSpecific(TestPlatforms.Windows/* "parameters.Curve.Hash doesn't round trip on Unix." */)]
+        public static void ImportExplicitWithHashButNoSeed()
+        {
+            if (!ECDsaFactory.ExplicitCurvesSupported)
+            {
+                return;
+            }
+
+            using (ECDsa ec = ECDsaFactory.Create())
+            {
+                ECCurve curve = EccTestData.GetNistP256ExplicitCurve();
+                Assert.NotNull(curve.Hash);
+                ec.GenerateKey(curve);
+
+                ECParameters parameters = ec.ExportExplicitParameters(true);
+                Assert.NotNull(parameters.Curve.Hash);
+                parameters.Curve.Seed = null;
+
+                ec.ImportParameters(parameters);
+                ec.Exercise();
+            }
+        }
 
         [Theory]
         [MemberData(nameof(TestCurvesFull))]

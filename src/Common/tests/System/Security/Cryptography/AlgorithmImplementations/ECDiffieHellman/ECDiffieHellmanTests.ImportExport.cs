@@ -87,17 +87,26 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
                     {
                         HashAlgorithmName hash = HashAlgorithmName.SHA256;
 
-                        byte[] dh1NamedExp = ecdh1Named.DeriveKeyFromHash(ecdh1ExplicitPub, hash);
-                        byte[] dh1ExpNamed = ecdh1Explicit.DeriveKeyFromHash(ecdh1NamedPub, hash);
-
-                        Assert.Equal(dh1NamedExp, dh1ExpNamed);
-
-                        byte[] dh1NamedDh2 = ecdh1Named.DeriveKeyFromHash(ecdh2Pub, hash);
-                        byte[] dh2Dh1Exp = ecdh2.DeriveKeyFromHash(ecdh1ExplicitPub, hash);
-                        byte[] dh1Expdh2 = ecdh1Explicit.DeriveKeyFromHash(ecdh2Pub, hash);
-
-                        Assert.Equal(dh1Expdh2, dh2Dh1Exp);
-                        Assert.Equal(dh1NamedDh2, dh2Dh1Exp);
+                        byte[] ech1Named_ecdh1Named = ecdh1Named.DeriveKeyFromHash(ecdh1NamedPub, hash);
+                        byte[] ech1Named_ecdh1Explicit = ecdh1Named.DeriveKeyFromHash(ecdh1ExplicitPub, hash);
+                        byte[] ech1Named_ecdh2Explicit = ecdh1Named.DeriveKeyFromHash(ecdh2Pub, hash);
+                        
+                        byte[] ecdh1Explicit_ecdh1Named = ecdh1Explicit.DeriveKeyFromHash(ecdh1NamedPub, hash);
+                        byte[] ecdh1Explicit_ecdh1Explicit = ecdh1Explicit.DeriveKeyFromHash(ecdh1ExplicitPub, hash);
+                        byte[] ecdh1Explicit_ecdh2Explicit = ecdh1Explicit.DeriveKeyFromHash(ecdh2Pub, hash);
+                        
+                        byte[] ecdh2_ecdh1Named = ecdh2.DeriveKeyFromHash(ecdh1NamedPub, hash);
+                        byte[] ecdh2_ecdh1Explicit = ecdh2.DeriveKeyFromHash(ecdh1ExplicitPub, hash);
+                        byte[] ecdh2_ecdh2Explicit = ecdh2.DeriveKeyFromHash(ecdh2Pub, hash);
+                        
+                        Assert.Equal(ech1Named_ecdh1Named, ech1Named_ecdh1Explicit);
+                        Assert.Equal(ech1Named_ecdh1Explicit, ech1Named_ecdh2Explicit);
+                        Assert.Equal(ech1Named_ecdh2Explicit, ecdh1Explicit_ecdh1Named);
+                        Assert.Equal(ecdh1Explicit_ecdh1Named, ecdh1Explicit_ecdh1Explicit);
+                        Assert.Equal(ecdh1Explicit_ecdh1Explicit, ecdh1Explicit_ecdh2Explicit);
+                        Assert.Equal(ecdh1Explicit_ecdh2Explicit, ecdh2_ecdh1Named);
+                        Assert.Equal(ecdh2_ecdh1Named, ecdh2_ecdh1Explicit);
+                        Assert.Equal(ecdh2_ecdh1Explicit, ecdh2_ecdh2Explicit);
                     }
                 }
             }
@@ -208,6 +217,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         }
 
         [Fact]
+        [PlatformSpecific(TestPlatforms.Windows/* "parameters.Curve.Hash doesn't round trip on Unix." */)]
         public static void ImportExplicitWithHashButNoSeed()
         {
             if (!ECDiffieHellmanFactory.ExplicitCurvesSupported)
