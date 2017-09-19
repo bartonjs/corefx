@@ -42,7 +42,7 @@ namespace System.Security.Cryptography
             return key;
         }
 
-        public static ECParameters ExportExplicitParameters(SafeEcKeyHandle currentKey, bool includePrivateParameters) =>  ExportExplicitCurveParameters(currentKey, includePrivateParameters);
+        public static ECParameters ExportExplicitParameters(SafeEcKeyHandle currentKey, bool includePrivateParameters) => ExportExplicitCurveParameters(currentKey, includePrivateParameters);
 
         public static ECParameters ExportParameters(SafeEcKeyHandle currentKey, bool includePrivateParameters)
         {
@@ -62,13 +62,23 @@ namespace System.Security.Cryptography
         {
             CheckInvalidKey(key);
 
-            ECParameters parameters = Interop.Crypto.GetECKeyParameters(key, includePrivateParameters);
+            //ECParameters parameters = Interop.Crypto.GetECKeyParameters(key, includePrivateParameters);
 
-            bool hasPrivateKey = (parameters.D != null);
-            if (hasPrivateKey != includePrivateParameters)
-            {
-                throw new CryptographicException(SR.Cryptography_CSP_NoPrivateKey);
-            }
+            // bool hasPrivateKey = (parameters.D != null);
+            // if (hasPrivateKey != includePrivateParameters)
+            // {
+                // throw new CryptographicException(SR.Cryptography_CSP_NoPrivateKey);
+            // }
+            
+            
+            //try
+            //{
+                ECParameters parameters = Interop.Crypto.GetECKeyParameters(key, includePrivateParameters);
+            //}
+            //catch (Exception e)
+            //{
+             //   throw new CryptographicException(e);
+            //}
 
             // Assign Curve
             string keyOidValueName = Interop.Crypto.EcKeyGetCurveName(key);
@@ -81,13 +91,19 @@ namespace System.Security.Cryptography
         {
             CheckInvalidKey(key);
 
-            ECParameters parameters = Interop.Crypto.GetECCurveParameters(key, includePrivateParameters);
-
-            bool hasPrivateKey = (parameters.D != null);
-            if (hasPrivateKey != includePrivateParameters)
-            {
-                throw new CryptographicException(SR.Cryptography_CSP_NoPrivateKey);
-            }
+            //try
+            //{
+                ECParameters parameters = Interop.Crypto.GetECCurveParameters(key, includePrivateParameters);
+            //}
+            //catch (Interop.Crypto.OpenSslCryptographicException e)
+            //{
+            //    throw new CryptographicException(e);
+            //}//
+            // bool hasPrivateKey = (parameters.D != null);
+            // if (hasPrivateKey != includePrivateParameters)
+            // {
+                // throw new CryptographicException(SR.Cryptography_CSP_NoPrivateKey);
+            // }
 
             return parameters;
         }

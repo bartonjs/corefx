@@ -154,6 +154,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
                 iut.ImportParameters(iutParameters);
                 cavs.ImportParameters(cavsParameters);
 
+                using (ECDiffieHellmanPublicKey iutPublic = iut.PublicKey)
                 using (ECDiffieHellmanPublicKey cavsPublic = cavs.PublicKey)
                 {
                     Verify(iut, cavsPublic, s_sha256, HashAlgorithmName.SHA256, iutZ);

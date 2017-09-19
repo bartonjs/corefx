@@ -83,6 +83,7 @@ namespace System.Security.Cryptography
             internal ECParameters ExportExplicitParameters(bool includePrivateParameters) => ECOpenSsl.ExportExplicitParameters(_key.Value, includePrivateParameters);
             public override ECParameters ExportParameters() => ECOpenSsl.ExportParameters(_key.Value, includePrivateParameters: false);
             internal ECParameters ExportParameters(bool includePrivateParameters) => ECOpenSsl.ExportParameters(_key.Value, includePrivateParameters);
+            internal string GetCurveName() => Interop.Crypto.EcKeyGetCurveName(_key.Value);
 
             protected override void Dispose(bool disposing)
             {

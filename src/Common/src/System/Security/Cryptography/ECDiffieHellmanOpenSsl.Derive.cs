@@ -125,31 +125,42 @@ namespace System.Security.Cryptography
                 {
                     throw new ArgumentNullException("otherPartyPublicKey");
                 }
+                
+                // Ensure that this ECDH object contains a private key by attempting a parameter export
+                // which will throw an OpenSslCryptoException if no private key is available
+                ECParameters thisKeyParams = ExportExplicitParameters(true);
 
-                // TODO: use named where possible
+                //TODO: cleanup, move to separate helper method
+                bool thisKeyNamed = _key.GetCurveName() != string.Empty;
+                ECDiffieHellmanOpenSslPublicKey thisKey = _key;
                 ECDiffieHellmanOpenSslPublicKey otherKey = otherPartyPublicKey as ECDiffieHellmanOpenSslPublicKey;
                 if (otherKey == null)
                 {
-                    ECParameters otherPartyParameters = otherPartyPublicKey.ExportExplicitParameters();
+                    ECParameters otherPartyParameters = thisKeyNamed ? otherPartyPublicKey.ExportParameters() : otherPartyPublicKey.ExportExplicitParameters();
                     otherKey = new ECDiffieHellmanOpenSslPublicKey(0);
                     otherKey.ImportParameters(otherPartyParameters);
                 }
-
-                // If this key is named and the other key is explicit, make this one explicit for the derivation
-                //TODO: don't just do this for all cases, it's wasteful
-                ECDiffieHellmanOpenSslPublicKey thisExplicitKey = new ECDiffieHellmanOpenSslPublicKey(0);
-                thisExplicitKey.ImportParameters(_key.ExportExplicitParameters());
+                if (thisKeyNamed && otherKey.GetCurveName() == string.Empty)
+                {
+                    thisKey = new ECDiffieHellmanOpenSslPublicKey(0);
+                    thisKey.ImportParameters(thisKeyParams);
+                }
+                else if (!thisKeyNamed && otherKey.GetCurveName() != string.Empty)
+                {
+                    ECParameters otherParams = otherKey.ExportExplicitParameters();
+                    otherKey = new ECDiffieHellmanOpenSslPublicKey(0);
+                    otherKey.ImportParameters(otherParams);
+                }
 
                 using (SafeEvpPKeyHandle otherPartyHandle = otherKey.DuplicateKeyHandle())
                 {
-                    if (otherKey._keySize != thisExplicitKey._keySize)
+                    if (otherKey._keySize != thisKey._keySize)
                     {
                         throw new ArgumentException(SR.Cryptography_ArgECDHKeySizeMismatch, "otherPartyPublicKey");
                     }
 
-                    using (SafeEvpPKeyHandle localHandle = thisExplicitKey.DuplicateKeyHandle())
+                    using (SafeEvpPKeyHandle localHandle = thisKey.DuplicateKeyHandle())
                     {
-                        //return Interop.Crypto.EvpPkeyDeriveSecretAgreement(localHandle, otherPartyHandle);
                         int secretLength;
                         using (SafeEvpPkeyCtxHandle ctx = Interop.Crypto.EvpPkeyCtxCreate(localHandle, otherPartyHandle, out secretLength))
                         {
