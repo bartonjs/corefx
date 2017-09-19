@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Buffers;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -263,6 +264,7 @@ namespace System.Security.Cryptography.Asn1
         private static readonly Text.Encoding s_utf8Encoding = new UTF8Encoding(false, true);
         private static readonly Text.Encoding s_bmpEncoding = new BMPEncoding();
         private static readonly Text.Encoding s_ia5Encoding = new IA5Encoding();
+        private static readonly Text.Encoding s_visibleStringEncoding = new VisibleStringEncoding();
 
         private ReadOnlySpan<byte> _data;
         private readonly AsnEncodingRules _ruleSet;
@@ -2837,8 +2839,18 @@ namespace System.Security.Cryptography.Asn1
         }
     }
 
-    internal class IA5Encoding : SpanBasedEncoding
+    internal abstract class RangedAsciiEncoding : SpanBasedEncoding
     {
+        private readonly byte _minValue;
+        private readonly byte _maxValue;
+
+        protected RangedAsciiEncoding(byte minCharAllowed, byte maxCharAllowed)
+        {
+            Debug.Assert(maxCharAllowed >= minCharAllowed);
+            _minValue = minCharAllowed;
+            _maxValue = maxCharAllowed;
+        }
+
         public override int GetMaxByteCount(int charCount)
         {
             return charCount;
@@ -2858,7 +2870,7 @@ namespace System.Security.Cryptography.Asn1
             {
                 char c = chars[i];
 
-                if (c > 0x7F)
+                if (c > _maxValue || c < _minValue)
                 {
                     EncoderFallback.CreateFallbackBuffer().Fallback(c, i);
 
@@ -2884,10 +2896,116 @@ namespace System.Security.Cryptography.Asn1
             {
                 byte b = bytes[i];
 
-                if (b >= 0x7F)
+                if (b > _maxValue || b < _minValue)
                 {
                     DecoderFallback.CreateFallbackBuffer().Fallback(
                         new[] { b }, 
+                        i);
+
+                    Debug.Fail("Fallback should have thrown");
+                    throw new CryptographicException();
+                }
+
+                if (write)
+                {
+                    chars[i] = (char)b;
+                }
+            }
+
+            return bytes.Length;
+        }
+    }
+
+    internal class IA5Encoding : RangedAsciiEncoding
+    {
+        // All of 7-bit ASCII
+        internal IA5Encoding()
+            : base(0x00, 0x7F)
+        {
+        }
+    }
+
+    internal class VisibleStringEncoding : RangedAsciiEncoding
+    {
+        // Space (0x20) through tilde (0x7E)
+        // Removes the 0x00-0x1F and the 0x7F control codes.
+        internal VisibleStringEncoding()
+            : base(0x20, 0x7E)
+        {
+        }
+    }
+
+    internal abstract class RestrictedAsciiStringEncoding : SpanBasedEncoding
+    {
+        private readonly bool[] _isAllowed;
+
+        protected RestrictedAsciiStringEncoding(IList<char> allowedChars)
+        {
+            bool[] isAllowed = new bool[0x7F];
+
+            foreach (char c in allowedChars)
+            {
+                if (c > isAllowed.Length)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(allowedChars));
+                }
+
+                Debug.Assert(isAllowed[c] == false);
+                isAllowed[c] = true;
+            }
+
+            _isAllowed = isAllowed;
+        }
+
+        public override int GetMaxByteCount(int charCount)
+        {
+            return charCount;
+        }
+
+        public override int GetMaxCharCount(int byteCount)
+        {
+            return byteCount;
+        }
+
+        protected override int GetBytes(ReadOnlySpan<char> chars, Span<byte> bytes, bool write)
+        {
+            if (chars.IsEmpty)
+                return 0;
+
+            for (int i = 0; i < chars.Length; i++)
+            {
+                char c = chars[i];
+
+                if (c > 0x7F || !_isAllowed[c])
+                {
+                    EncoderFallback.CreateFallbackBuffer().Fallback(c, i);
+
+                    Debug.Fail("Fallback should have thrown");
+                    throw new CryptographicException();
+                }
+
+                if (write)
+                {
+                    bytes[i] = (byte)c;
+                }
+            }
+
+            return chars.Length;
+        }
+
+        protected override int GetChars(ReadOnlySpan<byte> bytes, Span<char> chars, bool write)
+        {
+            if (bytes.IsEmpty)
+                return 0;
+
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                byte b = bytes[i];
+
+                if (b >= 0x7F || !_isAllowed[b])
+                {
+                    DecoderFallback.CreateFallbackBuffer().Fallback(
+                        new[] { b },
                         i);
 
                     Debug.Fail("Fallback should have thrown");
