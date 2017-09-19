@@ -29,8 +29,7 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             var algorithmIdentifier = AsnSerializer.Deserialize<AlgorithmIdentifier>(
                 inputData,
-                (AsnEncodingRules)ruleSet,
-                out int bytesRead);
+                (AsnEncodingRules)ruleSet);
 
             Assert.Equal("1.2.840.10045.2.1", algorithmIdentifier.Algorithm.Value);
             
@@ -94,8 +93,7 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             var atst = AsnSerializer.Deserialize<AllTheSimpleThings>(
                 inputData,
-                AsnEncodingRules.BER,
-                out _);
+                AsnEncodingRules.BER);
 
             const string UnicodeVerifier = "Dr. & Mrs. Smith\u2010Jones \uFE60 children";
             const string AsciiVerifier = "Dr. & Mrs. Smith-Jones & children";
@@ -148,8 +146,7 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             var spki = AsnSerializer.Deserialize<SubjectPublicKeyInfo>(
                 inputData,
-                AsnEncodingRules.DER,
-                out _);
+                AsnEncodingRules.DER);
 
             Assert.Equal("1.2.840.10045.2.1", spki.AlgorithmIdentifier.Algorithm.Value);
             Assert.Equal(PublicKeyValue, spki.PublicKey.ByteArrayToHex());
@@ -168,13 +165,11 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             var ds1 = AsnSerializer.Deserialize<DirectoryString>(
                 BmpInputHex.HexToByteArray(),
-                AsnEncodingRules.DER,
-                out _);
+                AsnEncodingRules.DER);
 
             var ds2 = AsnSerializer.Deserialize<DirectoryString>(
                 Utf8InputHex.HexToByteArray(),
-                AsnEncodingRules.DER,
-                out _);
+                AsnEncodingRules.DER);
 
             Assert.NotNull(ds1);
             Assert.NotNull(ds2);
@@ -193,18 +188,15 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             var fs1 = AsnSerializer.Deserialize<FlexibleString>(
                 BmpInputHex.HexToByteArray(),
-                AsnEncodingRules.DER,
-                out _);
+                AsnEncodingRules.DER);
 
             var fs2 = AsnSerializer.Deserialize<FlexibleString>(
                 Utf8InputHex.HexToByteArray(),
-                AsnEncodingRules.DER,
-                out _);
+                AsnEncodingRules.DER);
 
             var fs3 = AsnSerializer.Deserialize<FlexibleString>(
                 Ia5InputHex.HexToByteArray(),
-                AsnEncodingRules.DER,
-                out _);
+                AsnEncodingRules.DER);
 
             Assert.Null(fs1.DirectoryString?.Utf8String);
             Assert.Null(fs1.Ascii);
@@ -227,18 +219,15 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             var fs1 = AsnSerializer.Deserialize<FlexibleStringClass>(
                 BmpInputHex.HexToByteArray(),
-                AsnEncodingRules.DER,
-                out _);
+                AsnEncodingRules.DER);
 
             var fs2 = AsnSerializer.Deserialize<FlexibleStringClass>(
                 Utf8InputHex.HexToByteArray(),
-                AsnEncodingRules.DER,
-                out _);
+                AsnEncodingRules.DER);
 
             var fs3 = AsnSerializer.Deserialize<FlexibleStringClass>(
                 Ia5InputHex.HexToByteArray(),
-                AsnEncodingRules.DER,
-                out _);
+                AsnEncodingRules.DER);
 
             Assert.Null(fs1.DirectoryString?.Utf8String);
             Assert.Null(fs1.Ascii);
@@ -261,18 +250,15 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             var fs1 = AsnSerializer.Deserialize<FlexibleStringClassHybrid>(
                 BmpInputHex.HexToByteArray(),
-                AsnEncodingRules.DER,
-                out _);
+                AsnEncodingRules.DER);
 
             var fs2 = AsnSerializer.Deserialize<FlexibleStringClassHybrid>(
                 Utf8InputHex.HexToByteArray(),
-                AsnEncodingRules.DER,
-                out _);
+                AsnEncodingRules.DER);
 
             var fs3 = AsnSerializer.Deserialize<FlexibleStringClassHybrid>(
                 Ia5InputHex.HexToByteArray(),
-                AsnEncodingRules.DER,
-                out _);
+                AsnEncodingRules.DER);
 
             Assert.Null(fs1.DirectoryString?.Utf8String);
             Assert.Null(fs1.Ascii);
@@ -295,18 +281,15 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             var fs1 = AsnSerializer.Deserialize<FlexibleStringStructHybrid>(
                 BmpInputHex.HexToByteArray(),
-                AsnEncodingRules.DER,
-                out _);
+                AsnEncodingRules.DER);
 
             var fs2 = AsnSerializer.Deserialize<FlexibleStringStructHybrid>(
                 Utf8InputHex.HexToByteArray(),
-                AsnEncodingRules.DER,
-                out _);
+                AsnEncodingRules.DER);
 
             var fs3 = AsnSerializer.Deserialize<FlexibleStringStructHybrid>(
                 Ia5InputHex.HexToByteArray(),
-                AsnEncodingRules.DER,
-                out _);
+                AsnEncodingRules.DER);
 
             Assert.Null(fs1.DirectoryString?.Utf8String);
             Assert.Null(fs1.Ascii);
@@ -329,8 +312,7 @@ namespace System.Security.Cryptography.Tests.Asn1
                 () =>
                     AsnSerializer.Deserialize<CycleRoot>(
                         inputBytes,
-                        AsnEncodingRules.DER,
-                        out _)
+                        AsnEncodingRules.DER)
             );
         }
 
@@ -341,10 +323,22 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             DirectoryStringClass ds = AsnSerializer.Deserialize<DirectoryStringClass>(
                 inputBytes,
-                AsnEncodingRules.DER,
-                out _);
+                AsnEncodingRules.DER);
 
             Assert.Null(ds);
+        }
+
+        [Fact]
+        public static void Deserialize_ContextSpecific_Choice()
+        {
+            byte[] inputBytes = { 0x82, 0x00 };
+
+            ContextSpecificChoice choice = AsnSerializer.Deserialize<ContextSpecificChoice>(
+                inputBytes,
+                AsnEncodingRules.DER);
+
+            Assert.Null(choice.Utf8String);
+            Assert.Equal(string.Empty, choice.IA5String);
         }
     }
 
@@ -509,5 +503,18 @@ namespace System.Security.Cryptography.Tests.Asn1
     public class Cycle3
     {
         public CycleRoot CycleRoot;
+    }
+
+    [Choice]
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ContextSpecificChoice
+    {
+        [UTF8String]
+        [ExpectedTag(3)]
+        public string Utf8String;
+
+        [IA5String]
+        [ExpectedTag(2)]
+        public string IA5String;
     }
 }

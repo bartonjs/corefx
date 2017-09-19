@@ -18,8 +18,7 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             Certificate cert = AsnSerializer.Deserialize<Certificate>(
                 buf,
-                AsnEncodingRules.DER,
-                out _);
+                AsnEncodingRules.DER);
 
             ref TbsCertificate tbsCertificate = ref cert.TbsCertificate;
             ref SubjectPublicKeyInfo spki = ref tbsCertificate.SubjectPublicKeyInfo;
@@ -92,7 +91,7 @@ namespace System.Security.Cryptography.Tests.Asn1
         internal struct TbsCertificate
         {
             [ExpectedTag(0, ExplicitTag = true)]
-            [DefaultValue(0x01)]
+            [DefaultValue(0x02, 0x01, 0x01)]
             public int Version;
 
             [Integer]
@@ -126,7 +125,7 @@ namespace System.Security.Cryptography.Tests.Asn1
             [ObjectIdentifier]
             public string ExtnId;
 
-            [DefaultValue(0x00)]
+            [DefaultValue(0x01, 0x01, 0x00)]
             public bool Critical;
 
             [OctetString]

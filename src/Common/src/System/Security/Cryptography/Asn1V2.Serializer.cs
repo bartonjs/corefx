@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 
 namespace System.Security.Cryptography.Asn1
 {
@@ -31,6 +32,30 @@ namespace System.Security.Cryptography.Asn1
     {
         public AsnAmbiguousFieldTypeException(FieldInfo fieldInfo, Type ambiguousType)
             : base($"Field {fieldInfo.Name} of type {fieldInfo.DeclaringType.FullName} has ambiguous type '{ambiguousType.Name}', an attribute derived from {nameof(AsnTypeAttribute)} is required.")
+        {
+        }
+    }
+
+    internal class AsnSerializerInvalidDefaultException : AsnSerializationConstraintException
+    {
+        internal AsnSerializerInvalidDefaultException()
+        {
+        }
+
+        internal AsnSerializerInvalidDefaultException(FieldInfo fieldInfo)
+            : base($"Field {fieldInfo.Name} of type {fieldInfo.DeclaringType.FullName} has a default value that cannot be read.")
+        {
+        }
+
+        internal AsnSerializerInvalidDefaultException(Exception innerException)
+            : base(String.Empty, innerException)
+        {
+        }
+
+        internal AsnSerializerInvalidDefaultException(FieldInfo fieldInfo, Exception innerException)
+            : base(
+                  $"Field {fieldInfo.Name} of type {fieldInfo.DeclaringType.FullName} has a default value that cannot be read.",
+                  innerException)
         {
         }
     }
@@ -246,8 +271,12 @@ namespace System.Security.Cryptography.Asn1
             {
                 Asn1Tag actualTag = reader.PeekTag();
 
-                if (actualTag.TagClass == expectedTag.TagClass &&
-                    actualTag.TagValue == expectedTag.TagValue)
+                bool isExactMatch =
+                    actualTag.TagClass == expectedTag.TagClass &&
+                    actualTag.TagValue == expectedTag.TagValue;
+                
+                // If the actual tag is universal let the value deserializer handle it.
+                if (isExactMatch || actualTag.TagClass == TagClass.Universal)
                 {
                     return valueDeserializer(ref reader);
                 }
@@ -299,7 +328,7 @@ namespace System.Security.Cryptography.Asn1
 
             if (defaultContents != null)
             {
-                return DefaultValue(tagType, defaultContents);
+                return DefaultValue(defaultContents, valueDeserializer);
             }
 
             throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
@@ -327,7 +356,7 @@ namespace System.Security.Cryptography.Asn1
             {
                 deserializer = DefaultValueDeserializer(deserializer, isOptional, defaultContents, tagType, expectedTag);
             }
-            else if (expectedTag.TagClass != TagClass.Universal)
+            else if (expectedTag != Asn1Tag.EndOfContents)
             {
                 deserializer = CheckTagDeserializer(deserializer, expectedTag);
             }
@@ -560,21 +589,34 @@ namespace System.Security.Cryptography.Asn1
             throw new AsnSerializationConstraintException($"No deserializer for {typeT.FullName} was found");
         }
         
-        private static object DefaultValue(UniversalTagNumber tagType, byte[] defaultContents)
+        private static object DefaultValue(
+            byte[] defaultContents,
+            Deserializer valueDeserializer)
         {
             Debug.Assert(defaultContents != null);
 
-            // TODO: WRITE THIS FOR REAL!
-            if (tagType == UniversalTagNumber.Boolean)
+            try
             {
-                return defaultContents[0] != 0;
-            }
-            if (tagType == UniversalTagNumber.Integer)
-            {
-                return (int)defaultContents[0];
-            }
+                // TODO: DER? BER? The current mode?
+                AsnReader defaultValueReader = new AsnReader(defaultContents, AsnEncodingRules.DER);
 
-            throw new NotImplementedException(tagType.ToString());
+                object obj = valueDeserializer(ref defaultValueReader);
+
+                if (defaultValueReader.HasData)
+                {
+                    throw new AsnSerializerInvalidDefaultException();
+                }
+
+                return obj;
+            }
+            catch (AsnSerializerInvalidDefaultException)
+            {
+                throw;
+            }
+            catch (CryptographicException e)
+            {
+                throw new AsnSerializerInvalidDefaultException(e);
+            }
         }
 
         private static void GetFieldInfo(
@@ -721,9 +763,29 @@ namespace System.Security.Cryptography.Asn1
                     // TODO/Review: Exception type and message?
                     throw new AsnAmbiguousFieldTypeException(fieldInfo, unpackedType);
                 }
+                else if (unpackedType == typeof(Oid))
+                {
+                    tagType = UniversalTagNumber.ObjectIdentifier;
+                }
                 else if (unpackedType.IsArray)
                 {
                     tagType = UniversalTagNumber.SequenceOf;
+                }
+                else if (unpackedType.IsEnum)
+                {
+                    if (typeT.GetCustomAttributes(typeof(FlagsAttribute), false).Length > 0)
+                    {
+                        tagType = UniversalTagNumber.BitString;
+                    }
+                    else
+                    {
+                        tagType = UniversalTagNumber.Enumerated;
+                    }
+                }
+                else if (fieldInfo != null)
+                {
+                    Debug.Fail($"No tag type bound for {fieldInfo.DeclaringType.FullName}.{fieldInfo.Name}");
+                    throw new CryptographicException();
                 }
             }
 
@@ -735,14 +797,26 @@ namespace System.Security.Cryptography.Asn1
                 throw new AsnSerializationConstraintException();
             }
 
+            bool isChoice = GetChoiceAttribute(typeT) != null;
+
             var tagOverride = fieldInfo?.GetCustomAttribute<ExpectedTagAttribute>(false);
 
             if (tagOverride != null)
             {
+                if (isChoice)
+                {
+                    throw new AsnSerializationConstraintException($"{nameof(ExpectedTagAttribute)} cannot be combined with {nameof(ChoiceAttribute)}");
+                }
+
                 // This will throw for unmapped TagClass values and specifying Universal.
                 expectedTag = new Asn1Tag(tagOverride.TagClass, tagOverride.TagValue);
                 isExplicitTag = tagOverride.ExplicitTag;
                 return;
+            }
+
+            if (isChoice)
+            {
+                tagType = 0;
             }
 
             isExplicitTag = false;
@@ -784,14 +858,20 @@ namespace System.Security.Cryptography.Asn1
             throw new AsnSerializationConstraintException();
         }
 
-        public static T Deserialize<T>(ReadOnlySpan<byte> source, AsnEncodingRules ruleSet, out int bytesRead)
+        public static T Deserialize<T>(ReadOnlySpan<byte> source, AsnEncodingRules ruleSet)
         {
             Deserializer deserializer = GetDeserializer(typeof(T), null);
 
             AsnReader reader = new AsnReader(source, ruleSet);
 
-            bytesRead = 0;
-            return (T)deserializer(ref reader);
+            T t = (T)deserializer(ref reader);
+
+            if (reader.HasData)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            return t;
         }
     }
 
