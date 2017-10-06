@@ -213,6 +213,72 @@ namespace System.Security.Cryptography.Asn1
             return true;
         }
 
+        public int CalculateEncodedSize()
+        {
+            const int SevenBits = 0b0111_1111;
+            const int FourteenBits = 0b0011_1111_1111_1111;
+            const int TwentyOneBits = 0b0001_1111_1111_1111_1111_1111;
+            const int TwentyEightBits = 0b0000_1111_1111_1111_1111_1111_1111_1111;
+
+            if (TagValue < TagNumberMask)
+                return 1;
+            if (TagValue <= SevenBits)
+                return 2;
+            if (TagValue <= FourteenBits)
+                return 3;
+            if (TagValue <= TwentyOneBits)
+                return 4;
+            if (TagValue <= TwentyEightBits)
+                return 5;
+
+            return 6;
+        }
+
+        public bool TryWrite(Span<byte> destination, out int bytesWritten)
+        {
+            int spaceRequired = CalculateEncodedSize();
+
+            if (destination.Length < spaceRequired)
+            {
+                bytesWritten = 0;
+                return false;
+            }
+
+            if (spaceRequired == 1)
+            {
+                byte value = (byte)(_controlFlags | TagValue);
+                destination[0] = value;
+                bytesWritten = 1;
+                return true;
+            }
+
+            byte firstByte = (byte)(_controlFlags | TagNumberMask);
+            destination[0] = firstByte;
+
+            int remaining = TagValue;
+            int idx = spaceRequired - 1;
+
+            while (remaining > 0)
+            {
+                int segment = remaining & 0x7F;
+
+                // The last byte doesn't get the marker, which we write first.
+                if (remaining != TagValue)
+                {
+                    segment |= 0x80;
+                }
+
+                Debug.Assert(segment <= byte.MaxValue);
+                destination[idx] = (byte)segment;
+                remaining >>= 7;
+                idx--;
+            }
+
+            Debug.Assert(idx == 0);
+            bytesWritten = spaceRequired;
+            return true;
+        }
+
         public bool Equals(Asn1Tag other)
         {
             return _controlFlags == other._controlFlags && _tagValue == other._tagValue;

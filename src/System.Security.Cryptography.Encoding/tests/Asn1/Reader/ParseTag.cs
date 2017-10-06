@@ -65,6 +65,14 @@ namespace System.Security.Cryptography.Tests.Asn1
             {
                 Assert.False(tag.IsConstructed, "tag.IsConstructed");
             }
+
+            byte[] secondBytes = new byte[inputBytes.Length];
+            int written;
+            Assert.False(tag.TryWrite(secondBytes.AsSpan().Slice(0, inputBytes.Length - 1), out written));
+            Assert.Equal(0, written);
+            Assert.True(tag.TryWrite(secondBytes, out written));
+            Assert.Equal(inputBytes.Length, written);
+            Assert.Equal(inputHex, secondBytes.ByteArrayToHex());
         }
 
         [Theory]
