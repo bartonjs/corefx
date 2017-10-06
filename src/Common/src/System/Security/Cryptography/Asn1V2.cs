@@ -1282,7 +1282,7 @@ namespace System.Security.Cryptography.Asn1
             // so we don't need to validate it.
             Type backingType = tEnum.GetEnumUnderlyingType();
 
-            // TODO/review: Is this worth checking?
+            // TODO/review: Is this worth checking? (Flags would be BitString, not Enumerated)
             if (tEnum.IsDefined(typeof(FlagsAttribute), false))
             {
                 // TODO/review: What kind of exception? (This message is no good)
