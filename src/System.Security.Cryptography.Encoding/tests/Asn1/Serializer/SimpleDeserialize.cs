@@ -340,6 +340,25 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Null(choice.Utf8String);
             Assert.Equal(string.Empty, choice.IA5String);
         }
+
+        [Fact]
+        public static void Deserialize_UtcTime_WithTwoYearMax()
+        {
+            const string UtcTimeValue = "170D3132303130323233353935395A";
+
+            const string InputHex =
+                "3080" + UtcTimeValue + UtcTimeValue + UtcTimeValue + "0000";
+
+            byte[] inputBytes = InputHex.HexToByteArray();
+
+            UtcTimeTwoDigitYears dates = AsnSerializer.Deserialize<UtcTimeTwoDigitYears>(
+                inputBytes,
+                AsnEncodingRules.BER);
+
+            Assert.Equal(new DateTimeOffset(1912, 1, 2, 23, 59, 59, TimeSpan.Zero), dates.ErnestoSabatoLifetime);
+            Assert.Equal(new DateTimeOffset(2012, 1, 2, 23, 59, 59, TimeSpan.Zero), dates.MayanPhenomenon);
+            Assert.Equal(new DateTimeOffset(2012, 1, 2, 23, 59, 59, TimeSpan.Zero), dates.ImplicitMax);
+        }
     }
 
     // RFC 3280 / ITU-T X.509
@@ -516,5 +535,18 @@ namespace System.Security.Cryptography.Tests.Asn1
         [IA5String]
         [ExpectedTag(2)]
         public string IA5String;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct UtcTimeTwoDigitYears
+    {
+        [UtcTime(TwoDigitYearMax = 2011)]
+        public DateTimeOffset ErnestoSabatoLifetime;
+
+        [UtcTime(TwoDigitYearMax = 2012)]
+        public DateTimeOffset MayanPhenomenon;
+
+        [UtcTime]
+        public DateTimeOffset ImplicitMax;
     }
 }

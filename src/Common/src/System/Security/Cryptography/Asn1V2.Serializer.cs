@@ -150,6 +150,7 @@ namespace System.Security.Cryptography.Asn1
                         out byte[] defaultContents,
                         out _,
                         out _,
+                        out _,
                         out Asn1Tag expectedTag);
 
                     if (defaultContents != null)
@@ -390,6 +391,7 @@ namespace System.Security.Cryptography.Asn1
                 out defaultContents,
                 out isExplicitTag,
                 out isOptional,
+                out int? twoDigitYearMax,
                 out expectedTag);
 
             tagType2 = tagType;
@@ -560,6 +562,11 @@ namespace System.Security.Cryptography.Asn1
             {
                 if (tagType == UniversalTagNumber.UtcTime)
                 {
+                    if (twoDigitYearMax.HasValue)
+                    {
+                        return (ref AsnReader reader) => reader.GetUtcTime(twoDigitYearMax.Value);
+                    }
+
                     return (ref AsnReader reader) => reader.GetUtcTime();
                 }
 
@@ -630,6 +637,7 @@ namespace System.Security.Cryptography.Asn1
             out byte[] defaultContents,
             out bool isExplicitTag,
             out bool isOptional,
+            out int? twoDigitYearMax,
             out Asn1Tag expectedTag)
         {
             object[] typeAttrs = fieldInfo?.GetCustomAttributes(typeof(AsnTypeAttribute), false) ??
@@ -648,6 +656,7 @@ namespace System.Security.Cryptography.Asn1
             isAny = false;
             isCollection = false;
             wasCustomized = false;
+            twoDigitYearMax = null;
 
             if (typeAttrs.Length == 1)
             {
@@ -708,10 +717,20 @@ namespace System.Security.Cryptography.Asn1
                     expectedTypes = null;
                     tagType = UniversalTagNumber.SetOf;
                 }
-                else if (attr is UtcTimeAttribute)
+                else if (attr is UtcTimeAttribute utcAttr)
                 {
                     expectedTypes = new[] { typeof(DateTimeOffset) };
                     tagType = UniversalTagNumber.UtcTime;
+
+                    if (utcAttr.TwoDigitYearMax != 0)
+                    {
+                        twoDigitYearMax = utcAttr.TwoDigitYearMax;
+
+                        if (twoDigitYearMax < 99)
+                        {
+                            throw new AsnSerializationConstraintException($"{nameof(UtcTimeAttribute.TwoDigitYearMax)} value is too small");
+                        }
+                    }
                 }
                 else if (attr is GeneralizedTimeAttribute)
                 {
@@ -966,6 +985,7 @@ namespace System.Security.Cryptography.Asn1
     [AttributeUsage(AttributeTargets.Field)]
     internal sealed class UtcTimeAttribute : AsnTypeAttribute
     {
+        public int TwoDigitYearMax { get; set; }
     }
 
     [AttributeUsage(AttributeTargets.Field)]
