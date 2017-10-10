@@ -30,6 +30,10 @@
     <Compile Include="Asn1\Reader\ReadOctetString.cs" />
     <Compile Include="Asn1\Serializer\SimpleDeserialize.cs" />
     <Compile Include="Asn1\Serializer\X509DeserializeTests.cs" />
+    <Compile Include="Asn1\Writer\Asn1WriterTests.cs" />
+    <Compile Include="Asn1\Writer\WriteBitString.cs" />
+    <Compile Include="Asn1\Writer\WriteBoolean.cs" />
+    <Compile Include="Asn1\Writer\WriteInteger.cs" />
     <Compile Include="AsnEncodedData.cs" />
     <Compile Include="AsnEncodedDataCollectionTests.cs" />
     <Compile Include="Base64TransformsTests.cs" />

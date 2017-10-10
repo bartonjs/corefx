@@ -322,7 +322,7 @@ namespace System.Security.Cryptography.Asn1
     internal struct AsnReader
     {
         // ITU-T-REC-X.690-201508 sec 9.2
-        private const int MaxCERSegmentSize = 1000;
+        internal const int MaxCERSegmentSize = 1000;
 
         // T-REC-X.690-201508 sec 8.1.5 says only 0000 is legal.
         private const int EndOfContentsEncodedLength = 2;
@@ -3182,6 +3182,1329 @@ namespace System.Security.Cryptography.Asn1
         public override int GetMaxCharCount(int byteCount)
         {
             return byteCount / 2;
+        }
+    }
+
+    internal class AsnWriter
+    {
+        private static readonly Text.Encoding s_bmpEncoding = new BMPEncoding();
+        private static readonly Text.Encoding s_ia5Encoding = new IA5Encoding();
+        private static readonly Text.Encoding s_utf8Encoding = new UTF8Encoding(false, true);
+
+        private byte[] _buffer;
+        private int _offset;
+        private Stack<(Asn1Tag,int)> _nestingStack;
+
+        public AsnEncodingRules RuleSet { get; }
+
+        public AsnWriter(AsnEncodingRules ruleSet)
+        {
+            if (ruleSet != AsnEncodingRules.BER &&
+                ruleSet != AsnEncodingRules.CER &&
+                ruleSet != AsnEncodingRules.DER)
+            {
+                throw new ArgumentOutOfRangeException(nameof(ruleSet));
+            }
+
+            RuleSet = ruleSet;
+        }
+
+        private void EnsureWriteCapacity(int pendingCount)
+        {
+            if (_buffer == null || _buffer.Length - _offset < pendingCount)
+            {
+                const int BlockSize = 1024;
+                // While the ArrayPool may have similar logic, make sure we don't run into a lot of
+                // "grow a little" by asking in 1k steps.
+                int blocks = (_offset + pendingCount + (BlockSize - 1)) / BlockSize;
+                byte[] newBytes = ArrayPool<byte>.Shared.Rent(BlockSize * blocks);
+
+                if (_buffer != null)
+                {
+                    Buffer.BlockCopy(_buffer, 0, newBytes, 0, _offset);
+                    Array.Clear(_buffer, 0, _offset);
+                    ArrayPool<byte>.Shared.Return(_buffer);
+                }
+
+#if DEBUG
+                // Ensure no "implicit 0" is happening
+                for (int i = _offset; i < newBytes.Length; i++)
+                {
+                    newBytes[i] ^= 0xFF;
+                }
+#endif
+
+                _buffer = newBytes;
+            }
+        }
+
+        private void WriteTag(Asn1Tag tag)
+        {
+            int spaceRequired = tag.CalculateEncodedSize();
+            EnsureWriteCapacity(spaceRequired);
+
+            if (!tag.TryWrite(_buffer.AsSpan().Slice(_offset, spaceRequired), out int written) ||
+                written != spaceRequired)
+            {
+                Debug.Fail($"TryWrite failed or written was wrong value ({written} vs {spaceRequired})");
+                throw new CryptographicException();
+            }
+
+            _offset += spaceRequired;
+        }
+
+        private void WriteLength(int length)
+        {
+            const byte MultiByteMarker = 0x80;
+            Debug.Assert(length >= -1);
+
+            if (length == -1)
+            {
+                EnsureWriteCapacity(1);
+                _buffer[_offset] = MultiByteMarker;
+                _offset++;
+                return;
+            }
+
+            Debug.Assert(length >= 0);
+
+            if (length < MultiByteMarker)
+            {
+                // Pre-allocate the pending data since we know how much.
+                EnsureWriteCapacity(1 + length);
+                _buffer[_offset] = (byte)length;
+                _offset++;
+                return;
+            }
+
+            var lengthLength = GetLengthLength(length);
+
+            // Pre-allocate the pending data since we know how much.
+            EnsureWriteCapacity(lengthLength + 1 + length);
+            _buffer[_offset] = (byte)(MultiByteMarker | lengthLength);
+
+            // No minus one because offset didn't get incremented yet.
+            int idx = _offset + lengthLength;
+
+            int remaining = length;
+
+            do
+            {
+                _buffer[idx] = (byte)remaining;
+                remaining >>= 8;
+                idx--;
+            } while (remaining > 0);
+
+            Debug.Assert(idx == _offset);
+            _offset += lengthLength + 1;
+        }
+
+        private static int GetLengthLength(int length)
+        {
+            if (length <= 0x7F)
+                return 0;
+            if (length <= byte.MaxValue)
+                return 1;
+            if (length <= ushort.MaxValue)
+                return 2;
+            if (length <= 0x00FFFFFF)
+                return 3;
+
+            return 4;
+        }
+
+        public void WriteBoolean(bool value)
+        {
+            WriteBoolean(new Asn1Tag(UniversalTagNumber.Boolean), value);
+        }
+
+        public void WriteBoolean(Asn1Tag tag, bool value)
+        {
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+            // TODO: Spec ID?
+            if (tag.IsConstructed)
+                throw new ArgumentException($"Constructed Boolean values are not supported", nameof(tag));
+
+            WriteTag(tag);
+            WriteLength(1);
+            // Ensured by WriteLength
+            Debug.Assert(_offset < _buffer.Length);
+            _buffer[_offset] = (byte)(value ? 0xFF : 0x00);
+            _offset++;
+        }
+
+        public void WriteInteger(long value)
+        {
+            WriteInteger(new Asn1Tag(UniversalTagNumber.Integer), value);
+        }
+
+        public void WriteInteger(ulong value)
+        {
+            WriteInteger(new Asn1Tag(UniversalTagNumber.Integer), value);
+        }
+
+        public void WriteInteger(BigInteger value)
+        {
+            WriteInteger(new Asn1Tag(UniversalTagNumber.Integer), value);
+        }
+
+        public void WriteInteger(Asn1Tag tag, long value)
+        {
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+            // TODO: Spec ID?
+            if (tag.IsConstructed)
+                throw new ArgumentException($"Constructed Integer values are not supported", nameof(tag));
+
+            if (value >= 0)
+            {
+                WriteInteger(tag, (ulong)value);
+                return;
+            }
+
+            int valueLength;
+
+            if (value >= sbyte.MinValue)
+                valueLength = 1;
+            else if (value >= short.MinValue)
+                valueLength = 2;
+            else if (value >= unchecked((long)0xFFFFFFFF_FF800000))
+                valueLength = 3;
+            else if (value >= int.MinValue)
+                valueLength = 4;
+            else if (value >= unchecked((long)0xFFFFFF80_00000000))
+                valueLength = 5;
+            else if (value >= unchecked((long)0xFFFF8000_00000000))
+                valueLength = 6;
+            else if (value >= unchecked((long)0xFF800000_00000000))
+                valueLength = 7;
+            else
+                valueLength = 8;
+           
+            WriteTag(tag);
+            WriteLength(valueLength);
+
+            long remaining = value;
+            int idx = _offset + valueLength - 1;
+
+            do
+            {
+                _buffer[idx] = (byte)(remaining & 0xFF);
+                remaining >>= 8;
+                idx--;
+            } while (idx >= _offset);
+
+#if DEBUG
+            if (valueLength > 1)
+            {
+                // T-REC-X.690-201508 sec 8.1.2.2
+                // Cannot start with 9 bits of 1 (or 9 bits of 0, but that's not this method).
+                Debug.Assert(_buffer[_offset] != 0xFF || _buffer[_offset + 1] < 0x80);
+            }
+#endif
+
+            _offset += valueLength;
+        }
+
+        public void WriteInteger(Asn1Tag tag, ulong value)
+        {
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+            // TODO: Spec ID?
+            if (tag.IsConstructed)
+                throw new ArgumentException($"Constructed Integer values are not supported", nameof(tag));
+
+            int valueLength;
+            
+            // 0x80 needs two bytes: 0x00 0x80
+            if (value < 0x80)
+                valueLength = 1;
+            else if (value < 0x8000)
+                valueLength = 2;
+            else if (value < 0x800000)
+                valueLength = 3;
+            else if (value < 0x80000000)
+                valueLength = 4;
+            else if (value < 0x80_00000000)
+                valueLength = 5;
+            else if (value < 0x8000_00000000)
+                valueLength = 6;
+            else if (value < 0x800000_00000000)
+                valueLength = 7;
+            else if (value < 0x800000_0000000000)
+                valueLength = 8;
+            else
+                valueLength = 9;
+
+            WriteTag(tag);
+            WriteLength(valueLength);
+
+            ulong remaining = value;
+            int idx = _offset + valueLength - 1;
+
+            do
+            {
+                _buffer[idx] = (byte)remaining;
+                remaining >>= 8;
+                idx--;
+            } while (idx >= _offset);
+
+#if DEBUG
+            if (valueLength > 1)
+            {
+                // T-REC-X.690-201508 sec 8.1.2.2
+                // Cannot start with 9 bits of 0 (or 9 bits of 1, but that's not this method).
+                Debug.Assert(_buffer[_offset] != 0 || _buffer[_offset + 1] > 0x7F);
+            }
+#endif
+
+            _offset += valueLength;
+        }
+
+        public void WriteInteger(Asn1Tag tag, BigInteger value)
+        {
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+            // TODO: Spec ID?
+            if (tag.IsConstructed)
+                throw new ArgumentException($"Constructed Integer values are not supported", nameof(tag));
+
+            // TODO: Rewrite with Span operations after moving branch forward.
+            byte[] encoded = value.ToByteArray();
+            Array.Reverse(encoded);
+
+            WriteTag(tag);
+            WriteLength(encoded.Length);
+            Buffer.BlockCopy(encoded, 0, _buffer, _offset, encoded.Length);
+            _offset += encoded.Length;
+        }
+
+        public void WriteBitString(ReadOnlySpan<byte> bitString, int unusedBitCount=0)
+        {
+            WriteBitString(new Asn1Tag(UniversalTagNumber.BitString), bitString, unusedBitCount);
+        }
+
+        public void WriteBitString(Asn1Tag tag, ReadOnlySpan<byte> bitString, int unusedBitCount=0)
+        {
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+
+            // TODO: Find a section number for the 0 bound.
+            // T-REC-X.690-201508 sec 8.6.2.2
+            if (unusedBitCount < 0 || unusedBitCount > 7)
+                throw new ArgumentOutOfRangeException(
+                    nameof(unusedBitCount),
+                    unusedBitCount,
+                    $"Unused bit count must be between 0 and 7 inclusive");
+
+            // T-REC-X.690-201508 sec 8.6.2.4
+            if (bitString.Length == 0 && unusedBitCount != 0)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            // If 3 bits are "unused" then build a mask for the top 5 bits.
+            // 0b1111_1111 >> (8 - 3)
+            // 0b1111_1111 >> 5
+            // 0b0000_0111
+            // (then invert that)
+            // 0b1111_1000
+            byte mask = (byte)~(0xFF >> (8 - unusedBitCount));
+            byte lastByte = bitString.IsEmpty ? (byte)0 : bitString[bitString.Length - 1];
+
+            if ((lastByte & mask) != lastByte)
+            {
+                // TODO: Probably warrants a distinct message.
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            if (RuleSet == AsnEncodingRules.BER)
+            {
+                // Clear the constructed flag, if present.
+                tag = new Asn1Tag(tag.TagClass, tag.TagValue);
+            }
+            else if (RuleSet == AsnEncodingRules.DER && tag.IsConstructed)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+            else if (RuleSet == AsnEncodingRules.CER)
+            {
+                // If it's within a primitive segment, just clear the constructed flag
+                // (if present) and continue.
+                // (strict less than because of the unused bit count byte)
+                if (bitString.Length < AsnReader.MaxCERSegmentSize)
+                {
+                    tag = new Asn1Tag(tag.TagClass, tag.TagValue);
+                }
+                else
+                {
+                    WriteCERBitString(tag, bitString, unusedBitCount);
+                    return;
+                }
+            }
+
+            WriteTag(tag);
+            // The unused bits byte requires +1.
+            WriteLength(bitString.Length + 1);
+            _buffer[_offset] = (byte)unusedBitCount;
+            _offset++;
+            bitString.CopyTo(_buffer.AsSpan().Slice(_offset));
+            _offset += bitString.Length;
+        }
+
+
+        private void WriteCERBitString(Asn1Tag tag, ReadOnlySpan<byte> payload, int unusedBitCount)
+        {
+            const int MaxCERSegmentSize = AsnReader.MaxCERSegmentSize;
+            // Every segment has an "unused bit count" byte.
+            const int MaxCERContentSize = MaxCERSegmentSize - 1;
+            Debug.Assert(payload.Length > MaxCERContentSize);
+
+            WriteTag(new Asn1Tag(tag.TagClass, tag.TagValue, isConstructed: true));
+            WriteLength(-1);
+
+            int fullSegments = Math.DivRem(payload.Length, MaxCERContentSize, out int lastContentSize);
+            // +Unused bit count byte.
+            int lastSegmentSize = lastContentSize + 1;
+            // The tag size of primitive OCTET STRING is 1 byte.
+            // The lengthOrLengthLength byte is always 1 byte.
+            // These calculations use segment size (vs content size) to pre-account for the unused count byte.
+            int fullSegmentEncodedSize = 1 + 1 + MaxCERSegmentSize + GetLengthLength(MaxCERSegmentSize);
+            Debug.Assert(fullSegmentEncodedSize == 1004);
+            int remainingEncodedSize = 1 + 1 + lastSegmentSize + GetLengthLength(lastSegmentSize);
+
+            if (lastContentSize == 0)
+            {
+                lastSegmentSize = remainingEncodedSize = 0;
+            }
+
+            // Reduce the number of copies by pre-calculating the size.
+            // +2 for End-Of-Contents
+            int expectedSize = fullSegments * fullSegmentEncodedSize + remainingEncodedSize + 2;
+            EnsureWriteCapacity(expectedSize);
+
+            byte[] ensureNoExtraCopy = _buffer;
+            int savedOffset = _offset;
+
+            ReadOnlySpan<byte> remainingData = payload;
+            Span<byte> dest;
+            Asn1Tag primitiveBitString = new Asn1Tag(UniversalTagNumber.BitString);
+
+            while (remainingData.Length > MaxCERContentSize)
+            {
+                WriteTag(primitiveBitString);
+                WriteLength(MaxCERSegmentSize);
+                // 0 unused bits in this segment.
+                _buffer[_offset] = 0;
+                _offset++;
+
+                dest = _buffer.AsSpan().Slice(_offset);
+                remainingData.Slice(0, MaxCERContentSize).CopyTo(dest);
+
+                remainingData = remainingData.Slice(MaxCERContentSize);
+                _offset += MaxCERContentSize;
+            }
+
+            WriteTag(primitiveBitString);
+            WriteLength(remainingData.Length + 1);
+
+            _buffer[_offset] = (byte)unusedBitCount;
+            _offset++;
+
+            dest = _buffer.AsSpan().Slice(_offset);
+            remainingData.CopyTo(dest);
+            _offset += remainingData.Length;
+
+            WriteTag(Asn1Tag.EndOfContents);
+            WriteLength(0);
+
+            Debug.Assert(_offset - savedOffset == expectedSize, $"expected size was {expectedSize}, actual was {_offset - savedOffset}");
+            Debug.Assert(_buffer == ensureNoExtraCopy, $"_buffer was replaced during {nameof(WriteCERBitString)}");
+        }
+
+        public void WriteOctetString(ReadOnlySpan<byte> octetString)
+        {
+            WriteOctetString(new Asn1Tag(UniversalTagNumber.OctetString), octetString);
+        }
+
+        public void WriteOctetString(Asn1Tag tag, ReadOnlySpan<byte> octetString)
+        {
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+
+            if (RuleSet == AsnEncodingRules.BER)
+            {
+                // Clear the constructed flag, if present.
+                tag = new Asn1Tag(tag.TagClass, tag.TagValue);
+            }
+            else if (RuleSet == AsnEncodingRules.DER && tag.IsConstructed)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+            else
+            {
+                Debug.Assert(RuleSet == AsnEncodingRules.CER);
+
+                // If it's within a primitive segment, just clear the constructed flag
+                // (if present) and continue.
+                if (octetString.Length < AsnReader.MaxCERSegmentSize)
+                {
+                    tag = new Asn1Tag(tag.TagClass, tag.TagValue);
+                }
+                else
+                {
+                    WriteCEROctetString(tag, octetString);
+                    return;
+                }
+            }
+
+            WriteTag(tag);
+            WriteLength(octetString.Length);
+            octetString.CopyTo(_buffer.AsSpan().Slice(_offset));
+            _offset += octetString.Length;
+        }
+
+        private void WriteCEROctetString(Asn1Tag tag, ReadOnlySpan<byte> payload)
+        {
+            const int MaxCERSegmentSize = AsnReader.MaxCERSegmentSize;
+            Debug.Assert(payload.Length > MaxCERSegmentSize);
+
+            WriteTag(new Asn1Tag(tag.TagClass, tag.TagValue, isConstructed: true));
+            WriteLength(-1);
+
+            int fullSegments = Math.DivRem(payload.Length, MaxCERSegmentSize, out int lastSegmentSize);
+            // The tag size of primitive OCTET STRING is 1 byte.
+            // The lengthOrLengthLength byte is always 1 byte.
+            int fullSegmentEncodedSize = 1 + 1 + MaxCERSegmentSize + GetLengthLength(MaxCERSegmentSize);
+            Debug.Assert(fullSegmentEncodedSize == 1004);
+            int remainingEncodedSize = 1 + 1 + lastSegmentSize + GetLengthLength(lastSegmentSize);
+
+            // Reduce the number of copies by pre-calculating the size.
+            // +2 for End-Of-Contents
+            EnsureWriteCapacity(fullSegments * fullSegmentEncodedSize + remainingEncodedSize + 2);
+
+#if DEBUG
+            byte[] ensureNoExtraCopy = _buffer;
+#endif 
+
+            ReadOnlySpan<byte> remainingData = payload;
+            Span<byte> dest;
+            Asn1Tag primitiveOctetString = new Asn1Tag(UniversalTagNumber.OctetString);
+
+            while (remainingData.Length > MaxCERSegmentSize)
+            {
+                WriteTag(primitiveOctetString);
+                WriteLength(MaxCERSegmentSize);
+
+                dest = _buffer.AsSpan().Slice(_offset);
+                remainingData.Slice(0, MaxCERSegmentSize).CopyTo(dest);
+
+                _offset += MaxCERSegmentSize;
+            }
+
+            WriteTag(primitiveOctetString);
+            WriteLength(remainingData.Length);
+            dest = _buffer.AsSpan().Slice(_offset);
+            remainingData.CopyTo(dest);
+            _offset += remainingData.Length;
+
+            WriteTag(Asn1Tag.EndOfContents);
+            WriteLength(0);
+
+#if DEBUG
+            Debug.Assert(_buffer == ensureNoExtraCopy, $"_buffer was replaced during {nameof(WriteCEROctetString)}");
+#endif
+        }
+
+        public void WriteNull()
+        {
+            WriteNull(Asn1Tag.Null);
+        }
+
+        public void WriteNull(Asn1Tag tag)
+        {
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+            // TODO: Spec ID?
+            if (tag.IsConstructed)
+                throw new ArgumentException($"Constructed Null values are not supported", nameof(tag));
+
+            WriteTag(tag);
+            WriteLength(0);
+        }
+
+        public void WriteObjectIdentifier(Oid oid)
+        {
+            if (oid == null)
+                throw new ArgumentNullException(nameof(oid));
+
+            WriteObjectIdentifier(oid.Value);
+        }
+
+        public void WriteObjectIdentifier(string oidValue)
+        {
+            if (oidValue == null)
+                throw new ArgumentNullException(nameof(oidValue));
+
+            WriteObjectIdentifier(oidValue.AsReadOnlySpan());
+        }
+
+        public void WriteObjectIdentifier(ReadOnlySpan<char> oidValue)
+        {
+            WriteObjectIdentifier(new Asn1Tag(UniversalTagNumber.ObjectIdentifier), oidValue);
+        }
+
+        public void WriteObjectIdentifier(Asn1Tag tag, Oid oid)
+        {
+            if (oid == null)
+                throw new ArgumentNullException(nameof(oid));
+
+            WriteObjectIdentifier(tag, oid.Value);
+        }
+
+        public void WriteObjectIdentifier(Asn1Tag tag, string oidValue)
+        {
+            if (oidValue == null)
+                throw new ArgumentNullException(nameof(oidValue));
+
+            WriteObjectIdentifier(tag, oidValue.AsReadOnlySpan());
+        }
+
+        public void WriteObjectIdentifier(Asn1Tag tag, ReadOnlySpan<char> oidValue)
+        {
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+            // TODO: Spec ID?
+            if (tag.IsConstructed)
+                throw new ArgumentException($"Constructed ObjectIdentifier values are not supported", nameof(tag));
+
+            // TODO: Review exceptions.
+            if (oidValue.Length < 3 /* "1.1" is the shortest value */)
+                throw new CryptographicException(SR.Argument_InvalidOidValue);
+            if (oidValue[1] != '.')
+                throw new CryptographicException(SR.Argument_InvalidOidValue);
+
+            // The worst case is "1.1.1.1.1", which takes 4 bytes (5 rids, with the first two condensed)
+            // Longer numbers get smaller: "2.1.127" is only 2 bytes. (81d (0x51) and 127 (0x7F))
+            // So length / 2 should prevent any reallocations.
+            byte[] tmp = ArrayPool<byte>.Shared.Rent(oidValue.Length / 2);
+
+            try
+            {
+                int firstRid;
+
+                switch (oidValue[0])
+                {
+                    case '0':
+                        firstRid = 0;
+                        break;
+                    case '1':
+                        firstRid = 1;
+                        break;
+                    case '2':
+                        firstRid = 2;
+                        break;
+                    default:
+                        throw new CryptographicException(SR.Argument_InvalidOidValue);
+                }
+
+                // The first two RIDs are special:
+                // ITU X.690 8.19.4:
+                //   The numerical value of the first subidentifier is derived from the values of the first two
+                //   object identifier components in the object identifier value being encoded, using the formula:
+                //       (X*40) + Y
+                //   where X is the value of the first object identifier component and Y is the value of the
+                //   second object identifier component.
+                //       NOTE – This packing of the first two object identifier components recognizes that only
+                //          three values are allocated from the root node, and at most 39 subsequent values from
+                //          nodes reached by X = 0 and X = 1.
+
+                // skip firstRid and the trailing .
+                ReadOnlySpan<char> remaining = oidValue.Slice(2);
+
+                BigInteger rid = ParseOidRid(ref remaining);
+                rid += 40 * firstRid;
+
+                int tmpOffset = 0;
+                int localLen = EncodeRid(tmp.AsSpan().Slice(tmpOffset), ref rid);
+                tmpOffset += localLen;
+
+                while (!remaining.IsEmpty)
+                {
+                    rid = ParseOidRid(ref remaining);
+                    localLen = EncodeRid(tmp.AsSpan().Slice(tmpOffset), ref rid);
+                    tmpOffset += localLen;
+                }
+
+                WriteTag(tag);
+                WriteLength(tmpOffset);
+                Buffer.BlockCopy(tmp, 0, _buffer, _offset, tmpOffset);
+                _offset += tmpOffset;
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(tmp);
+            }
+        }
+
+        private static BigInteger ParseOidRid(ref ReadOnlySpan<char> oidValue)
+        {
+            int endIndex = oidValue.IndexOf('.');
+
+            if (endIndex == -1)
+            {
+                endIndex = oidValue.Length;
+            }
+
+            // The following code is equivalent to
+            // BigInteger.TryParse(temp, NumberStyles.None, CultureInfo.InvariantCulture, out value)
+            // TODO: Change it when BigInteger supports ROS<char>?
+            BigInteger value = BigInteger.Zero;
+
+            for (int position = 0; position < endIndex; position++)
+            {
+                value *= 10;
+                value += AtoI(oidValue[position]);
+            }
+
+            oidValue = oidValue.Slice(endIndex + 1);
+            return value;
+        }
+
+        private static int AtoI(char c)
+        {
+            if (c >= '0' && c <= '9')
+                return c - '0';
+
+            throw new CryptographicException(SR.Argument_InvalidOidValue);
+        }
+
+        private static int EncodeRid(Span<byte> dest, ref BigInteger rid)
+        {
+            Debug.Assert(dest.Length > 0);
+
+            if (rid.IsZero)
+            {
+                dest[0] = 0;
+                return 1;
+            }
+           
+            BigInteger unencoded = rid;
+            int idx = 0;
+
+            do
+            {
+                BigInteger cur = unencoded & 0x7F;
+                unencoded >>= 7;
+                byte curByte = (byte)cur;
+
+                if (cur != unencoded)
+                {
+                    curByte |= 0x80;
+                }
+
+                dest[idx] = curByte;
+                idx++;
+            }
+            while (unencoded != BigInteger.Zero);
+
+            Reverse(dest.Slice(0, idx));
+            return idx;
+        }
+
+        public void WriteEnumeratedValue<TEnum>(TEnum value) where TEnum : struct
+        {
+            WriteEnumeratedValue(new Asn1Tag(UniversalTagNumber.Enumerated), value);
+        }
+
+        public void WriteEnumeratedValue<TEnum>(Asn1Tag tag, TEnum value) where TEnum : struct
+        {
+            Type tEnum = typeof(TEnum);
+
+            if (!tEnum.IsEnum)
+                throw new ArgumentException("Value type must be an Enum");
+            if (tEnum.IsDefined(typeof(FlagsAttribute), false))
+                throw new ArgumentException("[Flags] enums are not supported");
+
+            Type backingType = tEnum.GetEnumUnderlyingType();
+
+            if (backingType == typeof(ulong))
+            {
+                ulong numericValue = Convert.ToUInt64(value);
+                WriteInteger(tag, numericValue);
+            }
+            else
+            {
+                // All other types fit in a (signed) long.
+                long numericValue = Convert.ToInt64(value);
+                WriteInteger(tag, numericValue);
+            }
+        }
+
+        public void WriteUtf8String(string str)
+        {
+            if (str == null)
+                throw new ArgumentNullException(nameof(str));
+
+            WriteUtf8String(new Asn1Tag(UniversalTagNumber.UTF8String), str);
+        }
+
+        public void WriteUtf8String(ReadOnlySpan<char> str)
+        {
+            WriteUtf8String(new Asn1Tag(UniversalTagNumber.UTF8String), str);
+        }
+
+        public void WriteUtf8String(Asn1Tag tag, string str)
+        {
+            if (str == null)
+                throw new ArgumentNullException(nameof(str));
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+
+            WriteUtf8String(tag, str.AsReadOnlySpan());
+        }
+
+        public void WriteUtf8String(Asn1Tag tag, ReadOnlySpan<char> str)
+        {
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+
+            WriteCharacterString(tag, s_utf8Encoding, str);
+        }
+
+        public void PushSequence()
+        {
+            PushSequence(new Asn1Tag(UniversalTagNumber.Sequence, isConstructed: true));
+        }
+
+        public void PushSequence(Asn1Tag tag)
+        {
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+            // TODO: Spec ID?
+            if (!tag.IsConstructed)
+                throw new ArgumentException("Primitive Sequence vales are not supported", nameof(tag));
+
+            PushTag(tag);
+        }
+
+        public void PopSequence()
+        {
+            PopSequence(new Asn1Tag(UniversalTagNumber.Sequence, isConstructed: true));
+        }
+
+        public void PopSequence(Asn1Tag tag)
+        {
+            PopTag(tag);
+        }
+
+        public void PushSetOf()
+        {
+            PushSetOf(new Asn1Tag(UniversalTagNumber.SetOf, isConstructed: true));
+        }
+
+        public void PushSetOf(Asn1Tag tag)
+        {
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+            // TODO: Spec ID?
+            if (!tag.IsConstructed)
+                throw new ArgumentException("Primitive SetOf vales are not supported", nameof(tag));
+
+            PushTag(tag);
+        }
+
+        public void PopSetOf()
+        {
+            PopSetOf(new Asn1Tag(UniversalTagNumber.SetOf, isConstructed: true));
+        }
+
+        public void PopSetOf(Asn1Tag tag)
+        {
+            PopTag(tag);
+        }
+
+        public void WriteIA5String(string str)
+        {
+            if (str == null)
+                throw new ArgumentNullException(nameof(str));
+
+            WriteIA5String(new Asn1Tag(UniversalTagNumber.IA5String), str.AsReadOnlySpan());
+        }
+
+        public void WriteIA5String(ReadOnlySpan<char> str)
+        {
+            WriteIA5String(new Asn1Tag(UniversalTagNumber.IA5String), str);
+        }
+
+        public void WriteIA5String(Asn1Tag tag, string str)
+        {
+            if (str == null)
+                throw new ArgumentNullException(nameof(str));
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+
+            WriteIA5String(tag, str.AsReadOnlySpan());
+        }
+
+        public void WriteIA5String(Asn1Tag tag, ReadOnlySpan<char> str)
+        {
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+
+            WriteCharacterString(tag, s_ia5Encoding, str);
+        }
+        
+        public void WriteUtcTime(DateTimeOffset value)
+        {
+            WriteUtcTime(new Asn1Tag(UniversalTagNumber.UtcTime), value);
+        }
+
+        public void WriteUtcTime(Asn1Tag tag, DateTimeOffset value)
+        {
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+
+            WriteTag(tag);
+
+            // BER allows for omitting the seconds, but that's not an option we need to expose.
+            // BER allows for non-UTC values, but that's also not an option we need to expose.
+            // So the format is always yyMMddHHmmssZ (13)
+            const int UtcTimeValueLength = 13;
+            WriteLength(UtcTimeValueLength);
+
+            DateTimeOffset normalized = value.ToUniversalTime();
+
+            int year = normalized.Year;
+            int month = normalized.Month;
+            int day = normalized.Day;
+            int hour = normalized.Hour;
+            int minute = normalized.Minute;
+            int second = normalized.Second;
+
+            year = WriteLeastSigificantDigitAndShift(year, _offset + 1);
+            WriteLeastSigificantDigitAndShift(year, _offset);
+
+            month = WriteLeastSigificantDigitAndShift(month, _offset + 3);
+            WriteLeastSigificantDigitAndShift(month, _offset + 2);
+
+            day = WriteLeastSigificantDigitAndShift(day, _offset + 5);
+            WriteLeastSigificantDigitAndShift(day, _offset + 4);
+
+            hour = WriteLeastSigificantDigitAndShift(hour, _offset + 7);
+            WriteLeastSigificantDigitAndShift(hour, _offset + 6);
+
+            minute = WriteLeastSigificantDigitAndShift(minute, _offset + 9);
+            WriteLeastSigificantDigitAndShift(minute, _offset + 8);
+
+            second = WriteLeastSigificantDigitAndShift(second, _offset + 11);
+            WriteLeastSigificantDigitAndShift(second, _offset + 10);
+
+            _buffer[_offset + 12] = (byte)'Z';
+
+            _offset += UtcTimeValueLength;
+        }
+
+        public void WriteGeneralizedTime(DateTimeOffset value, bool omitFractionalSeconds = false)
+        {
+            WriteGeneralizedTime(new Asn1Tag(UniversalTagNumber.GeneralizedTime), value, omitFractionalSeconds);
+        }
+
+        public void WriteGeneralizedTime(Asn1Tag tag, DateTimeOffset value, bool omitFractionalSeconds = false)
+        {
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+            if (value.Year > 9999)
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Date cannot be represented as a GeneralizedTime");
+
+            // GeneralizedTime under BER allows many different options:
+            // * (HHmmss), (HHmm), (HH)
+            // * "(value).frac", "(value),frac"
+            // * frac == 0 may be omitted or emitted
+            // non-UTC offset in various formats
+            //
+            // We're not allowing any of them.
+            // Just encode as the CER/DER common restrictions.
+            //
+            // This results in the following formats:
+            // yyyyMMddHHmmssZ
+            // yyyyMMddHHmmss.f?Z
+            //
+            // where "f?" is anything from "f" to "fffffff" (tenth of a second down to 100ns/1-tick)
+            // with no trailing zeros.
+            DateTimeOffset normalized = value.ToUniversalTime();
+            long fracValue = 0;
+            int fracLength;
+
+            if (omitFractionalSeconds)
+            {
+                fracLength = 0;
+            }
+            else
+            {
+                DateTimeOffset hhmmss = new DateTimeOffset(
+                    normalized.Year,
+                    normalized.Month,
+                    normalized.Day,
+                    normalized.Hour,
+                    normalized.Minute,
+                    normalized.Second,
+                    normalized.Offset);
+
+                long floatingTicks = normalized.Ticks - hhmmss.Ticks;
+
+                if (floatingTicks == 0)
+                {
+                    fracLength = 0;
+                }
+                else
+                {
+                    fracLength = 7;
+                    long tickTest = floatingTicks;
+
+                    while (true)
+                    {
+                        long div;
+                        long rem = Math.DivRem(tickTest, 10, out div);
+
+                        if (div * 10 != tickTest)
+                        {
+                            fracValue = tickTest;
+                            break;
+                        }
+
+                        tickTest = div;
+                        fracLength--;
+                    }
+                }
+            }
+
+            // yyyy, MM, dd, hh, mm, ss, Z
+            int totalLength = 4 + 2 + 2 + 2 + 2 + 2 + 1;
+
+            if (fracLength != 0)
+            {
+                // . and the fraction
+                totalLength += 1 + fracLength;
+            }
+
+            WriteTag(tag);
+            WriteLength(totalLength);
+
+            int year = normalized.Year;
+            int month = normalized.Month;
+            int day = normalized.Day;
+            int hour = normalized.Hour;
+            int minute = normalized.Minute;
+            int second = normalized.Second;
+
+            year = WriteLeastSigificantDigitAndShift(year, _offset + 3);
+            year = WriteLeastSigificantDigitAndShift(year, _offset + 2);
+            year = WriteLeastSigificantDigitAndShift(year, _offset + 1);
+            WriteLeastSigificantDigitAndShift(year, _offset);
+
+            month = WriteLeastSigificantDigitAndShift(month, _offset + 5);
+            WriteLeastSigificantDigitAndShift(month, _offset + 4);
+
+            day = WriteLeastSigificantDigitAndShift(day, _offset + 7);
+            WriteLeastSigificantDigitAndShift(day, _offset + 6);
+
+            hour = WriteLeastSigificantDigitAndShift(hour, _offset + 9);
+            WriteLeastSigificantDigitAndShift(hour, _offset + 8);
+
+            minute = WriteLeastSigificantDigitAndShift(minute, _offset + 11);
+            WriteLeastSigificantDigitAndShift(minute, _offset + 10);
+
+            second = WriteLeastSigificantDigitAndShift(second, _offset + 13);
+            WriteLeastSigificantDigitAndShift(second, _offset + 12);
+
+            _offset += 14;
+
+            if (fracLength > 0)
+            {
+                _buffer[_offset] = (byte)'.';
+
+                int fracWrite = (int)fracValue;
+
+                for (int i = 0; i < fracLength; i++)
+                {
+                    // a "-1" is not needed here because we didn't increment after the decimal point.
+                    fracWrite = WriteLeastSigificantDigitAndShift(fracWrite, _offset - i + fracLength);
+                }
+
+                Debug.Assert(fracWrite == 0);
+                Debug.Assert(_buffer[_offset + fracLength] != (byte)'0');
+
+                // Digits and the decimal point.
+                _offset += fracLength + 1;
+            }
+
+            _buffer[_offset] = (byte)'Z';
+            _offset++;
+        }
+
+        public void WriteBMPString(string str)
+        {
+            if (str == null)
+                throw new ArgumentNullException(nameof(str));
+
+            WriteBMPString(new Asn1Tag(UniversalTagNumber.BMPString), str.AsReadOnlySpan());
+        }
+
+        public void WriteBMPString(ReadOnlySpan<char> str)
+        {
+            WriteBMPString(new Asn1Tag(UniversalTagNumber.BMPString), str);
+        }
+
+        public void WriteBMPString(Asn1Tag tag, string str)
+        {
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+            if (str == null)
+                throw new ArgumentNullException(nameof(str));
+
+            WriteBMPString(new Asn1Tag(UniversalTagNumber.BMPString), str.AsReadOnlySpan());
+        }
+
+        public void WriteBMPString(Asn1Tag tag, ReadOnlySpan<char> str)
+        {
+            // TODO: Spec ID?
+            if (tag == default(Asn1Tag))
+                throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+
+            WriteCharacterString(tag, s_bmpEncoding, str);
+        }
+
+        public bool TryEncode(Span<byte> dest, out int bytesWritten)
+        {
+            if ((_nestingStack?.Count ?? 0) != 0)
+                throw new InvalidOperationException($"Cannot Encode while a SetOf or Sequence is still open");
+
+            // If the stack is closed out then everything is a definite encoding (BER, DER) or a
+            // required indefinite encoding (CER). So we're correctly sized up, and ready to copy.
+            if (dest.Length < _offset)
+            {
+                bytesWritten = 0;
+                return false;
+            }
+
+            if (_offset == 0)
+            {
+                bytesWritten = 0;
+                return true;
+            }
+
+            bytesWritten = _offset;
+            _buffer.AsSpan().Slice(0, _offset).CopyTo(dest);
+            return true;
+        }
+
+        public byte[] Encode()
+        {
+            if ((_nestingStack?.Count ?? 0) != 0)
+                throw new InvalidOperationException($"Cannot Encode while a SetOf or Sequence is still open");
+
+            if (_offset == 0)
+                return Array.Empty<byte>();
+
+            // If the stack is closed out then everything is a definite encoding (BER, DER) or a
+            // required indefinite encoding (CER). So we're correctly sized up, and ready to copy.
+            return _buffer.AsSpan().Slice(0, _offset).ToArray();
+        }
+
+        private void PushTag(Asn1Tag tag)
+        {
+            if (_nestingStack == null)
+            {
+                _nestingStack = new Stack<(Asn1Tag,int)>();
+            }
+
+            WriteTag(tag);
+            _nestingStack.Push((tag, _offset));
+            WriteLength(-1);
+        }
+
+        private void PopTag(Asn1Tag tag)
+        {
+            if (_nestingStack == null || _nestingStack.Count == 0)
+                throw new ArgumentException("Cannot pop the requested tag as it is not currently open", nameof(tag));
+
+            (Asn1Tag stackTag, int lenOffset) = _nestingStack.Peek();
+
+            if (stackTag != tag)
+                throw new ArgumentException("Cannot pop the requested tag as it is not currently open", nameof(tag));
+
+            _nestingStack.Pop();
+
+            if (RuleSet == AsnEncodingRules.CER)
+            {
+                // Write EndOfContents
+                WriteTag(Asn1Tag.EndOfContents);
+                WriteLength(0);
+                return;
+            }
+
+            int containedLength = _offset - 1 - lenOffset;
+            Debug.Assert(containedLength >= 0);
+
+            int shiftSize = GetLengthLength(containedLength);
+
+            // Best case, length fits in the compact byte
+            if (shiftSize == 0)
+            {
+                _buffer[lenOffset] = (byte)containedLength;
+                return;
+            }
+
+            // We're currently at the end, so ensure we have room for N more bytes.
+            EnsureWriteCapacity(shiftSize);
+
+            // Buffer.BlockCopy correctly does forward-overlapped, so use it.
+            int start = lenOffset + 1;
+            Buffer.BlockCopy(_buffer, start, _buffer, start + shiftSize, containedLength);
+
+            int tmp = _offset;
+            _offset = lenOffset;
+            WriteLength(containedLength);
+            Debug.Assert(_offset - lenOffset == shiftSize);
+            _offset = tmp + shiftSize;
+        }
+
+        private void WriteCharacterString(Asn1Tag tag, Text.Encoding encoding, ReadOnlySpan<char> str)
+        {
+            if (RuleSet == AsnEncodingRules.BER)
+            {
+                // Clear the constructed tag, if present.
+                tag = new Asn1Tag(tag.TagClass, tag.TagValue);
+            }
+            else if (RuleSet == AsnEncodingRules.DER && tag.IsConstructed)
+            {
+                // TODO: Spec-ID?
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+            else
+            {
+                // TODO: Didn't this get spanified?
+                unsafe
+                {
+                    fixed (char* strPtr = &str.DangerousGetPinnableReference())
+                    {
+                        int size = encoding.GetByteCount(strPtr, str.Length);
+
+                        if (size > AsnReader.MaxCERSegmentSize)
+                        {
+                            WriteCERCharacterString(tag, encoding, str);
+                            return;
+                        }
+                    }
+                }
+
+                // It fit in a primitive segment, so clear the constructed tag, if present.
+                tag = new Asn1Tag(tag.TagClass, tag.TagValue);
+            }
+
+            // TODO: Didn't this get spanified?
+            unsafe
+            {
+                fixed (char* strPtr = &str.DangerousGetPinnableReference())
+                {
+                    int size = encoding.GetByteCount(strPtr, str.Length);
+
+                    WriteTag(tag);
+                    WriteLength(size);
+                    Span<byte> dest = _buffer.AsSpan().Slice(_offset, size);
+
+                    fixed (byte* destPtr = &dest.DangerousGetPinnableReference())
+                    {
+                        int written = encoding.GetBytes(strPtr, str.Length, destPtr, dest.Length);
+
+                        if (written != size)
+                        {
+                            Debug.Fail($"Encoding produced different answer for GetByteCount ({size}) and GetBytes ({written})");
+                            throw new InvalidOperationException();
+                        }
+                    }
+
+                    _offset += size;
+                }
+            }
+        }
+
+        private void WriteCERCharacterString(Asn1Tag tag, Text.Encoding encoding, ReadOnlySpan<char> str)
+        {
+            byte[] tmp;
+            int size;
+
+            // TODO: Didn't this get spanified?
+            unsafe
+            {
+                fixed (char* strPtr = &str.DangerousGetPinnableReference())
+                {
+                    size = encoding.GetByteCount(strPtr, str.Length);
+                    tmp = ArrayPool<byte>.Shared.Rent(size);
+
+                    fixed (byte* destPtr = tmp)
+                    {
+                        int written = encoding.GetBytes(strPtr, str.Length, destPtr, tmp.Length);
+
+                        if (written != size)
+                        {
+                            Debug.Fail(
+                                $"Encoding produced different answer for GetByteCount ({size}) and GetBytes ({written})");
+                            throw new InvalidOperationException();
+                        }
+                    }
+                }
+            }
+
+            WriteCEROctetString(tag, tmp.AsSpan().Slice(0, size));
+            Array.Clear(tmp, 0, size);
+            ArrayPool<byte>.Shared.Return(tmp);
+        }
+
+        private int WriteLeastSigificantDigitAndShift(int value, int offset)
+        {
+            Debug.Assert(offset >= _offset);
+
+            int div = Math.DivRem(value, 10, out int rem);
+
+            const byte Char0 = (byte)'0';
+            _buffer[offset] = (byte)(Char0 + rem);
+            return div;
+        }
+
+        private static void Reverse(Span<byte> span)
+        {
+            int i = 0;
+            int j = span.Length - 1;
+
+            while (i < j)
+            {
+                byte tmp = span[i];
+                span[i] = span[j];
+                span[j] = tmp;
+
+                i++;
+                j--;
+            }
         }
     }
 }
