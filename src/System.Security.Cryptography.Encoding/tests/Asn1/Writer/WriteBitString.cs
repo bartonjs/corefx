@@ -297,7 +297,7 @@ namespace System.Security.Cryptography.Tests.Asn1
         [InlineData(PublicEncodingRules.BER)]
         [InlineData(PublicEncodingRules.CER)]
         [InlineData(PublicEncodingRules.DER)]
-        public void VerifyWriteBoolean_EndOfContents(PublicEncodingRules ruleSet)
+        public void VerifyWriteBitString_EndOfContents(PublicEncodingRules ruleSet)
         {
             AsnWriter writer = new AsnWriter((AsnEncodingRules)ruleSet);
 
