@@ -3678,13 +3678,11 @@ namespace System.Security.Cryptography.Asn1
             {
                 throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
             }
-            else
+            else if (RuleSet == AsnEncodingRules.CER)
             {
-                Debug.Assert(RuleSet == AsnEncodingRules.CER);
-
                 // If it's within a primitive segment, just clear the constructed flag
                 // (if present) and continue.
-                if (octetString.Length < AsnReader.MaxCERSegmentSize)
+                if (octetString.Length <= AsnReader.MaxCERSegmentSize)
                 {
                     tag = new Asn1Tag(tag.TagClass, tag.TagValue);
                 }
@@ -3716,13 +3714,18 @@ namespace System.Security.Cryptography.Asn1
             Debug.Assert(fullSegmentEncodedSize == 1004);
             int remainingEncodedSize = 1 + 1 + lastSegmentSize + GetLengthLength(lastSegmentSize);
 
+            if (lastSegmentSize == 0)
+            {
+                remainingEncodedSize = 0;
+            }
+
             // Reduce the number of copies by pre-calculating the size.
             // +2 for End-Of-Contents
-            EnsureWriteCapacity(fullSegments * fullSegmentEncodedSize + remainingEncodedSize + 2);
+            int expectedSize = fullSegments * fullSegmentEncodedSize + remainingEncodedSize + 2;
+            EnsureWriteCapacity(expectedSize);
 
-#if DEBUG
             byte[] ensureNoExtraCopy = _buffer;
-#endif 
+            int savedOffset = _offset;
 
             ReadOnlySpan<byte> remainingData = payload;
             Span<byte> dest;
@@ -3737,6 +3740,7 @@ namespace System.Security.Cryptography.Asn1
                 remainingData.Slice(0, MaxCERSegmentSize).CopyTo(dest);
 
                 _offset += MaxCERSegmentSize;
+                remainingData = remainingData.Slice(MaxCERSegmentSize);
             }
 
             WriteTag(primitiveOctetString);
@@ -3748,9 +3752,8 @@ namespace System.Security.Cryptography.Asn1
             WriteTag(Asn1Tag.EndOfContents);
             WriteLength(0);
 
-#if DEBUG
+            Debug.Assert(_offset - savedOffset == expectedSize, $"expected size was {expectedSize}, actual was {_offset - savedOffset}");
             Debug.Assert(_buffer == ensureNoExtraCopy, $"_buffer was replaced during {nameof(WriteCEROctetString)}");
-#endif
         }
 
         public void WriteNull()
@@ -3902,6 +3905,12 @@ namespace System.Security.Cryptography.Asn1
 
             for (int position = 0; position < endIndex; position++)
             {
+                if (position > 0 && value == 0)
+                {
+                    // T-REC X.680-201508 sec 12.26
+                    throw new CryptographicException("Object identifier is in an invalid format");
+                }
+
                 value *= 10;
                 value += AtoI(oidValue[position]);
             }
