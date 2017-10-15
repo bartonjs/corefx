@@ -33,6 +33,7 @@
     <Compile Include="Asn1\Writer\Asn1WriterTests.cs" />
     <Compile Include="Asn1\Writer\WriteBitString.cs" />
     <Compile Include="Asn1\Writer\WriteBoolean.cs" />
+    <Compile Include="Asn1\Writer\WriteEnumerated.cs" />
     <Compile Include="Asn1\Writer\WriteInteger.cs" />
     <Compile Include="Asn1\Writer\WriteNull.cs" />
     <Compile Include="Asn1\Writer\WriteOctetString.cs" />
