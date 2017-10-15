@@ -3897,6 +3897,10 @@ namespace System.Security.Cryptography.Asn1
             {
                 endIndex = oidValue.Length;
             }
+            else if (endIndex == oidValue.Length - 1)
+            {
+                throw new CryptographicException(SR.Argument_InvalidOidValue);
+            }
 
             // The following code is equivalent to
             // BigInteger.TryParse(temp, NumberStyles.None, CultureInfo.InvariantCulture, out value)
@@ -3915,7 +3919,7 @@ namespace System.Security.Cryptography.Asn1
                 value += AtoI(oidValue[position]);
             }
 
-            oidValue = oidValue.Slice(endIndex + 1);
+            oidValue = oidValue.Slice(Math.Min(oidValue.Length, endIndex + 1));
             return value;
         }
 
@@ -3943,14 +3947,14 @@ namespace System.Security.Cryptography.Asn1
             do
             {
                 BigInteger cur = unencoded & 0x7F;
-                unencoded >>= 7;
                 byte curByte = (byte)cur;
 
-                if (cur != unencoded)
+                if (rid != unencoded)
                 {
                     curByte |= 0x80;
                 }
 
+                unencoded >>= 7;
                 dest[idx] = curByte;
                 idx++;
             }
