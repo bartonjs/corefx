@@ -40,15 +40,6 @@ namespace System.Security.Cryptography.Tests.Asn1
             "not have died in vain-that this nation, under God, shall have a new birth of freedom-and " +
             "that government of the people, by the people, for the people, shall not perish from the earth.";
 
-        private static unsafe string Stringify(Asn1Tag tag)
-        {
-            byte* stackspace = stackalloc byte[10];
-            Span<byte> dest = new Span<byte>(stackspace, 10);
-
-            Assert.True(tag.TryWrite(dest, out int size));
-            return dest.Slice(0, size).ByteArrayToHex();
-        }
-
         protected void VerifyWrite_BER_String(string input, string expectedPayloadHex)
         {
             AsnWriter writer = new AsnWriter(AsnEncodingRules.BER);

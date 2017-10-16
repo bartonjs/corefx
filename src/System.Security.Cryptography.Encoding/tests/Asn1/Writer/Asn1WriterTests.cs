@@ -41,5 +41,14 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.True(dest.Slice(0, bytesWritten).SequenceEqual(encoded), "dest.SequenceEqual(encoded2) (overly big)");
             Assert.Equal(254, encoded2[encoded.Length]);
         }
+
+        internal static unsafe string Stringify(Asn1Tag tag)
+        {
+            byte* stackspace = stackalloc byte[10];
+            Span<byte> dest = new Span<byte>(stackspace, 10);
+
+            Assert.True(tag.TryWrite(dest, out int size));
+            return dest.Slice(0, size).ByteArrayToHex();
+        }
     }
 }
