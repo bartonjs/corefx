@@ -4435,7 +4435,7 @@ namespace System.Security.Cryptography.Asn1
             int tmp = _offset;
             _offset = lenOffset;
             WriteLength(containedLength);
-            Debug.Assert(_offset - lenOffset == shiftSize);
+            Debug.Assert(_offset - lenOffset - 1== shiftSize);
             _offset = tmp + shiftSize;
         }
 
