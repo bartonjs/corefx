@@ -4332,7 +4332,7 @@ namespace System.Security.Cryptography.Asn1
             if (str == null)
                 throw new ArgumentNullException(nameof(str));
 
-            WriteBMPString(new Asn1Tag(UniversalTagNumber.BMPString), str.AsReadOnlySpan());
+            WriteBMPString(tag, str.AsReadOnlySpan());
         }
 
         public void WriteBMPString(Asn1Tag tag, ReadOnlySpan<char> str)

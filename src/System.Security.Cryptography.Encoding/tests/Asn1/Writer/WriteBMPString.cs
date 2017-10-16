@@ -8,7 +8,7 @@ using Xunit;
 
 namespace System.Security.Cryptography.Tests.Asn1
 {
-    public class WriteUtf8String : WriteCharacterString
+    public class WriteBMPString : WriteCharacterString
     {
         public static IEnumerable<object[]> ShortValidCases { get; } = new object[][]
         {
@@ -16,16 +16,19 @@ namespace System.Security.Cryptography.Tests.Asn1
             {
                 string.Empty,
                 "00",
-            },
+            }, 
             new object[]
             {
                 "hi",
-                "026869",
+                "0400680069",
             },
             new object[]
             {
                 "Dr. & Mrs. Smith\u2010Jones \uFE60 children",
-                "2544722E2026204D72732E20536D697468E280904A6F6E657320EFB9A0206368696C6472656E",
+                "42" +
+                    "00440072002E002000260020004D00720073002E00200053006D0069" +
+                    "007400682010004A006F006E006500730020FE600020006300680069" +
+                    "006C006400720065006E",
             },
         };
 
@@ -33,8 +36,9 @@ namespace System.Security.Cryptography.Tests.Asn1
         {
             new object[]
             {
-                new string('f', 957) + new string('w', 182),
-                "820473" + new string('6', 957 * 2) + new string('7', 182 * 2),
+                // 498 Han-fragrant, 497 Han-dark, 23 Han-rich
+                new string('\u9999', 498) + new string('\u6666', 497) + new string('\u4444', 23),
+                "8207F4" + new string('9', 498 * 4) + new string('6', 497 * 4) + new string('4', 23 * 4),
             },
         };
 
@@ -43,24 +47,27 @@ namespace System.Security.Cryptography.Tests.Asn1
             new object[]
             {
                 GettysburgAddress,
-                1458,
+                1458 * 2,
             },
             new object[]
             {
-                // A whole bunch of "small ampersand" values (3 bytes each UTF-8),
-                // then one inverted exclamation (2 bytes UTF-8)
-                new string('\uFE60', 2000 / 3) + '\u00A1',
+                // 498 Han-fragrant, 497 Han-dark, 5 Han-rich
+                new string('\u9999', 498) + new string('\u6666', 497) + new string('\u4444', 5),
                 2000,
-            }, 
+            },
         };
 
-        public static IEnumerable<object[]> InvalidInputs => Array.Empty<object[]>();
+        public static IEnumerable<object[]> InvalidInputs { get; } = new object[][]
+        {
+            // Surrogate pair for "Deseret Small Letter Yee" (U+10437)
+            new object[] { "\uD801\uDC37" },
+        };
 
-        internal override void WriteString(AsnWriter writer, string s) => writer.WriteUtf8String(s);
-        internal override void WriteString(AsnWriter writer, Asn1Tag tag, string s) => writer.WriteUtf8String(tag, s);
-        internal override void WriteSpan(AsnWriter writer, ReadOnlySpan<char> s) => writer.WriteUtf8String(s);
-        internal override void WriteSpan(AsnWriter writer, Asn1Tag tag, ReadOnlySpan<char> s) => writer.WriteUtf8String(tag, s);
-        internal override Asn1Tag StandardTag => new Asn1Tag(UniversalTagNumber.UTF8String);
+        internal override void WriteString(AsnWriter writer, string s) => writer.WriteBMPString(s);
+        internal override void WriteString(AsnWriter writer, Asn1Tag tag, string s) => writer.WriteBMPString(tag, s);
+        internal override void WriteSpan(AsnWriter writer, ReadOnlySpan<char> s) => writer.WriteBMPString(s);
+        internal override void WriteSpan(AsnWriter writer, Asn1Tag tag, ReadOnlySpan<char> s) => writer.WriteBMPString(tag, s);
+        internal override Asn1Tag StandardTag => new Asn1Tag(UniversalTagNumber.BMPString);
 
         [Theory]
         [MemberData(nameof(ShortValidCases))]

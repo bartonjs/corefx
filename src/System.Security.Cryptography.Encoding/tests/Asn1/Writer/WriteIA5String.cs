@@ -14,6 +14,11 @@ namespace System.Security.Cryptography.Tests.Asn1
         {
             new object[]
             {
+                string.Empty,
+                "00",
+            },
+            new object[]
+            {
                 "hi",
                 "026869",
             },
