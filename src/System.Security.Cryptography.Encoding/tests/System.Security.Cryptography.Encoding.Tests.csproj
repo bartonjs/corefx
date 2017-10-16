@@ -35,6 +35,7 @@
     <Compile Include="Asn1\Writer\WriteBoolean.cs" />
     <Compile Include="Asn1\Writer\WriteCharacterString.cs" />
     <Compile Include="Asn1\Writer\WriteEnumerated.cs" />
+    <Compile Include="Asn1\Writer\WriteGeneralizedTime.cs" />
     <Compile Include="Asn1\Writer\WriteIA5String.cs" />
     <Compile Include="Asn1\Writer\WriteInteger.cs" />
     <Compile Include="Asn1\Writer\WriteNull.cs" />

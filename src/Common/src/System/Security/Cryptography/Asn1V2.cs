@@ -4174,8 +4174,6 @@ namespace System.Security.Cryptography.Asn1
             // TODO: Spec ID?
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
-            if (value.Year > 9999)
-                throw new ArgumentOutOfRangeException(nameof(value), value, "Date cannot be represented as a GeneralizedTime");
 
             // GeneralizedTime under BER allows many different options:
             // * (HHmmss), (HHmm), (HH)
@@ -4193,6 +4191,16 @@ namespace System.Security.Cryptography.Asn1
             // where "f?" is anything from "f" to "fffffff" (tenth of a second down to 100ns/1-tick)
             // with no trailing zeros.
             DateTimeOffset normalized = value.ToUniversalTime();
+
+            if (normalized.Year > 9999)
+            {
+                // This is unreachable since DateTimeOffset guards against this internally.
+                throw new ArgumentOutOfRangeException(
+                    nameof(value),
+                    value,
+                    "Date cannot be represented as a GeneralizedTime");
+            }
+
             long fracValue = 0;
             int fracLength;
 
@@ -4224,8 +4232,8 @@ namespace System.Security.Cryptography.Asn1
 
                     while (true)
                     {
-                        long div;
-                        long rem = Math.DivRem(tickTest, 10, out div);
+                        long rem;
+                        long div = Math.DivRem(tickTest, 10, out rem);
 
                         if (div * 10 != tickTest)
                         {
