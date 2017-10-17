@@ -3350,10 +3350,10 @@ namespace System.Security.Cryptography.Asn1
 
         public void WriteBoolean(Asn1Tag tag, bool value)
         {
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
-            // TODO: Spec ID?
+            // T-REC-X.690-201508 sec 8.2.1
             if (tag.IsConstructed)
                 throw new ArgumentException($"Constructed Boolean values are not supported", nameof(tag));
 
@@ -3382,10 +3382,10 @@ namespace System.Security.Cryptography.Asn1
 
         public void WriteInteger(Asn1Tag tag, long value)
         {
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
-            // TODO: Spec ID?
+            // T-REC-X.690-201508 sec 8.3.1
             if (tag.IsConstructed)
                 throw new ArgumentException($"Constructed Integer values are not supported", nameof(tag));
 
@@ -3430,7 +3430,7 @@ namespace System.Security.Cryptography.Asn1
 #if DEBUG
             if (valueLength > 1)
             {
-                // T-REC-X.690-201508 sec 8.1.2.2
+                // T-REC-X.690-201508 sec 8.3.2
                 // Cannot start with 9 bits of 1 (or 9 bits of 0, but that's not this method).
                 Debug.Assert(_buffer[_offset] != 0xFF || _buffer[_offset + 1] < 0x80);
             }
@@ -3441,10 +3441,10 @@ namespace System.Security.Cryptography.Asn1
 
         public void WriteInteger(Asn1Tag tag, ulong value)
         {
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
-            // TODO: Spec ID?
+            // T-REC-X.690-201508 sec 8.3.1
             if (tag.IsConstructed)
                 throw new ArgumentException($"Constructed Integer values are not supported", nameof(tag));
 
@@ -3486,7 +3486,7 @@ namespace System.Security.Cryptography.Asn1
 #if DEBUG
             if (valueLength > 1)
             {
-                // T-REC-X.690-201508 sec 8.1.2.2
+                // T-REC-X.690-201508 sec 8.3.2
                 // Cannot start with 9 bits of 0 (or 9 bits of 1, but that's not this method).
                 Debug.Assert(_buffer[_offset] != 0 || _buffer[_offset + 1] > 0x7F);
             }
@@ -3497,10 +3497,10 @@ namespace System.Security.Cryptography.Asn1
 
         public void WriteInteger(Asn1Tag tag, BigInteger value)
         {
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
-            // TODO: Spec ID?
+            // T-REC-X.690-201508 sec 8.3.1
             if (tag.IsConstructed)
                 throw new ArgumentException($"Constructed Integer values are not supported", nameof(tag));
 
@@ -3521,19 +3521,20 @@ namespace System.Security.Cryptography.Asn1
 
         public void WriteBitString(Asn1Tag tag, ReadOnlySpan<byte> bitString, int unusedBitCount=0)
         {
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
 
-            // TODO: Find a section number for the 0 bound.
             // T-REC-X.690-201508 sec 8.6.2.2
             if (unusedBitCount < 0 || unusedBitCount > 7)
+            {
                 throw new ArgumentOutOfRangeException(
                     nameof(unusedBitCount),
                     unusedBitCount,
                     $"Unused bit count must be between 0 and 7 inclusive");
+            }
 
-            // T-REC-X.690-201508 sec 8.6.2.4
+            // T-REC-X.690-201508 sec 8.6.2.3
             if (bitString.Length == 0 && unusedBitCount != 0)
             {
                 throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
@@ -3551,6 +3552,10 @@ namespace System.Security.Cryptography.Asn1
             if ((lastByte & mask) != lastByte)
             {
                 // TODO: Probably warrants a distinct message.
+                // T-REC-X.690-201508 sec 11.2
+                // This could be ignored for BER, but since DER is more common and
+                // it likely suggests a program error on the caller, leave it enabled for
+                // BER for now.
                 throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
             }
 
@@ -3561,6 +3566,7 @@ namespace System.Security.Cryptography.Asn1
             }
             else if (RuleSet == AsnEncodingRules.DER && tag.IsConstructed)
             {
+                // T-REC-X.690-201508 sec 10.2
                 throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
             }
             else if (RuleSet == AsnEncodingRules.CER)
@@ -3665,7 +3671,7 @@ namespace System.Security.Cryptography.Asn1
 
         public void WriteOctetString(Asn1Tag tag, ReadOnlySpan<byte> octetString)
         {
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
 
@@ -3676,6 +3682,7 @@ namespace System.Security.Cryptography.Asn1
             }
             else if (RuleSet == AsnEncodingRules.DER && tag.IsConstructed)
             {
+                // T-REC-X.690-201508 sec 10.2
                 throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
             }
             else if (RuleSet == AsnEncodingRules.CER)
@@ -3763,10 +3770,10 @@ namespace System.Security.Cryptography.Asn1
 
         public void WriteNull(Asn1Tag tag)
         {
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
-            // TODO: Spec ID?
+            // T-REC-X.690-201508 sec 8.8.1
             if (tag.IsConstructed)
                 throw new ArgumentException($"Constructed Null values are not supported", nameof(tag));
 
@@ -3813,10 +3820,10 @@ namespace System.Security.Cryptography.Asn1
 
         public void WriteObjectIdentifier(Asn1Tag tag, ReadOnlySpan<char> oidValue)
         {
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
-            // TODO: Spec ID?
+            // T-REC-X.690-201508 sec 8.19.1
             if (tag.IsConstructed)
                 throw new ArgumentException($"Constructed ObjectIdentifier values are not supported", nameof(tag));
 
@@ -3983,12 +3990,14 @@ namespace System.Security.Cryptography.Asn1
             if (backingType == typeof(ulong))
             {
                 ulong numericValue = Convert.ToUInt64(value);
+                // T-REC-X.690-201508 sec 8.4
                 WriteInteger(tag, numericValue);
             }
             else
             {
                 // All other types fit in a (signed) long.
                 long numericValue = Convert.ToInt64(value);
+                // T-REC-X.690-201508 sec 8.4
                 WriteInteger(tag, numericValue);
             }
         }
@@ -4008,18 +4017,18 @@ namespace System.Security.Cryptography.Asn1
 
         public void WriteUtf8String(Asn1Tag tag, string str)
         {
-            if (str == null)
-                throw new ArgumentNullException(nameof(str));
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+            if (str == null)
+                throw new ArgumentNullException(nameof(str));
 
             WriteUtf8String(tag, str.AsReadOnlySpan());
         }
 
         public void WriteUtf8String(Asn1Tag tag, ReadOnlySpan<char> str)
         {
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
 
@@ -4033,10 +4042,10 @@ namespace System.Security.Cryptography.Asn1
 
         public void PushSequence(Asn1Tag tag)
         {
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
-            // TODO: Spec ID?
+            // T-REC-X.690-201508 sec 8.9.1
             if (!tag.IsConstructed)
                 throw new ArgumentException("Primitive Sequence vales are not supported", nameof(tag));
 
@@ -4060,10 +4069,10 @@ namespace System.Security.Cryptography.Asn1
 
         public void PushSetOf(Asn1Tag tag)
         {
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
-            // TODO: Spec ID?
+            // T-REC-X.690-201508 sec 8.12.1
             if (!tag.IsConstructed)
                 throw new ArgumentException("Primitive SetOf vales are not supported", nameof(tag));
 
@@ -4098,18 +4107,18 @@ namespace System.Security.Cryptography.Asn1
 
         public void WriteIA5String(Asn1Tag tag, string str)
         {
-            if (str == null)
-                throw new ArgumentNullException(nameof(str));
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
+            if (str == null)
+                throw new ArgumentNullException(nameof(str));
 
             WriteIA5String(tag, str.AsReadOnlySpan());
         }
 
         public void WriteIA5String(Asn1Tag tag, ReadOnlySpan<char> str)
         {
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
 
@@ -4123,7 +4132,7 @@ namespace System.Security.Cryptography.Asn1
 
         public void WriteUtcTime(Asn1Tag tag, DateTimeOffset value)
         {
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
 
@@ -4174,7 +4183,7 @@ namespace System.Security.Cryptography.Asn1
 
         public void WriteGeneralizedTime(Asn1Tag tag, DateTimeOffset value, bool omitFractionalSeconds = false)
         {
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
 
@@ -4329,7 +4338,7 @@ namespace System.Security.Cryptography.Asn1
 
         public void WriteBMPString(Asn1Tag tag, string str)
         {
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
             if (str == null)
@@ -4340,7 +4349,7 @@ namespace System.Security.Cryptography.Asn1
 
         public void WriteBMPString(Asn1Tag tag, ReadOnlySpan<char> str)
         {
-            // TODO: Spec ID?
+            // T-REC-X.680-201508 sec 8.6
             if (tag == default(Asn1Tag))
                 throw new ArgumentException($"UNIVERSAL 0 tag may not be specified", nameof(tag));
 
@@ -4456,7 +4465,7 @@ namespace System.Security.Cryptography.Asn1
             }
             else if (RuleSet == AsnEncodingRules.DER && tag.IsConstructed)
             {
-                // TODO: Spec-ID?
+                // T-REC-X.690-201508 sec 10.2
                 throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
             }
             else
