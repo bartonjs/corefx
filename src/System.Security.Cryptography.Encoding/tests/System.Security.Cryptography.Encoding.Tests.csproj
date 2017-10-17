@@ -32,6 +32,7 @@
     <Compile Include="Asn1\Serializer\X509DeserializeTests.cs" />
     <Compile Include="Asn1\Writer\Asn1WriterTests.cs" />
     <Compile Include="Asn1\Writer\PushPopSequence.cs" />
+    <Compile Include="Asn1\Writer\PushPopSetOf.cs" />
     <Compile Include="Asn1\Writer\WriteBitString.cs" />
     <Compile Include="Asn1\Writer\WriteBMPString.cs" />
     <Compile Include="Asn1\Writer\WriteBoolean.cs" />

@@ -4077,7 +4077,10 @@ namespace System.Security.Cryptography.Asn1
 
         public void PopSetOf(Asn1Tag tag)
         {
-            PopTag(tag);
+            // T-REC-X.690-201508 sec 11.6
+            bool sortContents = RuleSet == AsnEncodingRules.CER || RuleSet == AsnEncodingRules.DER;
+
+            PopTag(tag, sortContents);
         }
 
         public void WriteIA5String(string str)
@@ -4393,7 +4396,7 @@ namespace System.Security.Cryptography.Asn1
             WriteLength(-1);
         }
 
-        private void PopTag(Asn1Tag tag)
+        private void PopTag(Asn1Tag tag, bool sortContents=false)
         {
             if (_nestingStack == null || _nestingStack.Count == 0)
                 throw new ArgumentException("Cannot pop the requested tag as it is not currently open", nameof(tag));
@@ -4404,6 +4407,11 @@ namespace System.Security.Cryptography.Asn1
                 throw new ArgumentException("Cannot pop the requested tag as it is not currently open", nameof(tag));
 
             _nestingStack.Pop();
+
+            if (sortContents)
+            {
+                SortContents(_buffer, lenOffset + 1, _offset);
+            }
 
             if (RuleSet == AsnEncodingRules.CER)
             {
@@ -4542,6 +4550,51 @@ namespace System.Security.Cryptography.Asn1
             return div;
         }
 
+        private static void SortContents(byte[] buffer, int start, int end)
+        {
+            Debug.Assert(buffer != null);
+            Debug.Assert(end >= start);
+
+            int len = end - start;
+
+            if (len == 0)
+                return;
+
+            var reader = new AsnReader(buffer.AsReadOnlySpan().Slice(start, len), AsnEncodingRules.BER);
+
+            List<(int, int)> positions = new List<(int, int)>();
+
+            int pos = start;
+
+            while (reader.HasData)
+            {
+                ReadOnlySpan<byte> encoded = reader.GetEncodedValue();
+                positions.Add((pos, encoded.Length));
+                pos += encoded.Length;
+            }
+
+            Debug.Assert(pos == end);
+
+            var comparer = new SetOfValueComparer(buffer);
+            positions.Sort(comparer);
+
+            byte[] tmp = ArrayPool<byte>.Shared.Rent(len);
+
+            pos = 0;
+
+            foreach (var tuple in positions)
+            {
+                Buffer.BlockCopy(buffer, tuple.Item1, tmp, pos, tuple.Item2);
+                pos += tuple.Item2;
+            }
+
+            Debug.Assert(pos == len);
+
+            Buffer.BlockCopy(tmp, 0, buffer, start, len);
+            Array.Clear(tmp, 0, len);
+            ArrayPool<byte>.Shared.Return(tmp);
+        }
+
         private static void Reverse(Span<byte> span)
         {
             int i = 0;
@@ -4555,6 +4608,57 @@ namespace System.Security.Cryptography.Asn1
 
                 i++;
                 j--;
+            }
+        }
+
+        private class SetOfValueComparer : IComparer<(int, int)>
+        {
+            private readonly byte[] _data;
+
+            public SetOfValueComparer(byte[] data)
+            {
+                _data = data;
+            }
+
+            public int Compare((int, int) x, (int, int) y)
+            {
+                (int xOffset, int xLength) = x;
+                (int yOffset, int yLength) = y;
+
+                int min = Math.Min(xLength, yLength);
+                int diff;
+
+                for (int i = 0; i < min; i++)
+                {
+                    int xVal = _data[xOffset + i];
+                    byte yVal = _data[yOffset + i];
+                    diff = xVal - yVal;
+
+                    if (diff != 0)
+                    {
+                        return diff;
+                    }
+                }
+
+                // The sorting rules (T-REC-X.690-201508 sec 11.6) say that the shorter one
+                // counts as if it are padded with as many 0x00s on the right as required for
+                // comparison.
+                //
+                // But, since a shorter definite value will have already had the length bytes
+                // compared, it was already different.  And a shorter indefinite value will
+                // have hit end-of-contents, making it already different.
+                //
+                // This is here because the spec says it should be, but no values are known
+                // which will make diff != 0.
+                diff = xLength - yLength;
+
+                if (diff != 0)
+                {
+                    return diff;
+                }
+
+                // Whichever had the lowest index wins (once sorted, stay sorted)
+                return xOffset - yOffset;
             }
         }
     }
