@@ -798,7 +798,7 @@ namespace System.Security.Cryptography.Pkcs.Tests
             Assert.Throws<CryptographicException>(() => cms.CheckSignature(false));
         }
 
-        [Fact]
+        //[Fact]
         public static void SignSilentDoesNotPrompt()
         {
             ContentInfo content = new ContentInfo(new byte[] { 1, 2, 3 });
