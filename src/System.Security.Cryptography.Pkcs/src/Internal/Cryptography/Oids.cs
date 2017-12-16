@@ -64,5 +64,8 @@ namespace Internal.Cryptography
         // Cert Extensions
         public const string SubjectKeyIdentifier = "2.5.29.14";
         public const string KeyUsage = "2.5.29.15";
+
+        // RFC3161 Timestamping
+        public const string TstInfo = "1.2.840.113549.1.9.16.1.4";
     }
 }
