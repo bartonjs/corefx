@@ -7,17 +7,26 @@ using System.Security.Cryptography.Asn1;
 
 namespace System.Security.Cryptography.Pkcs.Asn1
 {
+    // https://tools.ietf.org/html/rfc3161#section-2.4.2
+    // 
+    // Accuracy ::= SEQUENCE {
+    //       seconds INTEGER              OPTIONAL,
+    //       millis[0] INTEGER(1..999)    OPTIONAL,
+    //       micros[1] INTEGER(1..999)    OPTIONAL }
+    //
+    // And the ASN.1 module starts as
+    // DEFINITIONS IMPLICIT TAGS
     [StructLayout(LayoutKind.Sequential)]
     internal struct Rfc3161Accuracy
     {
         [OptionalValue]
         internal int? Seconds;
 
-        [ExpectedTag(0, ExplicitTag = true)]
+        [ExpectedTag(0)]
         [OptionalValue]
         internal int? Millis;
 
-        [ExpectedTag(1, ExplicitTag = true)]
+        [ExpectedTag(1)]
         [OptionalValue]
         internal int? Micros;
 

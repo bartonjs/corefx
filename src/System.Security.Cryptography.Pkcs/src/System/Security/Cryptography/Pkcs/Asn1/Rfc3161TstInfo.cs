@@ -40,7 +40,9 @@ namespace System.Security.Cryptography.Pkcs.Asn1
         [Integer]
         internal ReadOnlyMemory<byte> SerialNumber;
 
-        [GeneralizedTime(DisallowFractions = true)]
+        // Timestamps SHOULD omit fractions "when there is no need".
+        // That means that we need to still support reading and writing them.
+        [GeneralizedTime(DisallowFractions = false)]
         internal DateTimeOffset GenTime;
 
         [OptionalValue]

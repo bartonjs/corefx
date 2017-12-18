@@ -17,7 +17,7 @@ namespace System.Security.Cryptography.Pkcs
     public sealed partial class Rfc3161TimestampTokenInfo : AsnEncodedData
     {
         public Rfc3161TimestampTokenInfo(byte[] timestampTokenInfo) { }
-        public Rfc3161TimestampTokenInfo(Oid policyId, Oid hashAlgorithmId, ReadOnlyMemory<byte> messageHash, ReadOnlyMemory<byte> serialNumber, DateTimeOffset timestamp, long? accuracyInMicroseconds=null, ReadOnlyMemory<byte>? nonce=null, ReadOnlyMemory<byte>? tsaName=null, X509ExtensionCollection extensions =null) { throw null; }
+        public Rfc3161TimestampTokenInfo(Oid policyId, Oid hashAlgorithmId, ReadOnlyMemory<byte> messageHash, ReadOnlyMemory<byte> serialNumber, DateTimeOffset timestamp, long? accuracyInMicroseconds=null, bool isOrdering=false, ReadOnlyMemory<byte>? nonce=null, ReadOnlyMemory<byte>? tsaName=null, X509ExtensionCollection extensions =null) { throw null; }
         public int Version => throw null;
         public Oid PolicyId=> throw null;
         public Oid HashAlgorithmId => throw null;

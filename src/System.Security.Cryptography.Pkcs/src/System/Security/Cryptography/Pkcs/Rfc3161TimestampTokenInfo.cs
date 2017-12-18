@@ -28,6 +28,7 @@ namespace System.Security.Cryptography.Pkcs
             ReadOnlyMemory<byte> serialNumber,
             DateTimeOffset timestamp,
             long? accuracyInMicroseconds = null,
+            bool isOrdering = false,
             ReadOnlyMemory<byte>? nonce = null,
             ReadOnlyMemory<byte>? tsaName = null,
             X509ExtensionCollection extensions = null)
@@ -39,6 +40,7 @@ namespace System.Security.Cryptography.Pkcs
                       messageHash,
                       serialNumber,
                       timestamp,
+                      isOrdering,
                       accuracyInMicroseconds,
                       nonce,
                       tsaName,
@@ -176,6 +178,7 @@ namespace System.Security.Cryptography.Pkcs
             ReadOnlyMemory<byte> messageHash,
             ReadOnlyMemory<byte> serialNumber,
             DateTimeOffset timestamp,
+            bool isOrdering,
             long? accuracyInMicroseconds,
             ReadOnlyMemory<byte>? nonce,
             ReadOnlyMemory<byte>? tsaName,
@@ -203,6 +206,7 @@ namespace System.Security.Cryptography.Pkcs
                 },
                 SerialNumber = serialNumber,
                 GenTime = timestamp,
+                Ordering = isOrdering,
                 Nonce = nonce,
             };
 
