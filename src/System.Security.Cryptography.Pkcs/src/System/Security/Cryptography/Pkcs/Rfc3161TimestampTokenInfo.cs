@@ -155,10 +155,27 @@ namespace System.Security.Cryptography.Pkcs
             {
                 ReadOnlyMemory<byte> firstElement = reader.PeekEncodedValue();
 
-                var parsedInfo = AsnSerializer.Deserialize<Rfc3161TstInfo>(
+                Rfc3161TstInfo parsedInfo = AsnSerializer.Deserialize<Rfc3161TstInfo>(
                     // Copy the data so no ReadOnlyMemory values are pointing back to user data.
                     firstElement.ToArray(),
                     AsnEncodingRules.DER);
+
+                // The deserializer doesn't do bounds checks.
+                // Micros and Millis are defined as (1..999)
+                // Seconds doesn't define that it's bounded by 0,
+                // but negative accuracy doesn't make sense.
+                //
+                // (Reminder to readers: a null int? with an inequality operator
+                // has the value false, so if accuracy is missing, or millis or micro is missing,
+                // then the respective checks return false and don't throw).
+                if (parsedInfo.Accuracy?.Micros > 999 ||
+                    parsedInfo.Accuracy?.Micros < 1 ||
+                    parsedInfo.Accuracy?.Millis > 999 ||
+                    parsedInfo.Accuracy?.Millis < 1 ||
+                    parsedInfo.Accuracy?.Seconds < 0)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
 
                 tstInfo = parsedInfo;
                 bytesRead = firstElement.Length;

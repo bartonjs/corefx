@@ -530,5 +530,47 @@ namespace System.Security.Cryptography.Pkcs.Tests
             Assert.Equal("009631D170EA3B92D4", tokenInfo.GetNonce().Value.ByteArrayToHex());
             Assert.Equal(273, tokenInfo.GetTimestampAuthorityName().Value.Length);
         }
+
+        [Theory]
+        [InlineData("No accuracy", "", true, null)]
+        [InlineData("MicroSeconds = 0", "3003810100", false, null)]
+        [InlineData("MicroSeconds = 1", "3003810101", true, 1L)]
+        [InlineData("MicroSeconds = 999", "3004810203E7", true, 999L)]
+        [InlineData("MicroSeconds = 1000", "3004810203E8", false, null)]
+        [InlineData("MilliSeconds = 0", "3003800100", false, null)]
+        [InlineData("MilliSeconds = 1", "3003800101", true, 1000L)]
+        [InlineData("MilliSeconds = 999", "3004800203E7", true, 999000L)]
+        [InlineData("MilliSeconds = 1000", "3004800203E8", false, null)]
+        [InlineData("Seconds = 0", "3003020100", true, 0L)]
+        [InlineData("Seconds = -1", "30030201FF", false, null)]
+        public static void Accuracy_Bounds_ParsesAsExpected(
+            string description,
+            string accuracyHex,
+            bool shouldParse,
+            long? expectedTotalMicroseconds)
+        {
+            string inputHex =
+                "305A0201010601003031300D0609608648016503040201050004200000000000" +
+                "0000000000000000000000000000000000000000000000000000000201081817" +
+                "32303137313231383138313235342E373438363336345A" + accuracyHex;
+
+            byte[] inputData = inputHex.HexToByteArray();
+            inputData[1] = checked((byte)(0x55 + accuracyHex.Length / 2));
+
+            if (shouldParse)
+            {
+                int bytesRead;
+                Rfc3161TimestampTokenInfo tokenInfo;
+
+                Assert.True(Rfc3161TimestampTokenInfo.TryParse(inputData, out bytesRead, out tokenInfo));
+                Assert.Equal(inputData.Length, bytesRead);
+                Assert.NotNull(tokenInfo);
+                Assert.Equal(expectedTotalMicroseconds, tokenInfo.AccuracyInMicroseconds);
+            }
+            else
+            {
+                Assert.False(Rfc3161TimestampTokenInfo.TryParse(inputData, out _, out _));
+            }
+        }
     }
 }
