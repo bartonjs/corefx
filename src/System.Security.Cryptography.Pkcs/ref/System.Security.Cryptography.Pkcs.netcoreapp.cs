@@ -9,11 +9,6 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace System.Security.Cryptography.Pkcs
 {
-    public sealed partial class SignerInfo
-    {
-        public Oid SignatureAlgorithm => throw null;
-        public byte[] GetSignature() => throw null;
-    }
     public sealed partial class Rfc3161TimestampTokenInfo : AsnEncodedData
     {
         public Rfc3161TimestampTokenInfo(byte[] timestampTokenInfo) { }
@@ -31,5 +26,10 @@ namespace System.Security.Cryptography.Pkcs
         public bool HasExtensions => throw null;
         public X509ExtensionCollection GetExtensions() { throw null; }
         public static bool TryParse(ReadOnlyMemory<byte> source, out int bytesRead, out Rfc3161TimestampTokenInfo timestampTokenInfo) { throw null; }
+    }
+    public sealed partial class SignerInfo
+    {
+        public Oid SignatureAlgorithm => throw null;
+        public byte[] GetSignature() => throw null;
     }
 }
