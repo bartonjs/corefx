@@ -227,8 +227,8 @@ namespace System.Security.Cryptography.Tests.Asn1
 
             AsnReader reader = new AsnReader(inputData, (AsnEncodingRules)ruleSet);
             Assert.Equal(expectedTime, reader.GetGeneralizedTime());
-            Console.WriteLine($"{expectedTime.Ticks % TimeSpan.TicksPerMinute:D9}");
         }
+
 
         [Fact]
         public static void ExcessivelyPreciseFraction()
