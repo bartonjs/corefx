@@ -9,6 +9,14 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace System.Security.Cryptography.Pkcs
 {
+    public sealed partial class Rfc3161TimestampToken
+    {
+        public Rfc3161TimestampTokenInfo TokenInfo => throw null;
+        public SignedCms AsSignedCms() => throw null;
+        public bool VerifyData(ReadOnlySpan<byte> data) => throw null;
+        public bool VerifyHash(ReadOnlySpan<byte> hash) => throw null;
+        public static bool TryParse(ReadOnlyMemory<byte> source, out int bytesRead, out Rfc3161TimestampToken token) => throw null;
+    }
     public sealed partial class Rfc3161TimestampTokenInfo : AsnEncodedData
     {
         public Rfc3161TimestampTokenInfo(byte[] timestampTokenInfo) { }

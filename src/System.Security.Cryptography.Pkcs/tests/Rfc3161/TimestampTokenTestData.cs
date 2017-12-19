@@ -2,14 +2,19 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Text;
 using Test.Cryptography;
 
 namespace System.Security.Cryptography.Pkcs.Tests
 {
     internal sealed class TimestampTokenTestData
     {
+        internal ReadOnlyMemory<byte> MessageContent { get; private set; }
+
         internal ReadOnlyMemory<byte> FullTokenBytes { get; }
+        internal ReadOnlyMemory<byte>? EmbeddedSigningCertificate { get; private set; }
         internal ReadOnlyMemory<byte> TokenInfoBytes { get; private set; }
+
         internal int Version => 1;
         internal string PolicyId { get; private set; }
         internal string HashAlgorithmId { get; private set; }
@@ -23,6 +28,8 @@ namespace System.Security.Cryptography.Pkcs.Tests
         internal ReadOnlyMemory<byte>? TsaNameBytes { get; private set; }
         internal ReadOnlyMemory<byte>? ExtensionsBytes { get; private set; }
 
+        internal byte[] ExternalCertificateBytes { get; private set; }
+
         private TimestampTokenTestData(string inputHex)
             : this(inputHex.HexToByteArray())
         {
@@ -31,6 +38,19 @@ namespace System.Security.Cryptography.Pkcs.Tests
         private TimestampTokenTestData(ReadOnlyMemory<byte> fullTokenBytes)
         {
             FullTokenBytes = fullTokenBytes;
+        }
+
+        internal static TimestampTokenTestData GetTestData(string testDataName)
+        {
+            switch (testDataName)
+            {
+                case nameof(FreeTsaDotOrg1):
+                    return FreeTsaDotOrg1;
+                case nameof(Symantec1):
+                    return Symantec1;
+            }
+
+            throw new ArgumentOutOfRangeException(nameof(testDataName), testDataName, "No registered value");
         }
 
         internal static readonly TimestampTokenTestData FreeTsaDotOrg1 = ((Func<TimestampTokenTestData>)(() =>
@@ -79,6 +99,8 @@ namespace System.Security.Cryptography.Pkcs.Tests
                 "D50DF295F1DB078C84EECBCB30F1018E939B1FEA8615B31F39F87F02EF816EFF" +
                 "FE80A39C0857ECA510882DD2D66D49B743F0E7FF8DBEE4650449");
 
+            data.MessageContent = Encoding.ASCII.GetBytes("This is a test.\n");
+
             data.TokenInfoBytes = data.FullTokenBytes.Slice(64, 412);
             data.PolicyId = "1.2.3.4.1";
             data.HashAlgorithmId = Oids.Sha384;
@@ -91,6 +113,54 @@ namespace System.Security.Cryptography.Pkcs.Tests
             data.IsOrdering = true;
             data.NonceBytes = data.TokenInfoBytes.Slice(126, 9);
             data.TsaNameBytes = data.TokenInfoBytes.Slice(139, 273);
+
+            // https://freetsa.org/files/tsa.crt
+            data.ExternalCertificateBytes = Convert.FromBase64String(
+                @"
+MIIIATCCBemgAwIBAgIJAMHphhYNqOmCMA0GCSqGSIb3DQEBDQUAMIGVMREwDwYD
+VQQKEwhGcmVlIFRTQTEQMA4GA1UECxMHUm9vdCBDQTEYMBYGA1UEAxMPd3d3LmZy
+ZWV0c2Eub3JnMSIwIAYJKoZIhvcNAQkBFhNidXNpbGV6YXNAZ21haWwuY29tMRIw
+EAYDVQQHEwlXdWVyemJ1cmcxDzANBgNVBAgTBkJheWVybjELMAkGA1UEBhMCREUw
+HhcNMTYwMzEzMDE1NzM5WhcNMjYwMzExMDE1NzM5WjCCAQkxETAPBgNVBAoTCEZy
+ZWUgVFNBMQwwCgYDVQQLEwNUU0ExdjB0BgNVBA0TbVRoaXMgY2VydGlmaWNhdGUg
+ZGlnaXRhbGx5IHNpZ25zIGRvY3VtZW50cyBhbmQgdGltZSBzdGFtcCByZXF1ZXN0
+cyBtYWRlIHVzaW5nIHRoZSBmcmVldHNhLm9yZyBvbmxpbmUgc2VydmljZXMxGDAW
+BgNVBAMTD3d3dy5mcmVldHNhLm9yZzEiMCAGCSqGSIb3DQEJARYTYnVzaWxlemFz
+QGdtYWlsLmNvbTESMBAGA1UEBxMJV3VlcnpidXJnMQswCQYDVQQGEwJERTEPMA0G
+A1UECBMGQmF5ZXJuMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAtZEE
+jE5IbzTp3Ahif8I3UWIjaYS4LLEwvv9RfPw4+EvOXGWodNqyYhrgvOfjNWPg7ek0
+/V+IIxWfB4SICCJ0YMHtiCYXBvQoEzQ1nfu4G9E1P8F5YQrxqMjIZdwA6iOzqJvm
+vQO6hansgn1gVlkF4i1qWE7ROArhUCgM7jl+mKAS84BGQAeGJEO8B3y5X0Ia8xcS
+2Wg8223/uvPIululZq5SPUWdYXc0bU2EDieIa3wBxbiQ14ouJ7uo3S+aKBLhV9Yv
+khxlliVIBp3Nt9Bt4YHeDpVw1m+HIgzii2KKtVkG8+4MIQ9wUej0hYr4uaktCeRq
+8tnLpb/PrRaM32BEkaSwZgOxFMr3Ax8GXn7u+lPFdfNJDAWdLjLdx2rE1MTHEGg7
+l/0b5ZG8YQVRhtiPmgORswe2+R7ZVNqjb5rNah4Uqi5K3xdGS1TbGNu2/+MAgCRl
+RzcENs5Od7rl3m/g8/nW5/++tGHnlOkvsJUfiq5hpBLM6bIQdGNci+MnrhoPa0pk
+brD4RjvGO/hFUwQ10Z6AJRHsn2bDSWlS2L7LabCqTUxB9gUV/n3LuJMZzdpZumrq
+S+POrnGOb8tszX25/FC7FbEvNmWwqjByicLm3UsRHOSLotnv21prmlBgaTNPs09v
+x64zDws0IIqsgN8yZv3ZBGWHa6LLiY2VBTFbbnsCAwEAAaOCAdswggHXMAkGA1Ud
+EwQCMAAwHQYDVR0OBBYEFG52C3tOT5zhYMptLOknoqKUs3c3MB8GA1UdIwQYMBaA
+FPpVDYw0ZlFDTPfns6dsla965qSXMAsGA1UdDwQEAwIGwDAWBgNVHSUBAf8EDDAK
+BggrBgEFBQcDCDBjBggrBgEFBQcBAQRXMFUwKgYIKwYBBQUHMAKGHmh0dHA6Ly93
+d3cuZnJlZXRzYS5vcmcvdHNhLmNydDAnBggrBgEFBQcwAYYbaHR0cDovL3d3dy5m
+cmVldHNhLm9yZzoyNTYwMDcGA1UdHwQwMC4wLKAqoCiGJmh0dHA6Ly93d3cuZnJl
+ZXRzYS5vcmcvY3JsL3Jvb3RfY2EuY3JsMIHGBgNVHSAEgb4wgbswgbgGAQAwgbIw
+MwYIKwYBBQUHAgEWJ2h0dHA6Ly93d3cuZnJlZXRzYS5vcmcvZnJlZXRzYV9jcHMu
+aHRtbDAyBggrBgEFBQcCARYmaHR0cDovL3d3dy5mcmVldHNhLm9yZy9mcmVldHNh
+X2Nwcy5wZGYwRwYIKwYBBQUHAgIwOxo5RnJlZVRTQSB0cnVzdGVkIHRpbWVzdGFt
+cGluZyBTb2Z0d2FyZSBhcyBhIFNlcnZpY2UgKFNhYVMpMA0GCSqGSIb3DQEBDQUA
+A4ICAQClyUTixvrAoU2TCn/QoLFytB/BSDw+lXxoorzZuXZPGpUBYf1yRy1Bpe7S
+d3hiA7VCIkD7OibN4XYIe2+xAR30zBniVxqkoFEQlmXpTEb1C9Kt7mrEE34lGyWj
+navaRRUV2P+eByCejsILeHT34aDt58AJN/6EozT4syZc7S2O2d9hOWWDZ3/rOCwe
+47I+bqXwXfMN57n4kAXSUmb2EvOci09tq6bXv7rBljK5Bjcyn1Km8GahDkPqqB+E
+mmxf4/6LXqIydfaH8gUuUC6mwwdipmjM4Hhx3Y6X4xW7qSniVYmXegoxLOlsUQax
+Q3x3nys2GxgoiPPuiiNDdPoGPpVhkmJ/fEMQc5ZdEmCSjroAnoA0Ka4yTPlvBCNU
+83vKWv3cefeTRqs4i/x58B3JhhJU6mzBKZQQdrg9IFVvO+UTJoN/KHb3gzs3Dnw9
+QQUjgn1PU0AMciGNdSKf8QxviJOpo6HAxCu0yJjBPfQcf2VztPxWUVlxphCnsNKF
+fIIlqfsgTqzsouiXGqGvh4hqKuPHL+CgquhCmAp3vvFrkhFUWAkNmCtZRmA3ZOda
+CtPRFFS5mG9ni5q2r+hJcDOuOr/U60O3vJ3uaIFZSeZIFYKoLnhSd/IoIQfv45Ag
+DgUIrLjqguolBSdvPJ2io9O0rTi7+IQr2jb8JEgpH1WNwC3R4A==");
+
             return data;
         }))();
 
@@ -210,7 +280,11 @@ namespace System.Security.Cryptography.Pkcs.Tests
                 "B2733193C5674971BAC64EDADCA8880944572CBF4D5DD0D22B6BB0421C537885" +
                 "0E8F60BAD98EB85C7B09EBBCE11A759181EA9C32A83C8D1B73E54F3A571D1461" +
                 "FD6B6AB4F89DC6750F14EC2E0134BA61B4D0B2C1FB2F60F622379249CE6381AF" +
-                "667900B17A7BB6AF");
+                "667900B17A7BB6AE");
+
+            data.MessageContent = Encoding.ASCII.GetBytes("Hello, world!");
+
+            data.EmbeddedSigningCertificate = data.FullTokenBytes.Slice(1659, 1359);
 
             data.TokenInfoBytes = data.FullTokenBytes.Slice(64, 251);
             data.PolicyId = "2.16.840.1.113733.1.7.23.3";

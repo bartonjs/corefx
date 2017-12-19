@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using Test.Cryptography;
@@ -12,17 +11,12 @@ namespace System.Security.Cryptography.Pkcs.Tests
 {
     public static class TimestampTokenInfoTests
     {
-        private static TimestampTokenTestData GetTestData(string testDataName) =>
-            (TimestampTokenTestData)typeof(TimestampTokenTestData).GetField(
-                testDataName,
-                BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public).GetValue(null);
-
         [Theory]
         [InlineData(nameof(TimestampTokenTestData.FreeTsaDotOrg1))]
         [InlineData(nameof(TimestampTokenTestData.Symantec1))]
         public static void CreateFromParameters(string testDataName)
         {
-            TimestampTokenTestData testData = GetTestData(testDataName);
+            TimestampTokenTestData testData = TimestampTokenTestData.GetTestData(testDataName);
 
             Oid policyId = new Oid(testData.PolicyId, testData.PolicyId);
             Oid hashAlgorithmOid = new Oid(testData.HashAlgorithmId);
@@ -33,6 +27,19 @@ namespace System.Security.Cryptography.Pkcs.Tests
             byte[] nonce = testData.NonceBytes?.ToArray();
             byte[] tsaNameBytes = testData.TsaNameBytes?.ToArray();
 
+            ReadOnlyMemory<byte>? nonceMemory = null;
+            ReadOnlyMemory<byte>? tsaMemory = null;
+
+            if (nonce != null)
+            {
+                nonceMemory = nonce;
+            }
+
+            if (tsaNameBytes != null)
+            {
+                tsaMemory = tsaNameBytes;
+            }
+
             var tokenInfo = new Rfc3161TimestampTokenInfo(
                 policyId,
                 hashAlgorithmOid,
@@ -41,18 +48,15 @@ namespace System.Security.Cryptography.Pkcs.Tests
                 nonUtcTimestamp,
                 accuracyMicrosec,
                 testData.IsOrdering,
-                nonce == null ? null : new ReadOnlyMemory<byte>(nonce),
-                tsaNameBytes == null ? null : new ReadOnlyMemory<byte>(tsaNameBytes));
+                nonceMemory,
+                tsaMemory);
 
-            Assert.Equal(1, tokenInfo.Version);
+            // Since AssertEqual will check all the fields the remaining checks in this method are about
+            // input/output value/reference associations.
+            AssertEqual(testData, tokenInfo);
 
             Assert.NotSame(policyId, tokenInfo.PolicyId);
-            Assert.Equal(policyId.Value, tokenInfo.PolicyId.Value);
-
             Assert.NotSame(hashAlgorithmOid, tokenInfo.HashAlgorithmId);
-            Assert.Equal(hashAlgorithmOid.Value, tokenInfo.HashAlgorithmId.Value);
-            // FriendlyName should be set for known digest algorithms
-            Assert.NotEqual(tokenInfo.HashAlgorithmId.Value, tokenInfo.HashAlgorithmId.FriendlyName);
 
             Assert.Equal(nonUtcTimestamp, tokenInfo.Timestamp);
             Assert.Equal(TimeSpan.Zero, tokenInfo.Timestamp.Offset);
@@ -67,14 +71,8 @@ namespace System.Security.Cryptography.Pkcs.Tests
             serial[1] ^= 0xFF;
             Assert.NotEqual(serial.ByteArrayToHex(), tokenInfo.GetSerialNumber().ByteArrayToHex());
 
-            Assert.Equal(accuracyMicrosec, tokenInfo.AccuracyInMicroseconds);
-            Assert.Equal(testData.IsOrdering, tokenInfo.IsOrdering);
 
-            if (nonce == null)
-            {
-                Assert.False(tokenInfo.GetNonce().HasValue, "tokenInfo.GetNonce().HasValue");
-            }
-            else
+            if (nonce != null)
             {
                 ReadOnlyMemory<byte>? tokenNonce = tokenInfo.GetNonce();
                 Assert.True(tokenNonce.HasValue, "tokenInfo.GetNonce().HasValue");
@@ -87,11 +85,7 @@ namespace System.Security.Cryptography.Pkcs.Tests
 
             ReadOnlyMemory<byte>? nameFromToken = tokenInfo.GetTimestampAuthorityName();
 
-            if (tsaNameBytes == null)
-            {
-                Assert.False(nameFromToken.HasValue, "nameFromToken.HasValue");
-            }
-            else
+            if (tsaNameBytes != null)
             {
                 Assert.True(nameFromToken.HasValue, "nameFromToken.HasValue");
                 Assert.Equal(tsaNameBytes.ByteArrayToHex(), nameFromToken.Value.ByteArrayToHex());
@@ -131,7 +125,7 @@ namespace System.Security.Cryptography.Pkcs.Tests
         [InlineData(nameof(TimestampTokenTestData.Symantec1), true)]
         public static void CreateFromValue(string testDataName, bool viaTry)
         {
-            TimestampTokenTestData testData = GetTestData(testDataName);
+            TimestampTokenTestData testData = TimestampTokenTestData.GetTestData(testDataName);
 
             ValidateTokenInfo(
                 testData.TokenInfoBytes,
@@ -160,48 +154,7 @@ namespace System.Security.Cryptography.Pkcs.Tests
                 tokenInfo = new Rfc3161TimestampTokenInfo(tokenInfoBytes.ToArray());
             }
             
-            Assert.Equal(testData.Version, tokenInfo.Version);
-            Assert.Equal(testData.PolicyId, tokenInfo.PolicyId.Value);
-            Assert.Equal(testData.HashAlgorithmId, tokenInfo.HashAlgorithmId.Value);
-            // FriendlyName should be set for known digest algorithms
-            Assert.NotEqual(tokenInfo.HashAlgorithmId.Value, tokenInfo.HashAlgorithmId.FriendlyName);
-            Assert.Equal(testData.HashBytes.ByteArrayToHex(), tokenInfo.GetMessageHash().ByteArrayToHex());
-            Assert.Equal(testData.SerialNumberBytes.ByteArrayToHex(), tokenInfo.GetSerialNumber().ByteArrayToHex());
-            Assert.Equal(testData.Timestamp, tokenInfo.Timestamp);
-            Assert.Equal(TimeSpan.Zero, tokenInfo.Timestamp.Offset);
-            Assert.Equal(testData.AccuracyInMicroseconds, tokenInfo.AccuracyInMicroseconds);
-
-            if (testData.IsOrdering)
-            {
-                Assert.True(tokenInfo.IsOrdering, "tokenInfo.IsOrdering");
-            }
-            else
-            {
-                Assert.False(tokenInfo.IsOrdering, "tokenInfo.IsOrdering");
-            }
-
-            Assert.Equal(testData.NonceBytes?.ByteArrayToHex(), tokenInfo.GetNonce()?.ByteArrayToHex());
-            Assert.Equal(testData.TsaNameBytes?.ByteArrayToHex(), tokenInfo.GetTimestampAuthorityName()?.ByteArrayToHex());
-
-            if (testData.ExtensionsBytes == null)
-            {
-                Assert.False(tokenInfo.HasExtensions, "tokenInfo.HasExtensions");
-                Assert.NotNull(tokenInfo.GetExtensions());
-                Assert.Equal(0, tokenInfo.GetExtensions().Count);
-
-                // GetExtensions always returns a new collection.
-                Assert.NotSame(tokenInfo.GetExtensions(), tokenInfo.GetExtensions());
-            }
-            else
-            {
-                Assert.True(tokenInfo.HasExtensions, "tokenInfo.HasExtensions");
-                Assert.NotNull(tokenInfo.GetExtensions());
-
-                Assert.True(false, "A test handler has been written for extensions...");
-
-                // GetExtensions always returns a new collection.
-                Assert.NotSame(tokenInfo.GetExtensions(), tokenInfo.GetExtensions());
-            }
+            AssertEqual(testData, tokenInfo);
         }
 
         [Fact]
@@ -499,6 +452,52 @@ namespace System.Security.Cryptography.Pkcs.Tests
             else
             {
                 Assert.False(Rfc3161TimestampTokenInfo.TryParse(inputData, out _, out _));
+            }
+        }
+
+        internal static void AssertEqual(TimestampTokenTestData testData, Rfc3161TimestampTokenInfo tokenInfo)
+        {
+            Assert.Equal(testData.Version, tokenInfo.Version);
+            Assert.Equal(testData.PolicyId, tokenInfo.PolicyId.Value);
+            Assert.Equal(testData.HashAlgorithmId, tokenInfo.HashAlgorithmId.Value);
+            // FriendlyName should be set for known digest algorithms
+            Assert.NotEqual(tokenInfo.HashAlgorithmId.Value, tokenInfo.HashAlgorithmId.FriendlyName);
+            Assert.Equal(testData.HashBytes.ByteArrayToHex(), tokenInfo.GetMessageHash().ByteArrayToHex());
+            Assert.Equal(testData.SerialNumberBytes.ByteArrayToHex(), tokenInfo.GetSerialNumber().ByteArrayToHex());
+            Assert.Equal(testData.Timestamp, tokenInfo.Timestamp);
+            Assert.Equal(TimeSpan.Zero, tokenInfo.Timestamp.Offset);
+            Assert.Equal(testData.AccuracyInMicroseconds, tokenInfo.AccuracyInMicroseconds);
+
+            if (testData.IsOrdering)
+            {
+                Assert.True(tokenInfo.IsOrdering, "tokenInfo.IsOrdering");
+            }
+            else
+            {
+                Assert.False(tokenInfo.IsOrdering, "tokenInfo.IsOrdering");
+            }
+
+            Assert.Equal(testData.NonceBytes?.ByteArrayToHex(), tokenInfo.GetNonce()?.ByteArrayToHex());
+            Assert.Equal(testData.TsaNameBytes?.ByteArrayToHex(), tokenInfo.GetTimestampAuthorityName()?.ByteArrayToHex());
+
+            if (testData.ExtensionsBytes == null)
+            {
+                Assert.False(tokenInfo.HasExtensions, "tokenInfo.HasExtensions");
+                Assert.NotNull(tokenInfo.GetExtensions());
+                Assert.Equal(0, tokenInfo.GetExtensions().Count);
+
+                // GetExtensions always returns a new collection.
+                Assert.NotSame(tokenInfo.GetExtensions(), tokenInfo.GetExtensions());
+            }
+            else
+            {
+                Assert.True(tokenInfo.HasExtensions, "tokenInfo.HasExtensions");
+                Assert.NotNull(tokenInfo.GetExtensions());
+
+                Assert.True(false, "A test handler has been written for extensions...");
+
+                // GetExtensions always returns a new collection.
+                Assert.NotSame(tokenInfo.GetExtensions(), tokenInfo.GetExtensions());
             }
         }
     }
