@@ -6,6 +6,7 @@
 // ------------------------------------------------------------------------------
 
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 
 namespace System.Security.Cryptography.Pkcs
 {
@@ -20,7 +21,7 @@ namespace System.Security.Cryptography.Pkcs
         public ReadOnlyMemory<byte>? GetNonce() => throw null;
         public bool HasExtensions => throw null;
         public X509ExtensionCollection GetExtensions() => throw null;
-        public Rfc3161TimestampToken SubmitRequest(Uri uri, TimeSpan timeout) => throw null;
+        public Task<Rfc3161TimestampToken> SubmitRequestAsync(Uri uri, TimeSpan timeout) => throw null;
         public byte[] Encode() => throw null;
         public bool TryEncode(Span<byte> destination, out int bytesWritten) => throw null;
         public static Rfc3161TimestampRequest BuildForData(ReadOnlySpan<byte> data, HashAlgorithmName hashAlgorithm, Oid requestedPolicyId = null, ReadOnlyMemory<byte>? nonce = null, bool requestSignerCertificates = false, X509ExtensionCollection extensions = null) => throw null;
