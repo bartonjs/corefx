@@ -32,7 +32,9 @@ namespace System.Security.Cryptography.Pkcs.Asn1
         [Integer]
         public ReadOnlyMemory<byte>? Nonce;
 
+#pragma warning disable CS3016
         [DefaultValue(0x01, 0x01, 0x00)]
+#pragma warning restore CS3016
         public bool CertReq;
 
         [ExpectedTag(0)]
