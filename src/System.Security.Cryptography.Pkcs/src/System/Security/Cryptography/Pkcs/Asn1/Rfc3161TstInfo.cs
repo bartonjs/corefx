@@ -57,7 +57,7 @@ namespace System.Security.Cryptography.Pkcs.Asn1
         [OptionalValue]
         internal ReadOnlyMemory<byte>? Nonce;
 
-        [ExpectedTag(0)]
+        [ExpectedTag(0, ExplicitTag = true)]
         [OptionalValue]
         internal GeneralName? Tsa;
 
