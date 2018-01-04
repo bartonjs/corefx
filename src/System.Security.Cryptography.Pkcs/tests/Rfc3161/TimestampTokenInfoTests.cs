@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using Test.Cryptography;
 using Xunit;
@@ -289,8 +290,8 @@ namespace System.Security.Cryptography.Pkcs.Tests
 
             Assert.True(
                 Unsafe.AreSame(
-                    ref tsaName1.Span.DangerousGetPinnableReference(),
-                    ref tsaName2.Span.DangerousGetPinnableReference()),
+                    ref MemoryMarshal.GetReference(tsaName1.Span),
+                    ref MemoryMarshal.GetReference(tsaName2.Span)),
                 "Second call to GetTimestampAuthorityName is over the same memory");
         }
 
