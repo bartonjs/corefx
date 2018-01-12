@@ -26,15 +26,17 @@
     <Compile Include="CryptographicAttributeObjectCollectionTests.cs" />
     <Compile Include="Oids.cs" />
     <Compile Include="Pkcs9AttributeTests.cs" />
-    <Compile Include="Rfc3161\TimestampRequestTests.cs" />
-    <Compile Include="Rfc3161\TimestampTokenInfoTests.cs" />
-    <Compile Include="Rfc3161\TimestampTokenTestData.cs" />
-    <Compile Include="Rfc3161\TimestampTokenTests.cs" />
     <Compile Include="SignedCms\CounterSigningDerOrder.cs" />
     <Compile Include="SignedCms\SignedCmsTests.cs" />
     <Compile Include="SignedCms\SignedCmsWholeDocumentTests.cs" />
     <Compile Include="SignedCms\SignedDocuments.cs" />
     <Compile Include="SignedCms\SignerInfoTests.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetGroup)' == 'netcoreapp'">
+    <Compile Include="Rfc3161\TimestampRequestTests.cs" />
+    <Compile Include="Rfc3161\TimestampTokenInfoTests.cs" />
+    <Compile Include="Rfc3161\TimestampTokenTestData.cs" />
+    <Compile Include="Rfc3161\TimestampTokenTests.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetsWindows)' == 'true'">
     <Compile Include="RecipientInfoCollectionTests.cs" />
@@ -50,9 +52,6 @@
   </ItemGroup>
   <ItemGroup Condition="'$(TargetsWindows)' == 'true' AND '$(TargetGroup)'=='netcoreapp'">
     <Compile Include="EnvelopedCms\DecryptTests.KeyPersistence.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.targets))\dir.targets" />
 </Project>

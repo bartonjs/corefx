@@ -35,21 +35,24 @@ namespace System.Security.Cryptography.Pkcs
         {
             HashAlgorithmName hashAlgorithmName = Helpers.GetDigestAlgorithm(TokenInfo.HashAlgorithmId);
 
-            IncrementalHash hasher = IncrementalHash.CreateHash(hashAlgorithmName);
-            hasher.AppendData(data);
-            
-            // SHA-2-512 is the biggest hash we currently know about.
-            Span<byte> stackSpan = stackalloc byte[512 / 8];
-
-            if (hasher.TryGetHashAndReset(stackSpan, out int bytesWritten))
+            using (IncrementalHash hasher = IncrementalHash.CreateHash(hashAlgorithmName))
             {
-                return VerifyHash(stackSpan.Slice(0, bytesWritten));
-            }
+                hasher.AppendData(data);
 
-            // Something we understood, but is bigger than 512-bit.
-            // Allocate at runtime, trip in a debug build so we can re-evaluate this.
-            Debug.Fail($"TryGetHashAndReset did not fit in {stackSpan.Length} for hash {TokenInfo.HashAlgorithmId.Value}");
-            return VerifyHash(hasher.GetHashAndReset());
+                // SHA-2-512 is the biggest hash we currently know about.
+                Span<byte> stackSpan = stackalloc byte[512 / 8];
+
+                if (hasher.TryGetHashAndReset(stackSpan, out int bytesWritten))
+                {
+                    return VerifyHash(stackSpan.Slice(0, bytesWritten));
+                }
+
+                // Something we understood, but is bigger than 512-bit.
+                // Allocate at runtime, trip in a debug build so we can re-evaluate this.
+                Debug.Fail(
+                    $"TryGetHashAndReset did not fit in {stackSpan.Length} for hash {TokenInfo.HashAlgorithmId.Value}");
+                return VerifyHash(hasher.GetHashAndReset());
+            }
         }
 
         public bool VerifyHash(ReadOnlySpan<byte> hash)
@@ -102,7 +105,7 @@ namespace System.Security.Cryptography.Pkcs
             Debug.Assert(tsaCertificate != null);
             Debug.Assert(signer != null);
             Debug.Assert(tokenInfo != null);
-            // certId and certId2 are allowed to be null, they get checked in CerMatchesIds.
+            // certId and certId2 are allowed to be null, they get checked in CertMatchesIds.
 
             if (!CertMatchesIds(tsaCertificate, certId, certId2))
             {

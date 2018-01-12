@@ -229,7 +229,6 @@ namespace System.Security.Cryptography.Tests.Asn1
             Assert.Equal(expectedTime, reader.GetGeneralizedTime());
         }
 
-
         [Fact]
         public static void ExcessivelyPreciseFraction()
         {

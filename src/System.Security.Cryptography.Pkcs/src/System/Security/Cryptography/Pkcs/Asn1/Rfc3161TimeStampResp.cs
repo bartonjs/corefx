@@ -28,7 +28,6 @@ namespace System.Security.Cryptography.Pkcs.Asn1
         public PkiFailureInfo? FailInfo;
     }
 
-
     // https://tools.ietf.org/html/rfc4210#section-5.2.3
     [Flags]
     internal enum PkiFailureInfo
