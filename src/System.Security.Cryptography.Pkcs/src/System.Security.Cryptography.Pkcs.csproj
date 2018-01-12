@@ -256,6 +256,8 @@
   <ItemGroup>
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\Rfc3161TimeStampReq.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\Rfc3161TimeStampResp.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Asn1\SigningCertificateAsn.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Rfc3161RequestResponseStatus.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Rfc3161TimestampRequest.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Rfc3161TimestampToken.cs" />
   </ItemGroup>

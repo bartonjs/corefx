@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Test.Cryptography;
 using Xunit;
@@ -175,6 +176,843 @@ namespace System.Security.Cryptography.Pkcs.Tests
 
             Assert.Equal(0, bytesRead);
             Assert.Null(token);
+        }
+
+        [Theory]
+        [InlineData(X509IncludeOption.WholeChain, SigningCertificateOption.ValidHashNoName)]
+        [InlineData(X509IncludeOption.None, SigningCertificateOption.ValidHashNoName)]
+        [InlineData(X509IncludeOption.WholeChain, SigningCertificateOption.ValidHashWithName)]
+        [InlineData(X509IncludeOption.None, SigningCertificateOption.ValidHashWithName)]
+        public static void MatchV1(X509IncludeOption includeOption, SigningCertificateOption v1Option)
+        {
+            CustomBuild_CertMatch(
+                Certificates.ValidLookingTsaCert,
+                new DateTimeOffset(2018, 1, 10, 17, 21, 11, 802, TimeSpan.Zero),
+                v1Option,
+                SigningCertificateOption.Omit,
+                includeOption: includeOption);
+        }
+
+        [Theory]
+        [InlineData(X509IncludeOption.WholeChain)]
+        [InlineData(X509IncludeOption.None)]
+        public static void CertHashMismatchV1(X509IncludeOption includeOption)
+        {
+            CustomBuild_CertMismatch(
+                Certificates.ValidLookingTsaCert,
+                new DateTimeOffset(2018, 1, 10, 17, 21, 11, 802, TimeSpan.Zero),
+                SigningCertificateOption.InvalidHashNoName,
+                SigningCertificateOption.Omit,
+                includeOption: includeOption);
+        }
+
+        [Theory]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashWithInvalidName,
+            SubjectIdentifierType.SubjectKeyIdentifier)]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashWithInvalidName,
+            SubjectIdentifierType.SubjectKeyIdentifier)]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashWithInvalidName,
+            SubjectIdentifierType.IssuerAndSerialNumber)]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashWithInvalidName,
+            SubjectIdentifierType.IssuerAndSerialNumber)]
+        public static void CertMismatchIssuerAndSerialV1(
+            X509IncludeOption includeOption,
+            SigningCertificateOption v1Option,
+            SubjectIdentifierType identifierType)
+        {
+            CustomBuild_CertMismatch(
+                Certificates.ValidLookingTsaCert,
+                new DateTimeOffset(2018, 1, 10, 17, 21, 11, 802, TimeSpan.Zero),
+                v1Option,
+                SigningCertificateOption.Omit,
+                includeOption: includeOption,
+                identifierType: identifierType);
+        }
+
+        [Theory]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashNoName,
+            null)]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashNoName,
+            null)]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashWithName,
+            "MD5")]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashWithName,
+            "MD5")]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashWithName,
+            "SHA1")]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashWithName,
+            "SHA1")]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashWithName,
+            "SHA384")]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashWithName,
+            "SHA384")]
+        public static void MatchV2(
+            X509IncludeOption includeOption,
+            SigningCertificateOption v2Option,
+            string hashAlgName)
+        {
+            CustomBuild_CertMatch(
+                Certificates.ValidLookingTsaCert,
+                new DateTimeOffset(2018, 1, 10, 17, 21, 11, 802, TimeSpan.Zero),
+                SigningCertificateOption.Omit,
+                v2Option,
+                hashAlgName == null ? default(HashAlgorithmName) : new HashAlgorithmName(hashAlgName),
+                includeOption);
+        }
+
+        [Theory]
+        [InlineData(X509IncludeOption.WholeChain, null)]
+        [InlineData(X509IncludeOption.None, null)]
+        [InlineData(X509IncludeOption.WholeChain, "MD5")]
+        [InlineData(X509IncludeOption.None, "MD5")]
+        [InlineData(X509IncludeOption.WholeChain, "SHA1")]
+        [InlineData(X509IncludeOption.None, "SHA1")]
+        [InlineData(X509IncludeOption.WholeChain, "SHA384")]
+        [InlineData(X509IncludeOption.None, "SHA384")]
+        public static void CertHashMismatchV2(X509IncludeOption includeOption, string hashAlgName)
+        {
+            CustomBuild_CertMismatch(
+                Certificates.ValidLookingTsaCert,
+                new DateTimeOffset(2018, 1, 10, 17, 21, 11, 802, TimeSpan.Zero),
+                SigningCertificateOption.Omit,
+                SigningCertificateOption.InvalidHashNoName,
+                hashAlgName == null ? default(HashAlgorithmName) : new HashAlgorithmName(hashAlgName),
+                includeOption: includeOption);
+        }
+
+        [Theory]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashWithInvalidName,
+            SubjectIdentifierType.SubjectKeyIdentifier,
+            null)]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashWithInvalidName,
+            SubjectIdentifierType.SubjectKeyIdentifier,
+            null)]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashWithInvalidName,
+            SubjectIdentifierType.SubjectKeyIdentifier,
+            "SHA384")]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashWithInvalidName,
+            SubjectIdentifierType.SubjectKeyIdentifier,
+            "SHA384")]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashWithInvalidName,
+            SubjectIdentifierType.IssuerAndSerialNumber,
+            null)]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashWithInvalidName,
+            SubjectIdentifierType.IssuerAndSerialNumber,
+            null)]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashWithInvalidName,
+            SubjectIdentifierType.IssuerAndSerialNumber,
+            "SHA384")]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashWithInvalidName,
+            SubjectIdentifierType.IssuerAndSerialNumber,
+            "SHA384")]
+        public static void CertMismatchIssuerAndSerialV2(
+            X509IncludeOption includeOption,
+            SigningCertificateOption v2Option,
+            SubjectIdentifierType identifierType,
+            string hashAlgName)
+        {
+            CustomBuild_CertMismatch(
+                Certificates.ValidLookingTsaCert,
+                new DateTimeOffset(2018, 1, 10, 17, 21, 11, 802, TimeSpan.Zero),
+                SigningCertificateOption.Omit,
+                v2Option,
+                hashAlgName == null ? default(HashAlgorithmName) : new HashAlgorithmName(hashAlgName),
+                includeOption: includeOption,
+                identifierType: identifierType);
+        }
+
+        [Theory]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashNoName,
+            SigningCertificateOption.ValidHashNoName,
+            null)]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashNoName,
+            SigningCertificateOption.ValidHashNoName,
+            "SHA512")]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashNoName,
+            SigningCertificateOption.ValidHashNoName,
+            null)]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashNoName,
+            SigningCertificateOption.ValidHashNoName,
+            "SHA512")]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashNoName,
+            SigningCertificateOption.ValidHashWithName,
+            null)]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashNoName,
+            SigningCertificateOption.ValidHashWithName,
+            "SHA384")]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashNoName,
+            SigningCertificateOption.ValidHashWithName,
+            null)]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashNoName,
+            SigningCertificateOption.ValidHashWithName,
+            "SHA384")]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashWithName,
+            SigningCertificateOption.ValidHashNoName,
+            null)]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashWithName,
+            SigningCertificateOption.ValidHashNoName,
+            "SHA512")]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashWithName,
+            SigningCertificateOption.ValidHashNoName,
+            null)]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashWithName,
+            SigningCertificateOption.ValidHashNoName,
+            "SHA512")]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashWithName,
+            SigningCertificateOption.ValidHashWithName,
+            null)]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashWithName,
+            SigningCertificateOption.ValidHashWithName,
+            "SHA384")]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashWithName,
+            SigningCertificateOption.ValidHashWithName,
+            null)]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashWithName,
+            SigningCertificateOption.ValidHashWithName,
+            "SHA384")]
+        public static void CertMatchV1AndV2(
+            X509IncludeOption includeOption,
+            SigningCertificateOption v1Option,
+            SigningCertificateOption v2Option,
+            string hashAlgName)
+        {
+            CustomBuild_CertMatch(
+                Certificates.ValidLookingTsaCert,
+                new DateTimeOffset(2018, 1, 10, 17, 21, 11, 802, TimeSpan.Zero),
+                v1Option,
+                v2Option,
+                hashAlgName == null ? default(HashAlgorithmName) : new HashAlgorithmName(hashAlgName),
+                includeOption);
+        }
+
+        [Theory]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.InvalidHashNoName,
+            SigningCertificateOption.ValidHashWithName,
+            SubjectIdentifierType.IssuerAndSerialNumber,
+            null)]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashWithInvalidSerial,
+            SigningCertificateOption.ValidHashWithName,
+            SubjectIdentifierType.IssuerAndSerialNumber,
+            "SHA384")]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.ValidHashWithInvalidName,
+            SigningCertificateOption.InvalidHashNoName,
+            SubjectIdentifierType.SubjectKeyIdentifier,
+            null)]
+        [InlineData(
+            X509IncludeOption.None,
+            SigningCertificateOption.ValidHashWithName,
+            SigningCertificateOption.InvalidHashNoName,
+            SubjectIdentifierType.SubjectKeyIdentifier,
+            "SHA512")]
+        [InlineData(
+            X509IncludeOption.WholeChain,
+            SigningCertificateOption.InvalidHashWithInvalidSerial,
+            SigningCertificateOption.ValidHashNoName,
+            SubjectIdentifierType.IssuerAndSerialNumber,
+            null)]
+        public static void CertMismatchV1OrV2(
+            X509IncludeOption includeOption,
+            SigningCertificateOption v1Option,
+            SigningCertificateOption v2Option,
+            SubjectIdentifierType identifierType,
+            string hashAlgName)
+        {
+            CustomBuild_CertMismatch(
+                Certificates.ValidLookingTsaCert,
+                new DateTimeOffset(2018, 1, 10, 17, 21, 11, 802, TimeSpan.Zero),
+                v1Option,
+                v2Option,
+                hashAlgName == null ? default(HashAlgorithmName) : new HashAlgorithmName(hashAlgName),
+                includeOption: includeOption,
+                identifierType: identifierType);
+        }
+
+        [Theory]
+        [InlineData(X509IncludeOption.WholeChain)]
+        [InlineData(X509IncludeOption.None)]
+        public static void TimestampTooOld(X509IncludeOption includeOption)
+        {
+            CertLoader loader = Certificates.ValidLookingTsaCert;
+            DateTimeOffset referenceTime;
+
+            using (X509Certificate2 cert = loader.GetCertificate())
+            {
+                referenceTime = cert.NotBefore.AddSeconds(-1);
+            }
+
+            CustomBuild_CertMismatch(
+                loader,
+                referenceTime,
+                SigningCertificateOption.ValidHashNoName,
+                SigningCertificateOption.Omit,
+                includeOption: includeOption);
+        }
+
+        [Theory]
+        [InlineData(X509IncludeOption.WholeChain)]
+        [InlineData(X509IncludeOption.None)]
+        public static void TimestampTooNew(X509IncludeOption includeOption)
+        {
+            CertLoader loader = Certificates.ValidLookingTsaCert;
+            DateTimeOffset referenceTime;
+
+            using (X509Certificate2 cert = loader.GetCertificate())
+            {
+                referenceTime = cert.NotAfter.AddSeconds(1);
+            }
+
+            CustomBuild_CertMismatch(
+                loader,
+                referenceTime,
+                SigningCertificateOption.ValidHashNoName,
+                SigningCertificateOption.Omit,
+                includeOption: includeOption);
+        }
+
+        [Theory]
+        [InlineData(X509IncludeOption.WholeChain)]
+        [InlineData(X509IncludeOption.None)]
+        public static void NoEkuExtension(X509IncludeOption includeOption)
+        {
+            CertLoader loader = Certificates.RSA2048SignatureOnly;
+            DateTimeOffset referenceTime;
+
+            using (X509Certificate2 cert = loader.GetCertificate())
+            {
+                referenceTime = cert.NotAfter.AddDays(-1);
+
+                Assert.Equal(0, cert.Extensions.OfType<X509EnhancedKeyUsageExtension>().Count());
+            }
+
+            CustomBuild_CertMismatch(
+                loader,
+                referenceTime,
+                SigningCertificateOption.ValidHashNoName,
+                SigningCertificateOption.Omit,
+                includeOption: includeOption);
+        }
+
+        [Theory]
+        [InlineData(X509IncludeOption.WholeChain)]
+        [InlineData(X509IncludeOption.None)]
+        public static void TwoEkuExtensions(X509IncludeOption includeOption)
+        {
+            CertLoader loader = Certificates.TwoEkuTsaCert;
+            DateTimeOffset referenceTime;
+
+            using (X509Certificate2 cert = loader.GetCertificate())
+            {
+                referenceTime = cert.NotAfter.AddDays(-1);
+
+                var ekuExts = cert.Extensions.OfType<X509EnhancedKeyUsageExtension>().ToList();
+
+                Assert.Equal(2, ekuExts.Count);
+
+                // Make sure we're validating that "early success" doesn't happen.
+                Assert.Contains(
+                    Oids.TimeStampingPurpose,
+                    ekuExts[0].EnhancedKeyUsages.OfType<Oid>().Select(o => o.Value));
+            }
+
+            CustomBuild_CertMismatch(
+                loader,
+                referenceTime,
+                SigningCertificateOption.ValidHashNoName,
+                SigningCertificateOption.Omit,
+                includeOption: includeOption);
+        }
+
+        [Theory]
+        [InlineData(X509IncludeOption.WholeChain)]
+        [InlineData(X509IncludeOption.None)]
+        public static void NonCriticalEkuExtension(X509IncludeOption includeOption)
+        {
+            CertLoader loader = Certificates.NonCriticalTsaEku;
+            DateTimeOffset referenceTime;
+
+            using (X509Certificate2 cert = loader.GetCertificate())
+            {
+                referenceTime = cert.NotAfter.AddDays(-1);
+
+                var ekuExts = cert.Extensions.OfType<X509EnhancedKeyUsageExtension>().ToList();
+
+                Assert.Equal(1, ekuExts.Count);
+                Assert.False(ekuExts[0].Critical, "ekuExts[0].Critical");
+            }
+
+            CustomBuild_CertMismatch(
+                loader,
+                referenceTime,
+                SigningCertificateOption.ValidHashNoName,
+                SigningCertificateOption.Omit,
+                includeOption: includeOption);
+        }
+
+        [Theory]
+        [InlineData(X509IncludeOption.WholeChain)]
+        [InlineData(X509IncludeOption.None)]
+        public static void NoTsaEku(X509IncludeOption includeOption)
+        {
+            CertLoader loader = Certificates.TlsClientServerCert;
+            DateTimeOffset referenceTime;
+
+            using (X509Certificate2 cert = loader.GetCertificate())
+            {
+                referenceTime = cert.NotAfter.AddDays(-1);
+            }
+
+            CustomBuild_CertMismatch(
+                loader,
+                referenceTime,
+                SigningCertificateOption.ValidHashNoName,
+                SigningCertificateOption.Omit,
+                includeOption: includeOption);
+        }
+
+        private static void CustomBuild_CertMatch(
+            CertLoader loader,
+            DateTimeOffset referenceTime,
+            SigningCertificateOption v1Option,
+            SigningCertificateOption v2Option,
+            HashAlgorithmName v2AlgorithmName = default,
+            X509IncludeOption includeOption = default,
+            SubjectIdentifierType identifierType = SubjectIdentifierType.IssuerAndSerialNumber)
+        {
+            byte[] tokenBytes = BuildCustomToken(
+                loader,
+                referenceTime,
+                v1Option,
+                v2Option,
+                v2AlgorithmName,
+                includeOption,
+                identifierType);
+
+            Rfc3161TimestampToken token;
+            Assert.True(Rfc3161TimestampToken.TryParse(tokenBytes, out int bytesRead, out token));
+
+            Assert.Equal(tokenBytes.Length, bytesRead);
+            Assert.NotNull(token);
+
+            Assert.Equal(referenceTime, token.TokenInfo.Timestamp);
+
+            using (X509Certificate2 cert = Certificates.ValidLookingTsaCert.GetCertificate())
+            {
+                Assert.True(token.CheckCertificate(cert));
+            }
+        }
+
+        private static void CustomBuild_CertMismatch(
+            CertLoader loader,
+            DateTimeOffset referenceTime,
+            SigningCertificateOption v1Option,
+            SigningCertificateOption v2Option,
+            HashAlgorithmName v2AlgorithmName = default,
+            X509IncludeOption includeOption = default,
+            SubjectIdentifierType identifierType = SubjectIdentifierType.IssuerAndSerialNumber)
+        {
+            byte[] tokenBytes = BuildCustomToken(
+                loader,
+                referenceTime,
+                v1Option,
+                v2Option,
+                v2AlgorithmName,
+                includeOption,
+                identifierType);
+
+            Rfc3161TimestampToken token;
+
+            bool willParse = includeOption == X509IncludeOption.None;
+
+            if (willParse && identifierType == SubjectIdentifierType.IssuerAndSerialNumber)
+            {
+                // Because IASN matches against the ESSCertId(V2) directly it will reject the token.
+
+                switch (v1Option)
+                {
+                    case SigningCertificateOption.ValidHashWithInvalidName:
+                    case SigningCertificateOption.ValidHashWithInvalidSerial:
+                    case SigningCertificateOption.InvalidHashWithInvalidName:
+                    case SigningCertificateOption.InvalidHashWithInvalidSerial:
+                        willParse = false;
+                        break;
+                }
+
+                switch (v2Option)
+                {
+                    case SigningCertificateOption.ValidHashWithInvalidName:
+                    case SigningCertificateOption.ValidHashWithInvalidSerial:
+                    case SigningCertificateOption.InvalidHashWithInvalidName:
+                    case SigningCertificateOption.InvalidHashWithInvalidSerial:
+                        willParse = false;
+                        break;
+                }
+            }
+
+            if (willParse)
+            {
+                Assert.True(Rfc3161TimestampToken.TryParse(tokenBytes, out int bytesRead, out token));
+                Assert.NotNull(token);
+                Assert.Equal(tokenBytes.Length, bytesRead);
+
+                using (X509Certificate2 cert = loader.GetCertificate())
+                {
+                    Assert.False(token.CheckCertificate(cert));
+                }
+            }
+            else
+            {
+                Assert.False(Rfc3161TimestampToken.TryParse(tokenBytes, out int bytesRead, out token));
+
+                Assert.Null(token);
+                Assert.Equal(0, bytesRead);
+            }
+        }
+        
+        private static byte[] BuildCustomToken(
+            CertLoader cert,
+            DateTimeOffset timestamp,
+            SigningCertificateOption v1Option,
+            SigningCertificateOption v2Option,
+            HashAlgorithmName v2DigestAlg=default,
+            X509IncludeOption includeOption=X509IncludeOption.ExcludeRoot,
+            SubjectIdentifierType identifierType=SubjectIdentifierType.IssuerAndSerialNumber)
+        {
+            long accuracyMicroSeconds = (long)(TimeSpan.FromMinutes(1).TotalMilliseconds * 1000);
+
+            byte[] serialNumber = BitConverter.GetBytes(DateTimeOffset.UtcNow.Ticks);
+            Array.Reverse(serialNumber);
+
+            Rfc3161TimestampTokenInfo info = new Rfc3161TimestampTokenInfo(
+                new Oid("0.0", "0.0"),
+                new Oid(Oids.Sha384),
+                new byte[384 / 8],
+                serialNumber,
+                timestamp,
+                accuracyMicroSeconds,
+                isOrdering: true);
+
+            ContentInfo contentInfo = new ContentInfo(new Oid(Oids.TstInfo, Oids.TstInfo), info.RawData);
+            SignedCms cms = new SignedCms(contentInfo);
+
+            using (X509Certificate2 tsaCert = cert.TryGetCertificateWithPrivateKey())
+            {
+                CmsSigner signer = new CmsSigner(identifierType, tsaCert)
+                {
+                    IncludeOption = includeOption
+                };
+
+                if (v1Option != SigningCertificateOption.Omit)
+                {
+                    ExpandOption(v1Option, out bool validHash, out bool skipIssuerSerial, out bool validName, out bool validSerial);
+
+                    // simple SigningCertificate
+                    byte[] signingCertificateV1Bytes =
+                        "301A3018301604140000000000000000000000000000000000000000".HexToByteArray();
+
+                    if (validHash)
+                    {
+                        using (SHA1 hasher = SHA1.Create())
+                        {
+                            byte[] hash = hasher.ComputeHash(tsaCert.RawData);
+
+                            Buffer.BlockCopy(
+                                hash,
+                                0,
+                                signingCertificateV1Bytes,
+                                signingCertificateV1Bytes.Length - hash.Length,
+                                hash.Length);
+                        }
+                    }
+
+                    if (!skipIssuerSerial)
+                    {
+                        byte[] footer = BuildIssuerAndSerialNumber(tsaCert, validName, validSerial);
+
+                        signingCertificateV1Bytes[1] += (byte)footer.Length;
+                        signingCertificateV1Bytes[3] += (byte)footer.Length;
+                        signingCertificateV1Bytes[5] += (byte)footer.Length;
+
+                        Assert.InRange(signingCertificateV1Bytes[1], 0, 127);
+
+                        signingCertificateV1Bytes = signingCertificateV1Bytes.Concat(footer).ToArray();
+                    }
+
+                    signer.SignedAttributes.Add(
+                        new AsnEncodedData("1.2.840.113549.1.9.16.2.12", signingCertificateV1Bytes));
+                }
+
+                if (v2Option != SigningCertificateOption.Omit)
+                {
+                    byte[] attrBytes;
+                    byte[] algBytes = Array.Empty<byte>();
+                    byte[] hashBytes;
+                    byte[] issuerNameBytes = Array.Empty<byte>();
+
+                    if (v2DigestAlg != default)
+                    {
+                        switch (v2DigestAlg.Name)
+                        {
+                            case "MD5":
+                                algBytes = "300C06082A864886F70D02050500".HexToByteArray();
+                                break;
+                            case "SHA1":
+                                algBytes = "300906052B0E03021A0500".HexToByteArray();
+                                break;
+                            case "SHA256":
+                                // Invalid under DER, because it's the default.
+                                algBytes = "300D06096086480165030402010500".HexToByteArray();
+                                break;
+                            case "SHA384":
+                                algBytes = "300D06096086480165030402020500".HexToByteArray();
+                                break;
+                            case "SHA512":
+                                algBytes = "300D06096086480165030402030500".HexToByteArray();
+                                break;
+                            default:
+                                throw new NotSupportedException(v2DigestAlg.Name);
+                        }
+                    }
+                    else
+                    {
+                        v2DigestAlg = HashAlgorithmName.SHA256;
+                    }
+
+                    hashBytes = tsaCert.GetCertHash(v2DigestAlg);
+
+                    ExpandOption(v2Option, out bool validHash, out bool skipIssuerSerial, out bool validName, out bool validSerial);
+
+                    if (!validHash)
+                    {
+                        hashBytes[0] ^= 0xFF;
+                    }
+
+                    if (!skipIssuerSerial)
+                    {
+                        issuerNameBytes = BuildIssuerAndSerialNumber(tsaCert, validName, validSerial);
+                    }
+
+                    // hashBytes hasn't been wrapped in an OCTET STRING yet, so add 2 more.
+                    int payloadSize = algBytes.Length + hashBytes.Length + issuerNameBytes.Length + 2;
+                    Assert.InRange(payloadSize, 0, 123);
+
+                    attrBytes = new byte[payloadSize + 6];
+
+                    int index = 0;
+
+                    // SEQUENCE (SigningCertificateV2)
+                    attrBytes[index++] = 0x30;
+                    attrBytes[index++] = (byte)(payloadSize + 4);
+
+                    // SEQUENCE OF => certs
+                    attrBytes[index++] = 0x30;
+                    attrBytes[index++] = (byte)(payloadSize + 2);
+
+                    // SEQUENCE (ESSCertIdV2)
+                    attrBytes[index++] = 0x30;
+                    attrBytes[index++] = (byte)payloadSize;
+
+                    Buffer.BlockCopy(algBytes, 0, attrBytes, index, algBytes.Length);
+                    index += algBytes.Length;
+
+                    // OCTET STRING (Hash)
+                    attrBytes[index++] = 0x04;
+                    attrBytes[index++] = (byte)hashBytes.Length;
+                    Buffer.BlockCopy(hashBytes, 0, attrBytes, index, hashBytes.Length);
+                    index += hashBytes.Length;
+
+                    Buffer.BlockCopy(issuerNameBytes, 0, attrBytes, index, issuerNameBytes.Length);
+
+                    signer.SignedAttributes.Add(
+                        new AsnEncodedData("1.2.840.113549.1.9.16.2.47", attrBytes));
+                }
+
+                cms.ComputeSignature(signer);
+            }
+
+            return cms.Encode();
+        }
+
+        private static byte[] BuildIssuerAndSerialNumber(X509Certificate2 tsaCert, bool validName, bool validSerial)
+        {
+            byte[] issuerNameBytes;
+
+            if (validName)
+            {
+                issuerNameBytes = tsaCert.IssuerName.RawData;
+            }
+            else
+            {
+                issuerNameBytes = new X500DistinguishedName("CN=No Match").RawData;
+            }
+
+            byte[] serialBytes = tsaCert.GetSerialNumber();
+
+            if (validSerial)
+            {
+                Array.Reverse(serialBytes);
+            }
+            else
+            {
+                // If the byte sequence was a palindrome it's still a match,
+                // so flip some bits.
+                serialBytes[0] ^= 0x7F;
+            }
+
+            if (issuerNameBytes.Length + serialBytes.Length > 80)
+            {
+                throw new NotSupportedException(
+                    "Issuer name and serial length are bigger than this code can handle");
+            }
+
+            // SEQUENCE
+            //   SEQUENCE
+            //     CONTEXT-SPECIFIC 4
+            //       [IssuerName]
+            //   INTEGER
+            //     [SerialNumber, big endian]
+
+            byte[] issuerAndSerialNumber = new byte[issuerNameBytes.Length + serialBytes.Length + 8];
+            issuerAndSerialNumber[0] = 0x30;
+            issuerAndSerialNumber[1] = (byte)(issuerAndSerialNumber.Length - 2);
+
+            issuerAndSerialNumber[2] = 0x30;
+            issuerAndSerialNumber[3] = (byte)(issuerNameBytes.Length + 2);
+
+            issuerAndSerialNumber[4] = 0xA4;
+            issuerAndSerialNumber[5] = (byte)(issuerNameBytes.Length);
+            Buffer.BlockCopy(issuerNameBytes, 0, issuerAndSerialNumber, 6, issuerNameBytes.Length);
+
+            issuerAndSerialNumber[issuerNameBytes.Length + 6] = 0x02;
+            issuerAndSerialNumber[issuerNameBytes.Length + 7] = (byte)serialBytes.Length;
+            Buffer.BlockCopy(serialBytes, 0, issuerAndSerialNumber, issuerNameBytes.Length + 8, serialBytes.Length);
+
+            return issuerAndSerialNumber;
+        }
+
+        private static void ExpandOption(
+            SigningCertificateOption option,
+            out bool validHash,
+            out bool skipIssuerSerial,
+            out bool validName,
+            out bool validSerial)
+        {
+            Assert.NotEqual(SigningCertificateOption.Omit, option);
+
+            validHash = option < SigningCertificateOption.InvalidHashNoName;
+
+            skipIssuerSerial =
+                option == SigningCertificateOption.ValidHashNoName ||
+                option == SigningCertificateOption.InvalidHashNoName;
+
+            if (skipIssuerSerial)
+            {
+                validName = validSerial = false;
+            }
+            else
+            {
+                validName =
+                    option == SigningCertificateOption.ValidHashWithName ||
+                    option == SigningCertificateOption.InvalidHashWithName ||
+                    option == SigningCertificateOption.ValidHashWithInvalidSerial ||
+                    option == SigningCertificateOption.InvalidHashWithInvalidSerial;
+
+                validSerial =
+                    option == SigningCertificateOption.ValidHashWithName ||
+                    option == SigningCertificateOption.InvalidHashWithName ||
+                    option == SigningCertificateOption.ValidHashWithInvalidName ||
+                    option == SigningCertificateOption.InvalidHashWithInvalidName;
+            }
+        }
+
+        public enum SigningCertificateOption
+        {
+            Omit,
+            ValidHashNoName,
+            ValidHashWithName,
+            ValidHashWithInvalidName,
+            ValidHashWithInvalidSerial,
+            InvalidHashNoName,
+            InvalidHashWithName,
+            InvalidHashWithInvalidName,
+            InvalidHashWithInvalidSerial,
         }
     }
 }

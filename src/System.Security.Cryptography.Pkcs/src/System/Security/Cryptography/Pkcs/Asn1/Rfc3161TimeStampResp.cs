@@ -17,7 +17,7 @@ namespace System.Security.Cryptography.Pkcs.Asn1
     [StructLayout(LayoutKind.Sequential)]
     internal struct PkiStatusInfo
     {
-        public PkiStatus Status;
+        public int Status;
 
         [OptionalValue]
         [AnyValue]
