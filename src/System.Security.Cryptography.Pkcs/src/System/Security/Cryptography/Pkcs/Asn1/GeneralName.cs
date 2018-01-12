@@ -11,37 +11,37 @@ namespace System.Security.Cryptography.Pkcs.Asn1
     [StructLayout(LayoutKind.Sequential)]
     internal struct GeneralName
     {
-        [ExpectedTag(0)]
+        [ExpectedTag(0, ExplicitTag = true)]
         internal OtherName? OtherName;
 
-        [ExpectedTag(1)]
+        [ExpectedTag(1, ExplicitTag = true)]
         [IA5String]
         internal string Rfc822Name;
 
-        [ExpectedTag(2)]
+        [ExpectedTag(2, ExplicitTag = true)]
         [IA5String]
         internal string DnsName;
 
-        [ExpectedTag(3)]
+        [ExpectedTag(3, ExplicitTag = true)]
         [AnyValue]
         internal ReadOnlyMemory<byte>? X400Address;
 
-        [ExpectedTag(4)]
+        [ExpectedTag(4, ExplicitTag = true)]
         [AnyValue]
         internal ReadOnlyMemory<byte>? DirectoryName;
 
-        [ExpectedTag(5)]
+        [ExpectedTag(5, ExplicitTag = true)]
         internal EdiPartyName? EdiPartyName;
 
-        [ExpectedTag(6)]
+        [ExpectedTag(6, ExplicitTag = true)]
         [IA5String]
         internal string Uri;
 
-        [ExpectedTag(7)]
+        [ExpectedTag(7, ExplicitTag = true)]
         [OctetString]
         internal ReadOnlyMemory<byte>? IPAddress;
 
-        [ExpectedTag(8)]
+        [ExpectedTag(8, ExplicitTag = true)]
         [ObjectIdentifier]
         internal string RegisteredId;
     }
