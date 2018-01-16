@@ -55,22 +55,20 @@ namespace System.Security.Cryptography.Asn1
                     Buffer.BlockCopy(_buffer, 0, newBytes, 0, _offset);
                 }
 #else
+                // Allocate in 1k chunks rather than a lot of "grow a little and copy".
                 const int BlockSize = 1024;
-                // While the ArrayPool may have similar logic, make sure we don't run into a lot of
-                // "grow a little" by asking in 1k steps.
                 int blocks = checked(_offset + pendingCount + (BlockSize - 1)) / BlockSize;
-                byte[] newBytes = ArrayPool<byte>.Shared.Rent(BlockSize * blocks);
+                byte[] newBytes = new byte[BlockSize * blocks];
 
                 if (_buffer != null)
                 {
                     Buffer.BlockCopy(_buffer, 0, newBytes, 0, _offset);
                     Array.Clear(_buffer, 0, _offset);
-                    ArrayPool<byte>.Shared.Return(_buffer);
                 }
 #endif
 
 #if DEBUG
-                // Ensure no "implicit 0" is happening
+                // Ensure no "implicit 0" is happening, in case pooling gets used
                 for (int i = _offset; i < newBytes.Length; i++)
                 {
                     newBytes[i] ^= 0xFF;
