@@ -31,7 +31,6 @@ internal static partial class Interop
         [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_EvpMdSize")]
         internal extern static int EvpMdSize(IntPtr md);
 
-
         [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_EvpMd5")]
         internal extern static IntPtr EvpMd5();
 

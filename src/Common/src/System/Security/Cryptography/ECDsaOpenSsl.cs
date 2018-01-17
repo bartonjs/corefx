@@ -15,10 +15,6 @@ namespace System.Security.Cryptography
 #endif
         public sealed partial class ECDsaOpenSsl : ECDsa
         {
-            internal const string ECDSA_P256_OID_VALUE = "1.2.840.10045.3.1.7"; // Also called nistP256 or secP256r1
-            internal const string ECDSA_P384_OID_VALUE = "1.3.132.0.34"; // Also called nistP384 or secP384r1
-            internal const string ECDSA_P521_OID_VALUE = "1.3.132.0.35"; // Also called nistP521or secP521r1
-
             private Lazy<SafeEcKeyHandle> _key;
 
             /// <summary>
@@ -228,29 +224,7 @@ namespace System.Security.Cryptography
                 }
             }
 
-            private SafeEcKeyHandle GenerateKeyLazy()
-            {
-                string oid = null;
-                switch (KeySize)
-                {
-                    case 256: oid = ECDSA_P256_OID_VALUE; break;
-                    case 384: oid = ECDSA_P384_OID_VALUE; break;
-                    case 521: oid = ECDSA_P521_OID_VALUE; break;
-                    default:
-                        // Only above three sizes supported for backwards compatibility; named curves should be used instead
-                        throw new InvalidOperationException(SR.Cryptography_InvalidKeySize);
-                }
-
-                SafeEcKeyHandle key = Interop.Crypto.EcKeyCreateByOid(oid);
-
-                if (key == null || key.IsInvalid)
-                    throw new PlatformNotSupportedException(string.Format(SR.Cryptography_CurveNotSupported, oid));
-
-                if (!Interop.Crypto.EcKeyGenerateKey(key))
-                    throw Interop.Crypto.CreateOpenSslCryptographicException();
-
-                return key;
-            }
+            private SafeEcKeyHandle GenerateKeyLazy() => ECOpenSsl.GenerateKeyByKeySize(KeySize);
 
             private void FreeKey()
             {
@@ -274,7 +248,45 @@ namespace System.Security.Cryptography
 
                 _key = new Lazy<SafeEcKeyHandle>(newKey);
             }
-        }
+
+            /// <summary>
+            ///         ImportParameters will replace the existing key that ECDsaOpenSsl is working with by creating a
+            ///         new key. If the parameters contains only Q, then only a public key will be imported.
+            ///         If the parameters also contains D, then a full key pair will be imported. 
+            ///         The parameters Curve value specifies the type of the curve to import.
+            /// </summary>
+            /// <param name="parameters">The curve parameters.</param>
+            /// <exception cref="CryptographicException">
+            ///     if <paramref name="parameters" /> does not contain valid values.
+            /// </exception>
+            /// <exception cref="NotSupportedException">
+            ///     if <paramref name="parameters" /> references a curve that cannot be imported.
+            /// </exception>
+            /// <exception cref="PlatformNotSupportedException">
+            ///     if <paramref name="parameters" /> references a curve that is not supported by this platform.
+            /// </exception>
+            public override void ImportParameters(ECParameters parameters) => SetKey(ECOpenSsl.ImportParameters(parameters));
+
+            /// <summary>
+            ///     Exports the key and explicit curve parameters used by the ECC object into an <see cref="ECParameters"/> object.
+            /// </summary>
+            /// <exception cref="CryptographicException">
+            ///     if there was an issue obtaining the curve values.
+            /// </exception>
+            /// <returns>The key and explicit curve parameters used by the ECC object.</returns>
+            public override ECParameters ExportExplicitParameters(bool includePrivateParameters) => ECOpenSsl.ExportExplicitParameters(_key.Value, includePrivateParameters);
+
+            /// <summary>
+            ///     Exports the key used by the ECC object into an <see cref="ECParameters"/> object.
+            ///     If the curve has a name, the Curve property will contain named curve parameters otherwise it will contain explicit parameters.
+            /// </summary>
+            /// <exception cref="CryptographicException">
+            ///     if there was an issue obtaining the curve values.
+            /// </exception>
+            /// <returns>The key and named curve parameters used by the ECC object.</returns>
+            public override ECParameters ExportParameters(bool includePrivateParameters) => ECOpenSsl.ExportParameters(_key.Value, includePrivateParameters);
+
+    }
 #if INTERNAL_ASYMMETRIC_IMPLEMENTATIONS
     }
 #endif

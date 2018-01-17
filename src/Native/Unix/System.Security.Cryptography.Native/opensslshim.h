@@ -192,6 +192,11 @@ void SSL_get0_alpn_selected(const SSL* ssl, const unsigned char** protocol, unsi
     PER_FUNCTION_BLOCK(EVP_MD_CTX_create, true) \
     PER_FUNCTION_BLOCK(EVP_MD_CTX_destroy, true) \
     PER_FUNCTION_BLOCK(EVP_MD_size, true) \
+    PER_FUNCTION_BLOCK(EVP_PKEY_CTX_free, true) \
+    PER_FUNCTION_BLOCK(EVP_PKEY_CTX_new, true) \
+    PER_FUNCTION_BLOCK(EVP_PKEY_derive_set_peer, true) \
+    PER_FUNCTION_BLOCK(EVP_PKEY_derive_init, true) \
+    PER_FUNCTION_BLOCK(EVP_PKEY_derive, true) \
     PER_FUNCTION_BLOCK(EVP_PKEY_free, true) \
     PER_FUNCTION_BLOCK(EVP_PKEY_get1_DSA, true) \
     PER_FUNCTION_BLOCK(EVP_PKEY_get1_EC_KEY, true) \
@@ -484,6 +489,11 @@ FOR_ALL_OPENSSL_FUNCTIONS
 #define EVP_MD_CTX_create EVP_MD_CTX_create_ptr
 #define EVP_MD_CTX_destroy EVP_MD_CTX_destroy_ptr
 #define EVP_MD_size EVP_MD_size_ptr
+#define EVP_PKEY_CTX_free EVP_PKEY_CTX_free_ptr
+#define EVP_PKEY_CTX_new EVP_PKEY_CTX_new_ptr
+#define EVP_PKEY_derive_set_peer EVP_PKEY_derive_set_peer_ptr
+#define EVP_PKEY_derive_init EVP_PKEY_derive_init_ptr
+#define EVP_PKEY_derive EVP_PKEY_derive_ptr
 #define EVP_PKEY_free EVP_PKEY_free_ptr
 #define EVP_PKEY_get1_DSA EVP_PKEY_get1_DSA_ptr
 #define EVP_PKEY_get1_EC_KEY EVP_PKEY_get1_EC_KEY_ptr

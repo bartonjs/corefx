@@ -8,15 +8,15 @@ namespace System.Security.Cryptography
 {
     public partial struct ECCurve
     {
+        private const string ECDSA_P256_OID_VALUE = "1.2.840.10045.3.1.7"; // nistP256 or secP256r1
+        private const string ECDSA_P384_OID_VALUE = "1.3.132.0.34"; // nistP384 or secP384r1
+        private const string ECDSA_P521_OID_VALUE = "1.3.132.0.35"; // nistP521 or secP521r1
+
         /// <summary>
         /// Factory class for creating named curves.
         /// </summary>
         public static class NamedCurves
         {
-            private const string ECDSA_P256_OID_VALUE = "1.2.840.10045.3.1.7"; // nistP256 or secP256r1
-            private const string ECDSA_P384_OID_VALUE = "1.3.132.0.34"; // nistP384 or secP384r1
-            private const string ECDSA_P521_OID_VALUE = "1.3.132.0.35"; // nistP521 or secP521r1
-
             public static ECCurve brainpoolP160r1
             {
                 get
