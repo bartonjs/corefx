@@ -13,7 +13,7 @@ namespace System.Security.Cryptography
         internal const string ECDSA_P384_OID_VALUE = "1.3.132.0.34"; // Also called nistP384 or secP384r1
         internal const string ECDSA_P521_OID_VALUE = "1.3.132.0.35"; // Also called nistP521or secP521r1
 
-        public static SafeEcKeyHandle ImportParameters(ECParameters parameters)
+        public void ImportParameters(ECParameters parameters)
         {
             SafeEcKeyHandle key;
 
@@ -33,16 +33,21 @@ namespace System.Security.Cryptography
             }
             else
             {
-                throw new PlatformNotSupportedException(string.Format(SR.Cryptography_CurveNotSupported, parameters.Curve.CurveType.ToString()));
+                throw new PlatformNotSupportedException(
+                    string.Format(SR.Cryptography_CurveNotSupported, parameters.Curve.CurveType.ToString()));
             }
 
             if (key == null || key.IsInvalid)
+            {
                 throw Interop.Crypto.CreateOpenSslCryptographicException();
+            }
 
-            return key;
+            FreeKey();
+            _key = new Lazy<SafeEcKeyHandle>(key);
         }
 
-        public static ECParameters ExportExplicitParameters(SafeEcKeyHandle currentKey, bool includePrivateParameters) => ExportExplicitCurveParameters(currentKey, includePrivateParameters);
+        public static ECParameters ExportExplicitParameters(SafeEcKeyHandle currentKey, bool includePrivateParameters) =>
+            ExportExplicitCurveParameters(currentKey, includePrivateParameters);
 
         public static ECParameters ExportParameters(SafeEcKeyHandle currentKey, bool includePrivateParameters)
         {
@@ -62,23 +67,14 @@ namespace System.Security.Cryptography
         {
             CheckInvalidKey(key);
 
-            //ECParameters parameters = Interop.Crypto.GetECKeyParameters(key, includePrivateParameters);
+            ECParameters parameters = Interop.Crypto.GetECKeyParameters(key, includePrivateParameters);
 
-            // bool hasPrivateKey = (parameters.D != null);
-            // if (hasPrivateKey != includePrivateParameters)
-            // {
-                // throw new CryptographicException(SR.Cryptography_CSP_NoPrivateKey);
-            // }
-            
-            
-            //try
-            //{
-                ECParameters parameters = Interop.Crypto.GetECKeyParameters(key, includePrivateParameters);
-            //}
-            //catch (Exception e)
-            //{
-             //   throw new CryptographicException(e);
-            //}
+            bool hasPrivateKey = (parameters.D != null);
+
+            if (hasPrivateKey != includePrivateParameters)
+            {
+                throw new CryptographicException(SR.Cryptography_CSP_NoPrivateKey);
+            }
 
             // Assign Curve
             string keyOidValueName = Interop.Crypto.EcKeyGetCurveName(key);
@@ -91,19 +87,13 @@ namespace System.Security.Cryptography
         {
             CheckInvalidKey(key);
 
-            //try
-            //{
-                ECParameters parameters = Interop.Crypto.GetECCurveParameters(key, includePrivateParameters);
-            //}
-            //catch (Interop.Crypto.OpenSslCryptographicException e)
-            //{
-            //    throw new CryptographicException(e);
-            //}//
-            // bool hasPrivateKey = (parameters.D != null);
-            // if (hasPrivateKey != includePrivateParameters)
-            // {
-                // throw new CryptographicException(SR.Cryptography_CSP_NoPrivateKey);
-            // }
+            ECParameters parameters = Interop.Crypto.GetECCurveParameters(key, includePrivateParameters);
+
+            bool hasPrivateKey = (parameters.D != null);
+            if (hasPrivateKey != includePrivateParameters)
+            {
+                throw new CryptographicException(SR.Cryptography_CSP_NoPrivateKey);
+            }
 
             return parameters;
         }

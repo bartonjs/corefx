@@ -23,7 +23,7 @@ namespace System.Security.Cryptography
         {
             if (algorithm == null)
             {
-                throw new ArgumentNullException("algorithm");
+                throw new ArgumentNullException(nameof(algorithm));
             }
 
             return CryptoConfig.CreateFromName(algorithm) as ECDiffieHellman;

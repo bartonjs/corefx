@@ -24,9 +24,9 @@ namespace System.Security.Cryptography
                 Contract.Ensures(Contract.Result<byte[]>() != null);
 
                 if (otherPartyPublicKey == null)
-                    throw new ArgumentNullException("otherPartyPublicKey");
+                    throw new ArgumentNullException(nameof(otherPartyPublicKey));
                 if (string.IsNullOrEmpty(hashAlgorithm.Name))
-                    throw new ArgumentException(SR.Cryptography_HashAlgorithmNameNullOrEmpty, "hashAlgorithm");
+                    throw new ArgumentException(SR.Cryptography_HashAlgorithmNameNullOrEmpty, nameof(hashAlgorithm));
 
                 using (SafeNCryptSecretHandle secretAgreement = DeriveSecretAgreementHandle(otherPartyPublicKey))
                 {
@@ -49,9 +49,9 @@ namespace System.Security.Cryptography
                 Contract.Ensures(Contract.Result<byte[]>() != null);
 
                 if (otherPartyPublicKey == null)
-                    throw new ArgumentNullException("otherPartyPublicKey");
+                    throw new ArgumentNullException(nameof(otherPartyPublicKey));
                 if (string.IsNullOrEmpty(hashAlgorithm.Name))
-                    throw new ArgumentException(SR.Cryptography_HashAlgorithmNameNullOrEmpty, "hashAlgorithm");
+                    throw new ArgumentException(SR.Cryptography_HashAlgorithmNameNullOrEmpty, nameof(hashAlgorithm));
 
                 using (SafeNCryptSecretHandle secretAgreement = DeriveSecretAgreementHandle(otherPartyPublicKey))
                 {
@@ -74,11 +74,11 @@ namespace System.Security.Cryptography
                 Contract.Ensures(Contract.Result<byte[]>() != null);
 
                 if (otherPartyPublicKey == null)
-                    throw new ArgumentNullException("otherPartyPublicKey");
+                    throw new ArgumentNullException(nameof(otherPartyPublicKey));
                 if (prfLabel == null)
-                    throw new ArgumentNullException("prfLabel");
+                    throw new ArgumentNullException(nameof(prfLabel));
                 if (prfSeed == null)
-                    throw new ArgumentNullException("prfSeed");
+                    throw new ArgumentNullException(nameof(prfSeed));
 
                 using (SafeNCryptSecretHandle secretAgreement = DeriveSecretAgreementHandle(otherPartyPublicKey))
                 {

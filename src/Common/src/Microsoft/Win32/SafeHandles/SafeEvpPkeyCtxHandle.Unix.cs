@@ -9,21 +9,21 @@ using System.Runtime.InteropServices;
 namespace Microsoft.Win32.SafeHandles
 {
     [SecurityCritical]
-    internal sealed class SafeEvpPkeyCtxHandle : SafeHandle
+    internal sealed class SafeEvpPKeyCtxHandle : SafeHandle
     {
-        private SafeEvpPkeyCtxHandle() : 
+        private SafeEvpPKeyCtxHandle() : 
             base(IntPtr.Zero, ownsHandle: true)
         {
         }
 
-        public SafeEvpPkeyCtxHandle(IntPtr handle, bool ownsHandle)
+        public SafeEvpPKeyCtxHandle(IntPtr handle, bool ownsHandle)
             : base(handle, ownsHandle)
         {
         }
 
         protected override bool ReleaseHandle()
         {
-            Interop.Crypto.EvpPkeyCtxDestroy(handle);
+            Interop.Crypto.EvpPKeyCtxDestroy(handle);
             SetHandle(IntPtr.Zero);
             return true;
         }

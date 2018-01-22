@@ -76,7 +76,7 @@ namespace System.Security.Cryptography
 
                 if (otherPartyPublicKey == null)
                 {
-                    throw new ArgumentNullException("otherPartyPublicKey");
+                    throw new ArgumentNullException(nameof(otherPartyPublicKey));
                 }
 
                 ECDiffieHellmanCngPublicKey otherKey = otherPartyPublicKey as ECDiffieHellmanCngPublicKey;

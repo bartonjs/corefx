@@ -15,7 +15,7 @@ namespace System.Security.Cryptography
 #endif
         public sealed partial class ECDsaOpenSsl : ECDsa
         {
-            private Lazy<SafeEcKeyHandle> _key;
+            private ECOpenSsl _key;
 
             /// <summary>
             /// Create an ECDsaOpenSsl algorithm with a named curve.
@@ -24,7 +24,8 @@ namespace System.Security.Cryptography
             /// <exception cref="ArgumentNullException">if <paramref name="curve" /> is null.</exception>
             public ECDsaOpenSsl(ECCurve curve)
             {
-                GenerateKey(curve);
+                _key = new ECOpenSsl(curve);
+                ForceSetKeySize(_key.KeySize);
             }
 
             /// <summary>
@@ -42,6 +43,7 @@ namespace System.Security.Cryptography
             public ECDsaOpenSsl(int keySize)
             {
                 KeySize = keySize;
+                _key = new ECOpenSsl(this);
             }
 
             /// <summary>
@@ -162,7 +164,7 @@ namespace System.Security.Cryptography
             {
                 if (disposing)
                 {
-                    FreeKey();
+                    _key.Dispose();
                 }
 
                 base.Dispose(disposing);
@@ -182,71 +184,18 @@ namespace System.Security.Cryptography
                     // Set the KeySize before FreeKey so that an invalid value doesn't throw away the key
                     base.KeySize = value;
 
-                    FreeKey();
-                    _key = new Lazy<SafeEcKeyHandle>(GenerateKeyLazy);
+                    _key?.Dispose();
+                    _key = new ECOpenSsl(this);
                 }
             }
 
             public override void GenerateKey(ECCurve curve)
             {
-                curve.Validate();
-                FreeKey();
+                _key.GenerateKey(curve);
 
-                if (curve.IsNamed)
-                {
-                    string oid = null;
-                    // Use oid Value first if present, otherwise FriendlyName because Oid maintains a hard-coded
-                    // cache that may have different casing for FriendlyNames than OpenSsl
-                    oid = !string.IsNullOrEmpty(curve.Oid.Value) ? curve.Oid.Value : curve.Oid.FriendlyName;
-
-                    SafeEcKeyHandle key = Interop.Crypto.EcKeyCreateByOid(oid);
-
-                    if (key == null || key.IsInvalid)
-                        throw new PlatformNotSupportedException(string.Format(SR.Cryptography_CurveNotSupported, oid));
-
-                    if (!Interop.Crypto.EcKeyGenerateKey(key))
-                        throw Interop.Crypto.CreateOpenSslCryptographicException();
-
-                    SetKey(key);
-                }
-                else if (curve.IsExplicit)
-                {
-                    SafeEcKeyHandle key = Interop.Crypto.EcKeyCreateByExplicitCurve(curve);
-
-                    if (!Interop.Crypto.EcKeyGenerateKey(key))
-                        throw Interop.Crypto.CreateOpenSslCryptographicException();
-
-                    SetKey(key);
-                }
-                else
-                {
-                    throw new PlatformNotSupportedException(string.Format(SR.Cryptography_CurveNotSupported, curve.CurveType.ToString()));
-                }
-            }
-
-            private SafeEcKeyHandle GenerateKeyLazy() => ECOpenSsl.GenerateKeyByKeySize(KeySize);
-
-            private void FreeKey()
-            {
-                if (_key != null)
-                {
-                    if (_key.IsValueCreated)
-                    {
-                        SafeEcKeyHandle handle = _key.Value;
-                        if (handle != null)
-                            handle.Dispose();
-                    }
-                    _key = null;
-                }
-            }
-
-            private void SetKey(SafeEcKeyHandle newKey)
-            {
                 // Use ForceSet instead of the property setter to ensure that LegalKeySizes doesn't interfere
                 // with the already loaded key.
-                ForceSetKeySize(Interop.Crypto.EcKeyGetSize(newKey));
-
-                _key = new Lazy<SafeEcKeyHandle>(newKey);
+                ForceSetKeySize(_key.KeySize);
             }
 
             /// <summary>
@@ -265,7 +214,11 @@ namespace System.Security.Cryptography
             /// <exception cref="PlatformNotSupportedException">
             ///     if <paramref name="parameters" /> references a curve that is not supported by this platform.
             /// </exception>
-            public override void ImportParameters(ECParameters parameters) => SetKey(ECOpenSsl.ImportParameters(parameters));
+            public override void ImportParameters(ECParameters parameters)
+            {
+                _key.ImportParameters(parameters);
+                ForceSetKeySize(_key.KeySize);
+            }
 
             /// <summary>
             ///     Exports the key and explicit curve parameters used by the ECC object into an <see cref="ECParameters"/> object.
@@ -274,17 +227,20 @@ namespace System.Security.Cryptography
             ///     if there was an issue obtaining the curve values.
             /// </exception>
             /// <returns>The key and explicit curve parameters used by the ECC object.</returns>
-            public override ECParameters ExportExplicitParameters(bool includePrivateParameters) => ECOpenSsl.ExportExplicitParameters(_key.Value, includePrivateParameters);
+            public override ECParameters ExportExplicitParameters(bool includePrivateParameters) =>
+                ECOpenSsl.ExportExplicitParameters(_key.Value, includePrivateParameters);
 
             /// <summary>
             ///     Exports the key used by the ECC object into an <see cref="ECParameters"/> object.
-            ///     If the curve has a name, the Curve property will contain named curve parameters otherwise it will contain explicit parameters.
+            ///     If the curve has a name, the Curve property will contain named curve parameters
+            ///     otherwise it will contain explicit parameters.
             /// </summary>
             /// <exception cref="CryptographicException">
             ///     if there was an issue obtaining the curve values.
             /// </exception>
             /// <returns>The key and named curve parameters used by the ECC object.</returns>
-            public override ECParameters ExportParameters(bool includePrivateParameters) => ECOpenSsl.ExportParameters(_key.Value, includePrivateParameters);
+            public override ECParameters ExportParameters(bool includePrivateParameters) =>
+                ECOpenSsl.ExportParameters(_key.Value, includePrivateParameters);
 
     }
 #if INTERNAL_ASYMMETRIC_IMPLEMENTATIONS

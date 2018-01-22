@@ -111,6 +111,7 @@
   <ItemGroup Condition=" '$(TargetsWindows)' == 'true' and '$(IsPartialFacadeAssembly)' != 'true'">
     <Compile Include="System\Security\Cryptography\CngKeyLite.cs" />
     <Compile Include="System\Security\Cryptography\DSACng.cs" />
+    <Compile Include="System\Security\Cryptography\ECCngKey.cs" />
     <Compile Include="System\Security\Cryptography\ECDsaCng.cs" />
     <Compile Include="System\Security\Cryptography\ECDsaCng.Key.cs" />
     <Compile Include="System\Security\Cryptography\ECDiffieHellman.Create.Cng.cs" />
@@ -409,8 +410,11 @@
     <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDsaOpenSsl.cs">
       <Link>Common\System\Security\Cryptography\ECDsaOpenSsl.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\ECOpenSsl.cs">
+      <Link>Common\System\Security\Cryptography\ECOpenSsl.cs</Link>
+    </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\ECOpenSsl.ImportExport.cs">
-      <Link>Common\System\Security\Cryptography\ECDiffieHellmanOpenSsl.ImportExport.cs</Link>
+      <Link>Common\System\Security\Cryptography\ECOpenSsl.ImportExport.cs</Link>
     </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\RSAOpenSsl.cs">
       <Link>Common\System\Security\Cryptography\RSAOpenSsl.cs</Link>

@@ -2,9 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Internal.Cryptography;
 using Microsoft.Win32.SafeHandles;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace System.Security.Cryptography
 {
@@ -12,10 +12,9 @@ namespace System.Security.Cryptography
     internal static partial class ECDiffieHellmanImplementation
     {
 #endif
-        internal sealed partial class ECDiffieHellmanOpenSslPublicKey : ECDiffieHellmanPublicKey
+        internal sealed class ECDiffieHellmanOpenSslPublicKey : ECDiffieHellmanPublicKey
         {
-            private Lazy<SafeEcKeyHandle> _key;
-            internal int _keySize;
+            private readonly ECOpenSsl _key;
 
             /// <summary>
             /// Create an ECDiffieHellmanOpenSslPublicKey from an <see cref="SafeEvpPKeyHandle"/> whose value is an existing
@@ -34,35 +33,20 @@ namespace System.Security.Cryptography
 
                 // If ecKey is valid it has already been up-ref'd, so we can just use this handle as-is.
                 SafeEcKeyHandle key = Interop.Crypto.EvpPkeyGetEcKey(pkeyHandle);
+
                 if (key.IsInvalid)
                 {
                     key.Dispose();
                     throw Interop.Crypto.CreateOpenSslCryptographicException();
                 }
 
-                SetKey(key);
+                _key = new ECOpenSsl(key);
             }
 
-            /// <summary>
-            /// Create an ECDiffieHellmanOpenSslPublicKey from an existing <see cref="IntPtr"/> whose value is an
-            /// existing OpenSSL <c>EC_KEY*</c>.
-            /// </summary>
-            /// <remarks>
-            /// This method will increase the reference count of the <c>EC_KEY*</c>, the caller should
-            /// continue to manage the lifetime of their reference.
-            /// </remarks>
-            /// <param name="handle">A pointer to an OpenSSL <c>EC_KEY*</c></param>
-            /// <exception cref="ArgumentException"><paramref name="handle" /> is invalid</exception>
-            public ECDiffieHellmanOpenSslPublicKey(IntPtr handle)
+            internal ECDiffieHellmanOpenSslPublicKey(ECParameters parameters)
             {
-                if (handle == IntPtr.Zero)
-                    throw new ArgumentException(SR.Cryptography_OpenInvalidHandle, nameof(handle));
-
-                SafeEcKeyHandle ecKeyHandle = SafeEcKeyHandle.DuplicateHandle(handle);
-                SetKey(ecKeyHandle);
+                _key = new ECOpenSsl(parameters);
             }
-
-            internal ECDiffieHellmanOpenSslPublicKey(int keySize) => SetKey(keySize);
 
             public override string ToXmlString()
             {
@@ -78,18 +62,21 @@ namespace System.Security.Cryptography
                 throw new PlatformNotSupportedException();
             }
 
-            internal int ImportParameters(ECParameters parameters) => SetKey(ECOpenSsl.ImportParameters(parameters));
-            public override ECParameters ExportExplicitParameters() => ECOpenSsl.ExportExplicitParameters(_key.Value, includePrivateParameters: false);
-            internal ECParameters ExportExplicitParameters(bool includePrivateParameters) => ECOpenSsl.ExportExplicitParameters(_key.Value, includePrivateParameters);
-            public override ECParameters ExportParameters() => ECOpenSsl.ExportParameters(_key.Value, includePrivateParameters: false);
-            internal ECParameters ExportParameters(bool includePrivateParameters) => ECOpenSsl.ExportParameters(_key.Value, includePrivateParameters);
-            internal string GetCurveName() => Interop.Crypto.EcKeyGetCurveName(_key.Value);
+            public override ECParameters ExportExplicitParameters() =>
+                ECOpenSsl.ExportExplicitParameters(_key.Value, includePrivateParameters: false);
+
+            public override ECParameters ExportParameters() =>
+                ECOpenSsl.ExportParameters(_key.Value, includePrivateParameters: false);
+
+            internal bool HasCurveName => Interop.Crypto.EcKeyHasCurveName(_key.Value);
+
+            internal int KeySize => _key.KeySize;
 
             protected override void Dispose(bool disposing)
             {
                 if (disposing)
                 {
-                    FreeKey();
+                    _key?.Dispose();
                 }
 
                 base.Dispose(disposing);
@@ -102,12 +89,7 @@ namespace System.Security.Cryptography
             /// <returns>A SafeHandle for the EC_KEY key in OpenSSL</returns>
             internal SafeEvpPKeyHandle DuplicateKeyHandle()
             {
-                if (_key == null)
-                    throw new ObjectDisposedException("TODO this");
-
                 SafeEcKeyHandle currentKey = _key.Value;
-                Debug.Assert(currentKey != null, "null TODO");
-
                 SafeEvpPKeyHandle pkeyHandle = Interop.Crypto.EvpPkeyCreate();
 
                 try
@@ -127,39 +109,6 @@ namespace System.Security.Cryptography
                     pkeyHandle.Dispose();
                     throw;
                 }
-            }
-
-            private SafeEcKeyHandle GenerateKeyLazy() => ECOpenSsl.GenerateKeyByKeySize(_keySize);
-
-            internal void FreeKey()
-            {
-                if (_key != null)
-                {
-                    if (_key.IsValueCreated)
-                    {
-                        SafeEcKeyHandle handle = _key.Value;
-                        if (handle != null)
-                            handle.Dispose();
-                    }
-                    _key = null;
-                }
-            }
-
-            internal int SetKey(SafeEcKeyHandle newKey)
-            {
-                _keySize = Interop.Crypto.EcKeyGetSize(newKey);
-                _key = new Lazy<SafeEcKeyHandle>(newKey);
-                return _keySize;
-            }
-
-            internal void SetKey(int keySize)
-            {
-                if (_keySize == keySize)
-                    return;
-
-                FreeKey();
-                _keySize = keySize;
-                _key = new Lazy<SafeEcKeyHandle>(GenerateKeyLazy);
             }
         }
 #if INTERNAL_ASYMMETRIC_IMPLEMENTATIONS

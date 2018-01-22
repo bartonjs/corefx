@@ -2,9 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
-using System.Security.Cryptography;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.Tests;
 using Test.Cryptography;
 using Xunit;
@@ -17,10 +15,6 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
     // KAS_ECC_CDH_PrimitiveTest.txt
     public partial class ECDiffieHellmanTests
     {
-        private static HashAlgorithm s_sha256 = SHA256.Create();
-        private static HashAlgorithm s_sha384 = SHA384.Create();
-        private static HashAlgorithm s_sha512 = SHA512.Create();
-
         [Fact]
         public static void ValidateNistP256_0()
         {
@@ -154,11 +148,12 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
                 iut.ImportParameters(iutParameters);
                 cavs.ImportParameters(cavsParameters);
 
-                using (ECDiffieHellmanPublicKey iutPublic = iut.PublicKey)
                 using (ECDiffieHellmanPublicKey cavsPublic = cavs.PublicKey)
+                using (HashAlgorithm sha256 = SHA256.Create())
+                using (HashAlgorithm sha384 = SHA384.Create())
                 {
-                    Verify(iut, cavsPublic, s_sha256, HashAlgorithmName.SHA256, iutZ);
-                    Verify(iut, cavsPublic, s_sha384, HashAlgorithmName.SHA384, iutZ);
+                    Verify(iut, cavsPublic, sha256, HashAlgorithmName.SHA256, iutZ);
+                    Verify(iut, cavsPublic, sha384, HashAlgorithmName.SHA384, iutZ);
                 }
 
                 if (ECDiffieHellmanFactory.ExplicitCurvesSupported)
@@ -171,9 +166,39 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
                     // Support is entirely left up to the library.
                     // It was kind of surprising that it worked.
                     using (ECDiffieHellmanPublicKey cavsPublic = cavs.PublicKey)
+                    using (HashAlgorithm sha256 = SHA256.Create())
+                    using (HashAlgorithm sha512 = SHA512.Create())
                     {
-                        Verify(iut, cavsPublic, s_sha256, HashAlgorithmName.SHA256, iutZ);
-                        Verify(iut, cavsPublic, s_sha512, HashAlgorithmName.SHA512, iutZ);
+                        bool trySecondCase = true;
+
+                        try
+                        {
+                            Verify(iut, cavsPublic, sha256, HashAlgorithmName.SHA256, iutZ);
+                        }
+                        catch (CryptographicException)
+                        {
+                            // This is expected to work on Windows.
+                            // On Linux (via OpenSSL) it is less predictable, since it fails with
+                            // EVP_PKEY_derive_set_peer:different parameters if one key uses
+                            // the GFp_simple routines and another uses GFp_nist or GFp_mont (or,
+                            // one presumes, something custom from an HSM) even if they actually
+                            // represent the same curve.
+                            //
+                            // secp256r1 and secp521r1 both succeed this block, secp384r1 fails.
+                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                            {
+                                throw;
+                            }
+
+                            trySecondCase = false;
+                        }
+
+                        // If the first one failed, don't try the second.
+                        // If the first one passed, the second should, too.
+                        if (trySecondCase)
+                        {
+                            Verify(iut, cavsPublic, sha512, HashAlgorithmName.SHA512, iutZ);
+                        }
                     }
 
                     cavsParameters.Curve = explicitCurve;
@@ -181,9 +206,11 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
 
                     // Explicit, explicit; over the same curve.
                     using (ECDiffieHellmanPublicKey cavsPublic = cavs.PublicKey)
+                    using (HashAlgorithm sha384 = SHA384.Create())
+                    using (HashAlgorithm sha512 = SHA512.Create())
                     {
-                        Verify(iut, cavsPublic, s_sha384, HashAlgorithmName.SHA384, iutZ);
-                        Verify(iut, cavsPublic, s_sha512, HashAlgorithmName.SHA512, iutZ);
+                        Verify(iut, cavsPublic, sha384, HashAlgorithmName.SHA384, iutZ);
+                        Verify(iut, cavsPublic, sha512, HashAlgorithmName.SHA512, iutZ);
                     }
                 }
             }
@@ -198,7 +225,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         {
             byte[] result = iut.DeriveKeyFromHash(cavsPublic, zHashAlgorithm);
             byte[] hashedZ = zHasher.ComputeHash(iutZ);
-            Assert.Equal(hashedZ, result);
+            Assert.Equal(hashedZ.ByteArrayToHex(), result.ByteArrayToHex());
         }
     }
 }

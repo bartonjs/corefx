@@ -6,6 +6,7 @@ using System;
 using System.Diagnostics.Contracts;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using Internal.Cryptography;
 using Microsoft.Win32.SafeHandles;
 
 internal static partial class Interop
@@ -50,7 +51,7 @@ internal static partial class Interop
 
             if (error != ErrorCode.ERROR_SUCCESS)
             {
-                throw new CryptographicException((int)error);
+                throw error.ToCryptographicException();
             }
 
             return secretAgreement;

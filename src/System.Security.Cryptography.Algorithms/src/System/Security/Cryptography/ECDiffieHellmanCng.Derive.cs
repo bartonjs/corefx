@@ -27,7 +27,7 @@ namespace System.Security.Cryptography
             {
                 if (otherPartyPublicKey == null)
                 {
-                    throw new ArgumentNullException("otherPartyPublicKey");
+                    throw new ArgumentNullException(nameof(otherPartyPublicKey));
                 }
 
                 ECParameters otherPartyParameters = otherPartyPublicKey.ExportParameters();
@@ -37,11 +37,11 @@ namespace System.Security.Cryptography
                     string importedKeyAlgorithmGroup = CngKeyLite.GetPropertyAsString(otherPartyHandle, CngKeyLite.KeyPropertyName.AlgorithmGroup, CngPropertyOptions.None);
                     if (importedKeyAlgorithmGroup == null || importedKeyAlgorithmGroup != "ECDH")
                     {
-                        throw new ArgumentException(SR.Cryptography_ArgECDHRequiresECDHKey, "otherPartyPublicKey");
+                        throw new ArgumentException(SR.Cryptography_ArgECDHRequiresECDHKey, nameof(otherPartyPublicKey));
                     }
                     if (CngKeyLite.GetKeyLength(otherPartyHandle) != KeySize)
                     {
-                        throw new ArgumentException(SR.Cryptography_ArgECDHKeySizeMismatch, "otherPartyPublicKey");
+                        throw new ArgumentException(SR.Cryptography_ArgECDHKeySizeMismatch, nameof(otherPartyPublicKey));
                     }
 
                     using (SafeNCryptKeyHandle localHandle = GetDuplicatedKeyHandle())

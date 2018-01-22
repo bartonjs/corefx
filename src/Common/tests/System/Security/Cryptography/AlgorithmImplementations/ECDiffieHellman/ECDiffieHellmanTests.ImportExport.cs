@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Security.Cryptography;
 using System.Security.Cryptography.Tests;
 using Test.Cryptography;
 using Xunit;
@@ -37,6 +35,9 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         [Theory, MemberData("TestInvalidCurves")]
         public static void TestNamedCurvesNegative(CurveDef curveDef)
         {
+            if (!curveDef.Curve.IsNamed)
+                return;
+
             // An exception may be thrown during Create() if the Oid is bad, or later during native calls
             Assert.Throws<PlatformNotSupportedException>(() => ECDiffieHellmanFactory.Create(curveDef.Curve).ExportParameters(false));
         }
@@ -310,10 +311,22 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
                 return;
             }
 
-            using (ECDiffieHellman ecdsa = ECDiffieHellmanFactory.Create())
+            using (ECDiffieHellman ecdh = ECDiffieHellmanFactory.Create())
             {
                 ECParameters param = EccTestData.GetNistP256ExplicitTestData();
-                Assert.Throws<PlatformNotSupportedException>(() => ecdsa.ImportParameters(param));
+
+                Assert.Throws<PlatformNotSupportedException>(
+                    () =>
+                    {
+                        try
+                        {
+                            ecdh.ImportParameters(param);
+                        }
+                        catch (CryptographicException e)
+                        {
+                            throw new PlatformNotSupportedException("Converting exception", e);
+                        }
+                    });
             }
         }
 
@@ -336,7 +349,6 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         [Fact]
         public static void ExportIncludingPrivateOnPublicOnlyKey()
         {
-            Console.WriteLine("invcalid");
             ECParameters iutParameters = new ECParameters
             {
                 Curve = ECCurve.NamedCurves.nistP521,
@@ -353,12 +365,11 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
             {
                 iut.ImportParameters(iutParameters);
                 cavs.ImportParameters(iut.ExportParameters(false));
-                // Linux throws an Interop.Crypto.OpenSslCryptographicException : CryptographicException
+
                 Assert.ThrowsAny<CryptographicException>(() => cavs.ExportExplicitParameters(true));
                 Assert.ThrowsAny<CryptographicException>(() => cavs.ExportParameters(true));
 
                 using (ECDiffieHellmanPublicKey iutPublic = iut.PublicKey)
-                using (ECDiffieHellmanPublicKey cavsPublic = cavs.PublicKey)
                 {
                     Assert.ThrowsAny<CryptographicException>(() => cavs.DeriveKeyFromHash(iutPublic, HashAlgorithmName.SHA256));
                 }
