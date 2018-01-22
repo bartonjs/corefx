@@ -234,6 +234,7 @@ void SSL_get0_alpn_selected(const SSL* ssl, const unsigned char** protocol, unsi
     PER_FUNCTION_BLOCK(OBJ_txt2nid, true) \
     PER_FUNCTION_BLOCK(OBJ_txt2obj, true) \
     PER_FUNCTION_BLOCK(OPENSSL_add_all_algorithms_conf, true) \
+    PER_FUNCTION_BLOCK(OPENSSL_cleanse, true) \
     PER_FUNCTION_BLOCK(PEM_read_bio_PKCS7, true) \
     PER_FUNCTION_BLOCK(PEM_read_bio_X509_AUX, true) \
     PER_FUNCTION_BLOCK(PEM_read_bio_X509_CRL, true) \
@@ -531,6 +532,7 @@ FOR_ALL_OPENSSL_FUNCTIONS
 #define OBJ_txt2nid OBJ_txt2nid_ptr
 #define OBJ_txt2obj OBJ_txt2obj_ptr
 #define OPENSSL_add_all_algorithms_conf OPENSSL_add_all_algorithms_conf_ptr
+#define OPENSSL_cleanse OPENSSL_cleanse_ptr
 #define PEM_read_bio_PKCS7 PEM_read_bio_PKCS7_ptr
 #define PEM_read_bio_X509_AUX PEM_read_bio_X509_AUX_ptr
 #define PEM_read_bio_X509_CRL PEM_read_bio_X509_CRL_ptr
