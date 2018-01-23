@@ -529,6 +529,9 @@
     <Compile Include="$(CommonPath)\System\Security\Cryptography\DerSequenceReader.cs">
       <Link>Common\System\Security\Cryptography\DerSequenceReader.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDiffieHellmanDerivation.cs">
+      <Link>Common\System\Security\Cryptography\ECDiffieHellmanDerivation.cs</Link>
+    </Compile>
   </ItemGroup>
   <ItemGroup Condition="'$(IsPartialFacadeAssembly)' != 'true'">
     <Reference Include="System.Buffers" />

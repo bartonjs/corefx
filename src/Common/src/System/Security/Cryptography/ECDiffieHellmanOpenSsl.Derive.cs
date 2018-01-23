@@ -62,22 +62,12 @@ namespace System.Security.Cryptography
                 if (string.IsNullOrEmpty(hashAlgorithm.Name))
                     throw new ArgumentException(SR.Cryptography_HashAlgorithmNameNullOrEmpty, nameof(hashAlgorithm));
 
-                using (IncrementalHash hash = IncrementalHash.CreateHash(hashAlgorithm))
-                {
-                    if (secretPrepend != null)
-                    {
-                        hash.AppendData(secretPrepend);
-                    }
-
-                    DeriveSecretAgreement(otherPartyPublicKey, hash);
-
-                    if (secretAppend != null)
-                    {
-                        hash.AppendData(secretAppend);
-                    }
-
-                    return hash.GetHashAndReset();
-                }
+                return ECDiffieHellmanDerivation.DeriveKeyFromHash(
+                    otherPartyPublicKey,
+                    hashAlgorithm,
+                    secretPrepend,
+                    secretAppend,
+                    (pubKey, hasher) => DeriveSecretAgreement(pubKey, hasher));
             }
 
             public override byte[] DeriveKeyFromHmac(
@@ -87,50 +77,18 @@ namespace System.Security.Cryptography
                 byte[] secretPrepend,
                 byte[] secretAppend)
             {
-                Contract.Ensures(Contract.Result<byte[]>() != null);
-
                 if (otherPartyPublicKey == null)
                     throw new ArgumentNullException(nameof(otherPartyPublicKey));
                 if (string.IsNullOrEmpty(hashAlgorithm.Name))
                     throw new ArgumentException(SR.Cryptography_HashAlgorithmNameNullOrEmpty, nameof(hashAlgorithm));
 
-                // If an hmac key is provided then calculate
-                // HMAC(hmacKey, prepend || derived || append)
-                //
-                // Otherwise, calculate
-                // HMAC(derived, prepend || derived || append)
-
-                bool useSecretAsKey = hmacKey == null;
-
-                if (useSecretAsKey)
-                {
-                    hmacKey = DeriveSecretAgreement(otherPartyPublicKey, null);
-                }
-
-                using (IncrementalHash hash = IncrementalHash.CreateHMAC(hashAlgorithm, hmacKey))
-                {
-                    if (secretPrepend != null)
-                    {
-                        hash.AppendData(secretPrepend);
-                    }
-
-                    if (useSecretAsKey)
-                    {
-                        hash.AppendData(hmacKey);
-                        Array.Clear(hmacKey, 0, hmacKey.Length);
-                    }
-                    else
-                    {
-                        DeriveSecretAgreement(otherPartyPublicKey, hash);
-                    }
-
-                    if (secretAppend != null)
-                    {
-                        hash.AppendData(secretAppend);
-                    }
-
-                    return hash.GetHashAndReset();
-                }
+                return ECDiffieHellmanDerivation.DeriveKeyFromHmac(
+                    otherPartyPublicKey,
+                    hashAlgorithm,
+                    hmacKey,
+                    secretPrepend,
+                    secretAppend,
+                    (pubKey, hasher) => DeriveSecretAgreement(pubKey, hasher));
             }
 
             public override byte[] DeriveKeyTls(ECDiffieHellmanPublicKey otherPartyPublicKey, byte[] prfLabel, byte[] prfSeed)
@@ -142,8 +100,11 @@ namespace System.Security.Cryptography
                 if (prfSeed == null)
                     throw new ArgumentNullException(nameof(prfSeed));
 
-                // TODO: do derivation
-                throw new PlatformNotSupportedException("OpenSSL does not support DeriveKeyTls.");
+                return ECDiffieHellmanDerivation.DeriveKeyTls(
+                    otherPartyPublicKey,
+                    prfLabel,
+                    prfSeed,
+                    (pubKey, hasher) => DeriveSecretAgreement(pubKey, hasher));
             }
 
             /// <summary>
