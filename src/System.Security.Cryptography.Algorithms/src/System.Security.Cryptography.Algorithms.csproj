@@ -496,6 +496,12 @@
     <Compile Include="$(CommonPath)\System\Security\Cryptography\DSASecurityTransforms.cs">
       <Link>Common\System\Security\Cryptography\DSASecurityTransforms.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\EccSecurityTransforms.cs">
+      <Link>Common\System\Security\Cryptography\EccSecurityTransforms.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDiffieHellmanSecurityTransforms.cs">
+      <Link>Common\System\Security\Cryptography\ECDiffieHellmanSecurityTransforms.cs</Link>
+    </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\ECDsaSecurityTransforms.cs">
       <Link>Common\System\Security\Cryptography\ECDsaSecurityTransforms.cs</Link>
     </Compile>
