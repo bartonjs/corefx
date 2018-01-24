@@ -102,6 +102,7 @@ namespace System.Security.Cryptography
                 throw new CryptographicException($"{nameof(prfSeed)} must be exactly 64 bytes");
             }
 
+            // Windows produces a 48-byte output, so that's what we do, too.
             byte[] ret = new byte[48];
 
             const int Sha1Size = 20;
@@ -112,8 +113,21 @@ namespace System.Security.Cryptography
 
             try
             {
+                // https://tools.ietf.org/html/rfc4346#section-5
+                //
+                //    S1 and S2 are the two halves of the secret, and each is the same
+                //    length.  S1 is taken from the first half of the secret, S2 from the
+                //    second half.  Their length is created by rounding up the length of
+                //    the overall secret, divided by two; thus, if the original secret is
+                //    an odd number of bytes long, the last byte of S1 will be the same as
+                //    the first byte of S2.
+                //
                 int half = secretAgreement.Length / 2;
                 int odd = secretAgreement.Length & 1;
+
+
+                // PRF(secret, label, seed) = P_MD5(S1, label + seed) XOR
+                //                            P_SHA-1(S2, label + seed);
 
                 PHash(
                     HashAlgorithmName.MD5,
@@ -155,6 +169,16 @@ namespace System.Security.Cryptography
             int hashOutputSize,
             Span<byte> ret)
         {
+            // https://tools.ietf.org/html/rfc4346#section-5
+            // 
+            // P_hash(secret, seed) = HMAC_hash(secret, A(1) + seed) +
+            //                        HMAC_hash(secret, A(2) + seed) +
+            //                        HMAC_hash(secret, A(3) + seed) + ...
+            //
+            // A(0) = seed
+            // A(i) = HMAC_hash(secret, A(i-1))
+            //
+            // This is called via PRF, which turns (label || seed) into seed.
             byte[] secretTmp = new byte[secret.Length];
             GCHandle pinHandle = GCHandle.Alloc(secretTmp, GCHandleType.Pinned);
             secret.Slice(0, secretTmp.Length).CopyTo(secretTmp);
@@ -171,7 +195,6 @@ namespace System.Security.Cryptography
                     // A(1)
                     hasher.AppendData(prfLabel);
                     hasher.AppendData(prfSeed);
-                    int ai = 0;
 
                     if (!hasher.TryGetHashAndReset(a, out int bytesWritten) || bytesWritten != hashOutputSize)
                     {
@@ -207,8 +230,6 @@ namespace System.Security.Cryptography
                         {
                             throw new CryptographicException();
                         }
-
-                        ai++;
                     }
                 }
             }
@@ -216,96 +237,6 @@ namespace System.Security.Cryptography
             {
                 Array.Clear(secretTmp, 0, secretTmp.Length);
                 pinHandle.Free();
-            }
-        }
-
-        internal static byte[] DeriveKeyTls12(
-            ECDiffieHellmanPublicKey otherPartyPublicKey,
-            ReadOnlySpan<byte> prfLabel,
-            ReadOnlySpan<byte> prfSeed,
-            DeriveSecretAgreement deriveSecretAgreement)
-        {
-            Debug.Assert(otherPartyPublicKey != null);
-
-            if (prfSeed.Length != 64)
-            {
-                throw new CryptographicException($"{nameof(prfSeed)} must be exactly 64 bytes");
-            }
-
-            byte[] secretAgreement = deriveSecretAgreement(otherPartyPublicKey, null);
-            GCHandle handle = GCHandle.Alloc(secretAgreement, GCHandleType.Pinned);
-            const int HashOutputSize = 256 / 8;
-
-            try
-            {
-                // Windows always outputs 384 bits / 48 bytes of data.
-                // Since ECDHCng didn't specify a hash algorithm in net35 it uses the
-                // Windows default of (HMAC)SHA-2-256.
-                //
-                // Defaults can be found at
-                // https://msdn.microsoft.com/en-us/library/windows/desktop/aa375393(v=vs.85).aspx
-                // in the section on BCRYPT_KDF_TLS_PRF
-
-                // The algorithm is described at https://tools.ietf.org/html/rfc5246#section-5
-                //
-                // PRF(secret, label, seed) = P_<hash>(secret, label + seed)
-                //
-                // P_hash(secret, seed) = HMAC_hash(secret, A(1) + seed) +
-                //                        HMAC_hash(secret, A(2) + seed) + ...
-                //
-                // A(0) = seed
-                // A(i) = HMAC_hash(secret, A(i-1))
-                using (IncrementalHash hasher = IncrementalHash.CreateHMAC(HashAlgorithmName.SHA256, secretAgreement))
-                {
-                    Span<byte> a = stackalloc byte[HashOutputSize];
-                    Span<byte> p = stackalloc byte[HashOutputSize];
-                    byte[] ret = new byte[100];
-                    Span<byte> retSpan = ret;
-
-                    // A(1)
-                    hasher.AppendData(prfLabel);
-                    hasher.AppendData(prfSeed);
-
-                    if (!hasher.TryGetHashAndReset(a, out int bytesWritten) || bytesWritten != HashOutputSize)
-                    {
-                        throw new CryptographicException();
-                    }
-
-                    while (true)
-                    {
-                        // HMAC_hash(secret, A(i) || seed) => p
-                        hasher.AppendData(a);
-                        hasher.AppendData(prfLabel);
-                        hasher.AppendData(prfSeed);
-
-                        if (!hasher.TryGetHashAndReset(p, out bytesWritten) || bytesWritten != HashOutputSize)
-                        {
-                            throw new CryptographicException();
-                        }
-
-                        if (p.Length > retSpan.Length)
-                        {
-                            p.Slice(0, retSpan.Length).CopyTo(retSpan);
-                            return ret;
-                        }
-
-                        p.CopyTo(retSpan);
-                        retSpan = retSpan.Slice(p.Length);
-
-                        // Build the next A(i)
-                        hasher.AppendData(a);
-
-                        if (!hasher.TryGetHashAndReset(a, out bytesWritten) || bytesWritten != HashOutputSize)
-                        {
-                            throw new CryptographicException();
-                        }
-                    }
-                }
-            }
-            finally
-            {
-                Array.Clear(secretAgreement, 0, secretAgreement.Length);
-                handle.Free();
             }
         }
     }
