@@ -2,9 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using System.Text;
 using Test.Cryptography;
 using Xunit;
@@ -27,7 +25,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         }
 
         [Theory]
-        [MemberData("MismatchedKeysizes")]
+        [MemberData(nameof(MismatchedKeysizes))]
         public static void TlsDerivation_SameSizeOtherKeyRequired(int aliceSize, int bobSize)
         {
             using (ECDiffieHellman alice = ECDiffieHellmanFactory.Create(aliceSize))
@@ -78,7 +76,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         }
 
         [Theory]
-        [MemberData("EveryKeysize")]
+        [MemberData(nameof(EveryKeysize))]
         public static void SymmetricDerivation_TlsPrf(int keySize)
         {
             using (ECDiffieHellman alice = ECDiffieHellmanFactory.Create(keySize))
@@ -108,7 +106,7 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
         }
 
         [Theory]
-        [MemberData("EveryKeysize")]
+        [MemberData(nameof(EveryKeysize))]
         public static void TlsPrfOutputIs48Bytes(int keySize)
         {
             using (ECDiffieHellman ecdh = ECDiffieHellmanFactory.Create(keySize))
@@ -190,6 +188,46 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
                      "ED83A7CF14C6F1577FE7AD90F1D78D36AFF5D2612B78A70E5FD000660E4A3B00DFF9B7C118C29A3D32536A89A5481C00",
                  },
             };
+        }
+
+        [Theory]
+        [MemberData(nameof(TlsDerivationTestCases))]
+        public static void TlsDerivation_KnownResults(string labelText, string answerHex)
+        {
+            byte[] label = Encoding.ASCII.GetBytes(labelText);
+            byte[] output;
+
+            ECParameters ecParams = new ECParameters
+            {
+                Curve = ECCurve.NamedCurves.nistP521,
+
+                Q =
+                {
+                    X = (
+                        "014AACFCDA18F77EBF11DC0A2D394D3032E86C3AC0B5F558916361163EA6AD3DB27" +
+                        "F6476D6C6E5D9C4A77BCCC5C0069D481718DACA3B1B13035AF5D246C4DC0CE0EA").HexToByteArray(),
+
+                    Y = (
+                        "00CA500F75537C782E027DE568F148334BF56F7E24C3830792236B5D20F7A33E998" +
+                        "62B1744D2413E4C4AC29DBA42FC48D23AE5B916BED73997EC69B3911C686C5164").HexToByteArray(),
+                },
+
+                D = (
+                    "00202F9F5480723D1ACF15372CE0B99B6CC3E8772FFDDCF828EEEB314B3EAA35B19" +
+                    "886AAB1E6871E548C261C7708BF561A4C373D3EED13F0749851F57B86DC049D71").HexToByteArray(),
+            };
+
+            using (ECDiffieHellman ecdh = ECDiffieHellmanFactory.Create())
+            {
+                ecdh.ImportParameters(ecParams);
+
+                using (ECDiffieHellmanPublicKey publicKey = ecdh.PublicKey)
+                {
+                    output = ecdh.DeriveKeyTls(publicKey, label, s_emptySeed);
+                }
+            }
+
+            Assert.Equal(answerHex, output.ByteArrayToHex());
         }
     }
 }

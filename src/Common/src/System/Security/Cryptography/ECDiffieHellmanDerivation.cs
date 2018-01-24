@@ -102,12 +102,139 @@ namespace System.Security.Cryptography
                 throw new CryptographicException($"{nameof(prfSeed)} must be exactly 64 bytes");
             }
 
+            byte[] ret = new byte[48];
+
+            const int Sha1Size = 20;
+            const int Md5Size = 16;
+
             byte[] secretAgreement = deriveSecretAgreement(otherPartyPublicKey, null);
             GCHandle handle = GCHandle.Alloc(secretAgreement, GCHandleType.Pinned);
-            ArrayPool<byte> pool = ArrayPool<byte>.Shared;
+
+            try
+            {
+                int half = secretAgreement.Length / 2;
+                int odd = secretAgreement.Length & 1;
+
+                PHash(
+                    HashAlgorithmName.MD5,
+                    new ReadOnlySpan<byte>(secretAgreement, 0, half + odd),
+                    prfLabel,
+                    prfSeed,
+                    Md5Size,
+                    ret);
+
+                Span<byte> part2 = stackalloc byte[ret.Length];
+
+                PHash(
+                    HashAlgorithmName.SHA1,
+                    new ReadOnlySpan<byte>(secretAgreement, half, half + odd),
+                    prfLabel,
+                    prfSeed,
+                    Sha1Size,
+                    part2);
+
+                for (int i = 0; i < ret.Length; i++)
+                {
+                    ret[i] ^= part2[i];
+                }
+
+                return ret;
+            }
+            finally
+            {
+                Array.Clear(secretAgreement, 0, secretAgreement.Length);
+                handle.Free();
+            }
+        }
+
+        private static void PHash(
+            HashAlgorithmName algorithmName,
+            ReadOnlySpan<byte> secret,
+            ReadOnlySpan<byte> prfLabel,
+            ReadOnlySpan<byte> prfSeed,
+            int hashOutputSize,
+            Span<byte> ret)
+        {
+            byte[] secretTmp = new byte[secret.Length];
+            GCHandle pinHandle = GCHandle.Alloc(secretTmp, GCHandleType.Pinned);
+            secret.Slice(0, secretTmp.Length).CopyTo(secretTmp);
+
+            try
+            {
+                Span<byte> retSpan = ret;
+
+                using (IncrementalHash hasher = IncrementalHash.CreateHMAC(algorithmName, secretTmp))
+                {
+                    Span<byte> a = stackalloc byte[hashOutputSize];
+                    Span<byte> p = stackalloc byte[hashOutputSize];
+
+                    // A(1)
+                    hasher.AppendData(prfLabel);
+                    hasher.AppendData(prfSeed);
+                    int ai = 0;
+
+                    if (!hasher.TryGetHashAndReset(a, out int bytesWritten) || bytesWritten != hashOutputSize)
+                    {
+                        throw new CryptographicException();
+                    }
+
+                    while (true)
+                    {
+                        // HMAC_hash(secret, A(i) || seed) => p
+                        hasher.AppendData(a);
+                        hasher.AppendData(prfLabel);
+                        hasher.AppendData(prfSeed);
+
+                        if (!hasher.TryGetHashAndReset(p, out bytesWritten) || bytesWritten != hashOutputSize)
+                        {
+                            throw new CryptographicException();
+                        }
+
+                        int len = Math.Min(p.Length, retSpan.Length);
+
+                        p.Slice(0, len).CopyTo(retSpan);
+                        retSpan = retSpan.Slice(len);
+
+                        if (retSpan.Length == 0)
+                        {
+                            return;
+                        }
+
+                        // Build the next A(i)
+                        hasher.AppendData(a);
+
+                        if (!hasher.TryGetHashAndReset(a, out bytesWritten) || bytesWritten != hashOutputSize)
+                        {
+                            throw new CryptographicException();
+                        }
+
+                        ai++;
+                    }
+                }
+            }
+            finally
+            {
+                Array.Clear(secretTmp, 0, secretTmp.Length);
+                pinHandle.Free();
+            }
+        }
+
+        internal static byte[] DeriveKeyTls12(
+            ECDiffieHellmanPublicKey otherPartyPublicKey,
+            ReadOnlySpan<byte> prfLabel,
+            ReadOnlySpan<byte> prfSeed,
+            DeriveSecretAgreement deriveSecretAgreement)
+        {
+            Debug.Assert(otherPartyPublicKey != null);
+
+            if (prfSeed.Length != 64)
+            {
+                throw new CryptographicException($"{nameof(prfSeed)} must be exactly 64 bytes");
+            }
+
+            byte[] secretAgreement = deriveSecretAgreement(otherPartyPublicKey, null);
+            GCHandle handle = GCHandle.Alloc(secretAgreement, GCHandleType.Pinned);
             const int HashOutputSize = 256 / 8;
-            byte[] a0toA2 = pool.Rent(3 * HashOutputSize);
-            byte[] pHash = pool.Rent(2 * HashOutputSize);
 
             try
             {
@@ -128,78 +255,57 @@ namespace System.Security.Cryptography
                 //
                 // A(0) = seed
                 // A(i) = HMAC_hash(secret, A(i-1))
-
-                // Since we're outputting 48 bytes and HMACSHA256 outputs 32 bytes, we need two runs.
-                // So we need A0, A1, and A2.
-
                 using (IncrementalHash hasher = IncrementalHash.CreateHMAC(HashAlgorithmName.SHA256, secretAgreement))
                 {
-                    Span<byte> a0 = new Span<byte>(a0toA2, 0, HashOutputSize);
-                    Span<byte> a1 = new Span<byte>(a0toA2, HashOutputSize, HashOutputSize);
-                    Span<byte> a2 = new Span<byte>(a0toA2, 2 * HashOutputSize, HashOutputSize);
+                    Span<byte> a = stackalloc byte[HashOutputSize];
+                    Span<byte> p = stackalloc byte[HashOutputSize];
+                    byte[] ret = new byte[100];
+                    Span<byte> retSpan = ret;
 
+                    // A(1)
                     hasher.AppendData(prfLabel);
                     hasher.AppendData(prfSeed);
 
-                    if (!hasher.TryGetHashAndReset(a0, out int bytesWritten) || bytesWritten != HashOutputSize)
+                    if (!hasher.TryGetHashAndReset(a, out int bytesWritten) || bytesWritten != HashOutputSize)
                     {
                         throw new CryptographicException();
                     }
 
-                    // Should this really have the label and seed?
-                    hasher.AppendData(a0);
-                    hasher.AppendData(prfLabel);
-                    hasher.AppendData(prfSeed);
-
-                    if (!hasher.TryGetHashAndReset(a1, out bytesWritten) || bytesWritten != HashOutputSize)
+                    while (true)
                     {
-                        throw new CryptographicException();
+                        // HMAC_hash(secret, A(i) || seed) => p
+                        hasher.AppendData(a);
+                        hasher.AppendData(prfLabel);
+                        hasher.AppendData(prfSeed);
+
+                        if (!hasher.TryGetHashAndReset(p, out bytesWritten) || bytesWritten != HashOutputSize)
+                        {
+                            throw new CryptographicException();
+                        }
+
+                        if (p.Length > retSpan.Length)
+                        {
+                            p.Slice(0, retSpan.Length).CopyTo(retSpan);
+                            return ret;
+                        }
+
+                        p.CopyTo(retSpan);
+                        retSpan = retSpan.Slice(p.Length);
+
+                        // Build the next A(i)
+                        hasher.AppendData(a);
+
+                        if (!hasher.TryGetHashAndReset(a, out bytesWritten) || bytesWritten != HashOutputSize)
+                        {
+                            throw new CryptographicException();
+                        }
                     }
-
-                    hasher.AppendData(a1);
-                    hasher.AppendData(prfLabel);
-                    hasher.AppendData(prfSeed);
-
-                    if (!hasher.TryGetHashAndReset(a2, out bytesWritten) || bytesWritten != HashOutputSize)
-                    {
-                        throw new CryptographicException();
-                    }
-
-                    Span<byte> pHash0 = new Span<byte>(pHash, 0, HashOutputSize);
-                    Span<byte> pHash1 = new Span<byte>(pHash, HashOutputSize, HashOutputSize);
-
-                    hasher.AppendData(a1);
-                    hasher.AppendData(prfLabel);
-                    hasher.AppendData(prfSeed);
-
-                    if (!hasher.TryGetHashAndReset(pHash0, out bytesWritten) || bytesWritten != HashOutputSize)
-                    {
-                        throw new CryptographicException();
-                    }
-
-                    hasher.AppendData(a2);
-                    hasher.AppendData(prfLabel);
-                    hasher.AppendData(prfSeed);
-
-                    if (!hasher.TryGetHashAndReset(pHash1, out bytesWritten) || bytesWritten != HashOutputSize)
-                    {
-                        throw new CryptographicException();
-                    }
-
-                    byte[] ret = new byte[48];
-                    Buffer.BlockCopy(pHash, 0, ret, 0, ret.Length);
-                    return ret;
                 }
             }
             finally
             {
                 Array.Clear(secretAgreement, 0, secretAgreement.Length);
                 handle.Free();
-
-                Array.Clear(a0toA2, 0, 3 * HashOutputSize);
-                Array.Clear(pHash, 0, 2 * HashOutputSize);
-                pool.Return(a0toA2);
-                pool.Return(pHash);
             }
         }
     }
