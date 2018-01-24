@@ -366,8 +366,12 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
                 iut.ImportParameters(iutParameters);
                 cavs.ImportParameters(iut.ExportParameters(false));
 
-                Assert.ThrowsAny<CryptographicException>(() => cavs.ExportExplicitParameters(true));
                 Assert.ThrowsAny<CryptographicException>(() => cavs.ExportParameters(true));
+
+                if (ECDiffieHellmanFactory.ExplicitCurvesSupported)
+                {
+                    Assert.ThrowsAny<CryptographicException>(() => cavs.ExportExplicitParameters(true));
+                }
 
                 using (ECDiffieHellmanPublicKey iutPublic = iut.PublicKey)
                 {

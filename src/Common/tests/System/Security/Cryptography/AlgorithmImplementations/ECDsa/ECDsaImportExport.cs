@@ -291,7 +291,7 @@ namespace System.Security.Cryptography.EcDsa.Tests
             }
         }
 
-        [ConditionalFact(nameof(ECExplicitCurvesSupported))]
+        [Fact]
         public static void ExportIncludingPrivateOnPublicOnlyKey()
         {
             ECParameters iutParameters = new ECParameters
@@ -311,9 +311,12 @@ namespace System.Security.Cryptography.EcDsa.Tests
                 iut.ImportParameters(iutParameters);
                 cavs.ImportParameters(iut.ExportParameters(false));
 
-                // Linux throws an Interop.Crypto.OpenSslCryptographicException : CryptographicException
-                Assert.ThrowsAny<CryptographicException>(() => cavs.ExportExplicitParameters(true));
                 Assert.ThrowsAny<CryptographicException>(() => cavs.ExportParameters(true));
+
+                if (ECExplicitCurvesSupported)
+                {
+                    Assert.ThrowsAny<CryptographicException>(() => cavs.ExportExplicitParameters(true));
+                }
             }
         }
 

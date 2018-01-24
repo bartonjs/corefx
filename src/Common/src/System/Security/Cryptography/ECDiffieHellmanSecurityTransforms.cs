@@ -192,7 +192,48 @@ namespace System.Security.Cryptography
 
                 private byte[] DeriveSecretAgreement(ECDiffieHellmanPublicKey otherPartyPublicKey, IncrementalHash hasher)
                 {
-                    throw new NotImplementedException();
+                    if (!(otherPartyPublicKey is ECDiffieHellmanSecurityTransformsPublicKey secTransPubKey))
+                    {
+                        secTransPubKey =
+                            new ECDiffieHellmanSecurityTransformsPublicKey(otherPartyPublicKey.ExportParameters());
+                    }
+
+                    try
+                    {
+                        SafeSecKeyRefHandle otherPublic = secTransPubKey.KeyHandle;
+
+                        if (Interop.AppleCrypto.EccGetKeySizeInBits(otherPublic) != KeySize)
+                        {
+                            throw new ArgumentException(
+                                SR.Cryptography_ArgECDHKeySizeMismatch,
+                                nameof(otherPartyPublicKey));
+                        }
+
+                        SafeSecKeyRefHandle thisPrivate = GetKeys().PrivateKey;
+
+                        if (thisPrivate == null)
+                        {
+                            throw new CryptographicException(SR.Cryptography_CSP_NoPrivateKey);
+                        }
+
+                        byte[] secret = Interop.AppleCrypto.EcdhKeyAgree(thisPrivate, otherPublic);
+
+                        if (hasher == null)
+                        {
+                            return secret;
+                        }
+
+                        hasher.AppendData(secret);
+                        Array.Clear(secret, 0, secret.Length);
+                        return null;
+                    }
+                    finally
+                    {
+                        if (!ReferenceEquals(otherPartyPublicKey, secTransPubKey))
+                        {
+                            secTransPubKey.Dispose();
+                        }
+                    }
                 }
 
                 public override ECDiffieHellmanPublicKey PublicKey =>
