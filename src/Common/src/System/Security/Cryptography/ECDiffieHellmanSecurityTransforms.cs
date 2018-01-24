@@ -216,15 +216,37 @@ namespace System.Security.Cryptography
                             throw new CryptographicException(SR.Cryptography_CSP_NoPrivateKey);
                         }
 
-                        byte[] secret = Interop.AppleCrypto.EcdhKeyAgree(thisPrivate, otherPublic);
+                        // Since Apple only supports secp256r1, secp384r1, and secp521r1; and 521 fits in
+                        // 66 bytes ((521 + 7) / 8), the Span path will always succeed.
+                        Span<byte> secretSpan = stackalloc byte[66];
+
+                        byte[] secret = Interop.AppleCrypto.EcdhKeyAgree(
+                            thisPrivate,
+                            otherPublic,
+                            secretSpan,
+                            out int bytesWritten);
+
+                        // Either we wrote to the span or we returned an array, but not both, and not neither.
+                        // ("neither" would have thrown)
+                        Debug.Assert(
+                            (bytesWritten == 0) != (secret == null),
+                            $"bytesWritten={bytesWritten}, (secret==null)={secret == null}");
 
                         if (hasher == null)
                         {
-                            return secret;
+                            return secret ?? secretSpan.Slice(0, bytesWritten).ToArray();
                         }
 
-                        hasher.AppendData(secret);
-                        Array.Clear(secret, 0, secret.Length);
+                        if (secret == null)
+                        {
+                            hasher.AppendData(secretSpan.Slice(0, bytesWritten));
+                        }
+                        else
+                        {
+                            hasher.AppendData(secret);
+                            Array.Clear(secret, 0, secret.Length);
+                        }
+
                         return null;
                     }
                     finally
