@@ -168,6 +168,7 @@ internal static partial class Interop
         {
             Pkcs1 = 0,
             OaepSHA1 = 1,
+            NoPadding = 2,
         }
     }
 }

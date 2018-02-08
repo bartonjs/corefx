@@ -2,9 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Buffers;
+using System.Buffers.Binary;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-
+using System.Runtime.CompilerServices;
 using Microsoft.Win32.SafeHandles;
 using Internal.Cryptography;
 
@@ -22,6 +25,9 @@ namespace System.Security.Cryptography
     public sealed partial class RSAOpenSsl : RSA
     {
         private const int BitsPerByte = 8;
+
+        private delegate void DepaddingMethod(ReadOnlySpan<byte> source, Span<byte> destination, out int bytesWritten);
+        private delegate void PaddingMethod(ReadOnlySpan<byte> source, Span<byte> destination);
 
         // 65537 (0x10001) in big-endian form
         private static readonly byte[] s_defaultExponent = { 0x01, 0x00, 0x01 };
@@ -88,65 +94,117 @@ namespace System.Security.Cryptography
             if (padding == null)
                 throw new ArgumentNullException(nameof(padding));
 
-            Interop.Crypto.RsaPadding rsaPadding = GetInteropPadding(padding);
+            Interop.Crypto.RsaPadding rsaPadding = GetInteropPadding(padding, out DepaddingMethod depaddingMethod);
             SafeRsaHandle key = _key.Value;
             CheckInvalidKey(key);
 
-            byte[] buf = new byte[Interop.Crypto.RsaSize(key)];
+            int rsaSize = Interop.Crypto.RsaSize(key);
+            byte[] buf = null;
 
-            int returnValue = Interop.Crypto.RsaPrivateDecrypt(
-                data.Length,
-                data,
-                buf,
-                key,
-                rsaPadding);
-
-            CheckReturn(returnValue);
-
-            // If the padding mode is RSA_NO_PADDING then the size of the decrypted block
-            // will be RSA_size, so let's just return buf.
-            //
-            // If any padding was used, then some amount (determined by the padding algorithm)
-            // will have been reduced, and only returnValue bytes were part of the decrypted
-            // body, so copy the decrypted bytes to an appropriately sized array before
-            // returning it.
-            if (returnValue == buf.Length)
+            try
             {
-                return buf;
-            }
+                buf = ArrayPool<byte>.Shared.Rent(rsaSize);
+                Span<byte> destination = new Span<byte>(buf, 0, rsaSize);
 
-            byte[] plainBytes = new byte[returnValue];
-            Buffer.BlockCopy(buf, 0, plainBytes, 0, returnValue);
-            return plainBytes;
+                if (!TryDecrypt(key, data, destination, rsaPadding, depaddingMethod, out int bytesWritten))
+                {
+                    Debug.Fail($"{nameof(TryDecrypt)} should not return false for RSA_size buffer");
+                    throw new CryptographicException();
+                }
+
+                return destination.Slice(0, bytesWritten).ToArray();
+            }
+            finally
+            {
+                if (buf != null)
+                {
+                    Array.Clear(buf, 0, rsaSize);
+                    ArrayPool<byte>.Shared.Return(buf);
+                }
+            }
         }
 
-        public override bool TryDecrypt(ReadOnlySpan<byte> source, Span<byte> destination, RSAEncryptionPadding padding, out int bytesWritten)
+        public override bool TryDecrypt(
+            ReadOnlySpan<byte> source,
+            Span<byte> destination,
+            RSAEncryptionPadding padding,
+            out int bytesWritten)
         {
             if (padding == null)
             {
                 throw new ArgumentNullException(nameof(padding));
             }
 
-            Interop.Crypto.RsaPadding rsaPadding = GetInteropPadding(padding);
+            Interop.Crypto.RsaPadding rsaPadding = GetInteropPadding(padding, out DepaddingMethod depaddingMethod);
             SafeRsaHandle key = _key.Value;
             CheckInvalidKey(key);
 
-            if (destination.Length < Interop.Crypto.RsaSize(key))
+            return TryDecrypt(key, source, destination, rsaPadding, depaddingMethod, out bytesWritten);
+        }
+
+        private static bool TryDecrypt(
+            SafeRsaHandle key,
+            ReadOnlySpan<byte> source,
+            Span<byte> destination,
+            Interop.Crypto.RsaPadding rsaPadding,
+            DepaddingMethod depaddingMethod,
+            out int bytesWritten)
+        {
+            // If rsaPadding is PKCS1 or OAEP-SHA1 then no depadding method should be present.
+            // If rsaPadding is NoPadding then a depadding method should be present.
+            Debug.Assert(
+                (rsaPadding == Interop.Crypto.RsaPadding.NoPadding) ==
+                (depaddingMethod != null));
+
+            // Caller should have already checked this.
+            Debug.Assert(!key.IsInvalid);
+
+            int rsaSize = Interop.Crypto.RsaSize(key);
+
+            if (destination.Length < rsaSize)
             {
                 bytesWritten = 0;
                 return false;
             }
 
-            int returnValue = Interop.Crypto.RsaPrivateDecrypt(source.Length, source, destination, key, rsaPadding);
-            CheckReturn(returnValue);
+            Span<byte> decryptBuf = destination;
+            byte[] paddingBuf = null;
 
-            // If the padding mode is RSA_NO_PADDING then the size of the decrypted block
-            // will be RSA_size. If any padding was used, then some amount (determined by the padding algorithm)
-            // will have been reduced, and only returnValue bytes were part of the decrypted
-            // body.  Either way, we can just use returnValue, but some additional bytes may have been overwritten
-            // in the destination span.
-            bytesWritten = returnValue;
-            return true;
+            if (depaddingMethod != null)
+            {
+                paddingBuf = ArrayPool<byte>.Shared.Rent(rsaSize);
+                decryptBuf = paddingBuf;
+            }
+
+            try
+            {
+                int returnValue = Interop.Crypto.RsaPrivateDecrypt(source.Length, source, decryptBuf, key, rsaPadding);
+                CheckReturn(returnValue);
+
+                if (depaddingMethod != null)
+                {
+                    depaddingMethod(paddingBuf, destination, out bytesWritten);
+                }
+                else
+                {
+                    // If the padding mode is RSA_NO_PADDING then the size of the decrypted block
+                    // will be RSA_size. If any padding was used, then some amount (determined by the padding algorithm)
+                    // will have been reduced, and only returnValue bytes were part of the decrypted
+                    // body.  Either way, we can just use returnValue, but some additional bytes may have been overwritten
+                    // in the destination span.
+                    bytesWritten = returnValue;
+                }
+
+                return true;
+            }
+            finally
+            {
+                if (paddingBuf != null)
+                {
+                    Array.Clear(paddingBuf, 0, rsaSize);
+                    ArrayPool<byte>.Shared.Return(paddingBuf);
+                }
+            }
         }
 
         public override byte[] Encrypt(byte[] data, RSAEncryptionPadding padding)
@@ -198,10 +256,225 @@ namespace System.Security.Cryptography
             return true;
         }
 
+        private static Interop.Crypto.RsaPadding GetInteropPadding(
+            RSAEncryptionPadding padding,
+            out DepaddingMethod depaddingMethod)
+        {
+            if (padding == RSAEncryptionPadding.Pkcs1)
+            {
+                depaddingMethod = null;
+                return Interop.Crypto.RsaPadding.Pkcs1;
+            }
+
+            if (padding == RSAEncryptionPadding.OaepSHA1)
+            {
+                depaddingMethod = null;
+                return Interop.Crypto.RsaPadding.OaepSHA1;
+            }
+
+            if (padding.Mode == RSAEncryptionPaddingMode.Oaep)
+            {
+                depaddingMethod = GetOaepDepadder(padding.OaepHashAlgorithm);
+                return Interop.Crypto.RsaPadding.NoPadding;
+            }
+
+            throw PaddingModeNotSupported();
+        }
+
+        private static Dictionary<HashAlgorithmName, DepaddingMethod> s_oaepDepadders =
+            new Dictionary<HashAlgorithmName,DepaddingMethod>();
+
+        private static DepaddingMethod GetOaepDepadder(HashAlgorithmName hashAlgorithmName)
+        {
+            if (s_oaepDepadders.TryGetValue(hashAlgorithmName, out DepaddingMethod method))
+            {
+                return method;
+            }
+
+            lock (s_oaepDepadders)
+            {
+                if (s_oaepDepadders.TryGetValue(hashAlgorithmName, out method))
+                {
+                    return method;
+                }
+
+                byte[] hashBytes;
+
+                try
+                {
+                    // Test that the algorithm is valid
+                    using (IncrementalHash hasher = IncrementalHash.CreateHash(hashAlgorithmName))
+                    {
+                        hashBytes = hasher.GetHashAndReset();
+                    }
+                }
+                catch (CryptographicException)
+                {
+                    throw PaddingModeNotSupported();
+                }
+
+                return (ReadOnlySpan<byte> source, Span<byte> destination, out int bytesWritten) =>
+                    OaepMgf1Depadder(hashAlgorithmName, hashBytes.Length, source, destination, out bytesWritten);
+            }
+        }
+
+        private static void OaepMgf1Depadder(
+            HashAlgorithmName hashAlgorithmName,
+            int hLen,
+            ReadOnlySpan<byte> source,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            // https://tools.ietf.org/html/rfc3447#section-7.1.2
+            using (IncrementalHash hasher = IncrementalHash.CreateHash(hashAlgorithmName))
+            {
+                Span<byte> lHash = stackalloc byte[hLen];
+
+                if (!hasher.TryGetHashAndReset(lHash, out int hLen2) || hLen2 != hLen)
+                {
+                    Debug.Fail("TryGetHashAndReset failed with exact-size destination");
+                    throw new CryptographicException();
+                }
+
+                int y = source[0];
+                ReadOnlySpan<byte> maskedSeed = source.Slice(1, hLen);
+                ReadOnlySpan<byte> maskedDB = source.Slice(1 + hLen);
+
+                Span<byte> seed = stackalloc byte[hLen];
+                // seedMask = MGF(maskedDB, hLen)
+                Mgf1(hasher, hLen, maskedDB, seed);
+
+                // seed = seedMask XOR maskedSeed
+                for (int i = 0; i < seed.Length; i++)
+                {
+                    seed[i] ^= maskedSeed[i];
+                }
+
+                byte[] tmp = ArrayPool<byte>.Shared.Rent(source.Length);
+
+                try
+                {
+                    Span<byte> dbMask = new Span<byte>(tmp, 0, maskedDB.Length);
+                    // dbMask = MGF(seed, k - hLen - 1)
+                    Mgf1(hasher, hLen, seed, dbMask);
+
+                    // DB = dbMask XOR maskedDB
+                    for (int i = 0; i < dbMask.Length; i++)
+                    {
+                        dbMask[i] ^= maskedDB[i];
+                    }
+
+                    ReadOnlySpan<byte> lHashPrime = dbMask.Slice(0, hLen);
+
+                    int separatorPos = int.MaxValue;
+
+                    for (int i = dbMask.Length - 1; i >= hLen; i--)
+                    {
+                        // if dbMask[i] is 1, val is 0. otherwise val is [01,FF]
+                        byte dbMinus1 = (byte)(dbMask[i] - 1);
+                        int val = dbMinus1;
+
+                        // if val is 0: FFFFFFFF & FFFFFFFF => FFFFFFFF
+                        // if val is any other byte value, val-1 will be in the range 00000000 to 000000FE,
+                        // and so the high bit will not be set.
+                        val = (~val & (val - 1)) >> 31;
+
+                        // if val is 0: separator = (0 & i) | (~0 & separator) => separator
+                        // else: separator = (~0 & i) | (0 & separator) => i
+                        //
+                        // Net result: non-branching if (dbMask[i] == 1) separatorPos = i;
+                        separatorPos = (val & i) | (~val & separatorPos);
+                    }
+
+                    bool lHashMatches = FixedTimeEquals(lHashPrime, lHashPrime);
+                    bool yIsZero = y == 0;
+                    bool separatorMadeSense = separatorPos < dbMask.Length;
+
+                    bool shouldContinue = lHashMatches & yIsZero & separatorMadeSense;
+
+                    if (!shouldContinue)
+                    {
+                        throw new CryptographicException("Padding failed.");
+                    }
+
+                    Span<byte> message = dbMask.Slice(separatorPos + 1);
+                    message.CopyTo(destination);
+                    bytesWritten = message.Length;
+                }
+                finally
+                {
+                    Array.Clear(tmp, 0, source.Length);
+                    ArrayPool<byte>.Shared.Return(tmp);
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+        private static bool FixedTimeEquals(ReadOnlySpan<byte> left, ReadOnlySpan<byte> right)
+        {
+            if (left.Length != right.Length)
+            {
+                return false;
+            }
+
+            int accum = 0;
+            int len = left.Length;
+
+            for (int i = 0; i < len; i++)
+            {
+                accum |= (left[i] - right[i]);
+            }
+
+            return accum == 0;
+        }
+
+        // https://tools.ietf.org/html/rfc3447#appendix-B.2.1
+        private static void Mgf1(IncrementalHash hasher, int hLen, ReadOnlySpan<byte> mgfSeed, Span<byte> mask)
+        {
+            Span<byte> writePtr = mask;
+            int count = 0;
+            Span<byte> bigEndianCount = stackalloc byte[sizeof(int)];
+
+            while (writePtr.Length > 0)
+            {
+                hasher.AppendData(mgfSeed);
+                BinaryPrimitives.WriteInt32BigEndian(bigEndianCount, count);
+                hasher.AppendData(bigEndianCount);
+
+                if (writePtr.Length > hLen)
+                {
+                    if (!hasher.TryGetHashAndReset(writePtr, out int bytesWritten))
+                    {
+                        Debug.Fail($"TryGetHashAndReset failed with sufficient space");
+                        throw new CryptographicException();
+                    }
+
+                    Debug.Assert(bytesWritten == hLen);
+                    writePtr = writePtr.Slice(bytesWritten);
+                }
+                else
+                {
+                    Span<byte> tmp = stackalloc byte[hLen];
+
+                    if (!hasher.TryGetHashAndReset(tmp, out int bytesWritten))
+                    {
+                        Debug.Fail($"TryGetHashAndReset failed with sufficient space");
+                        throw new CryptographicException();
+                    }
+
+                    Debug.Assert(bytesWritten == hLen);
+                    tmp.Slice(0, writePtr.Length).CopyTo(writePtr);
+                    break;
+                }
+
+                count++;
+            }
+        }
+
         private static Interop.Crypto.RsaPadding GetInteropPadding(RSAEncryptionPadding padding) =>
             padding == RSAEncryptionPadding.Pkcs1 ? Interop.Crypto.RsaPadding.Pkcs1 :
             padding == RSAEncryptionPadding.OaepSHA1 ? Interop.Crypto.RsaPadding.OaepSHA1 :
-            throw PaddingModeNotSupported();
+            Interop.Crypto.RsaPadding.NoPadding;
 
         public override RSAParameters ExportParameters(bool includePrivateParameters)
         {
