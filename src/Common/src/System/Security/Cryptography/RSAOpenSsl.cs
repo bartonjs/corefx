@@ -13,23 +13,25 @@ using Internal.Cryptography;
 
 namespace System.Security.Cryptography
 {
-    internal class OaepProcessor
+    internal class RsaPaddingProcessor
     {
-        private static Dictionary<HashAlgorithmName, OaepProcessor> s_lookup =
-            new Dictionary<HashAlgorithmName, OaepProcessor>();
+        private static readonly Dictionary<HashAlgorithmName, RsaPaddingProcessor> s_lookup =
+            new Dictionary<HashAlgorithmName, RsaPaddingProcessor>();
+
+        private static readonly byte[] s_eightZeros = new byte[8];
 
         private readonly HashAlgorithmName _hashAlgorithmName;
         private readonly int _hLen;
 
-        private OaepProcessor(HashAlgorithmName hashAlgorithmName, int hLen)
+        private RsaPaddingProcessor(HashAlgorithmName hashAlgorithmName, int hLen)
         {
             _hashAlgorithmName = hashAlgorithmName;
             _hLen = hLen;
         }
 
-        internal static OaepProcessor OpenProcessor(HashAlgorithmName hashAlgorithmName)
+        internal static RsaPaddingProcessor OpenProcessor(HashAlgorithmName hashAlgorithmName)
         {
-            if (s_lookup.TryGetValue(hashAlgorithmName, out OaepProcessor processor))
+            if (s_lookup.TryGetValue(hashAlgorithmName, out RsaPaddingProcessor processor))
             {
                 return processor;
             }
@@ -48,12 +50,12 @@ namespace System.Security.Cryptography
 
                     if (hasher.TryGetHashAndReset(stackDest, out int bytesWritten))
                     {
-                        processor = new OaepProcessor(hashAlgorithmName, bytesWritten);
+                        processor = new RsaPaddingProcessor(hashAlgorithmName, bytesWritten);
                     }
                     else
                     {
                         byte[] big = hasher.GetHashAndReset();
-                        processor = new OaepProcessor(hashAlgorithmName, big.Length);
+                        processor = new RsaPaddingProcessor(hashAlgorithmName, big.Length);
                     }
                 }
 
@@ -62,7 +64,7 @@ namespace System.Security.Cryptography
             }
         }
 
-        internal void Pad(
+        internal void PadOaep(
             ReadOnlySpan<byte> source,
             Span<byte> destination)
         {
@@ -123,7 +125,7 @@ namespace System.Security.Cryptography
                     // 2(e)
                     dbMask = ArrayPool<byte>.Shared.Rent(db.Length);
                     dbMaskSpan = new Span<byte>(dbMask, 0, db.Length);
-                    Mgf1(hasher, _hLen, seed, dbMaskSpan);
+                    Mgf1(hasher, seed, dbMaskSpan);
 
                     // 2(f)
                     for (int i = 0; i < dbMaskSpan.Length; i++)
@@ -133,7 +135,7 @@ namespace System.Security.Cryptography
 
                     // 2(g)
                     Span<byte> seedMask = stackalloc byte[_hLen];
-                    Mgf1(hasher, _hLen, db, seedMask);
+                    Mgf1(hasher, db, seedMask);
 
                     // 2(h)
                     for (int i = 0; i < seedMask.Length; i++)
@@ -160,7 +162,7 @@ namespace System.Security.Cryptography
             }
         }
 
-        internal void Depad(
+        internal void DepadOaep(
             ReadOnlySpan<byte> source,
             Span<byte> destination,
             out int bytesWritten)
@@ -182,7 +184,7 @@ namespace System.Security.Cryptography
 
                 Span<byte> seed = stackalloc byte[_hLen];
                 // seedMask = MGF(maskedDB, hLen)
-                Mgf1(hasher, _hLen, maskedDB, seed);
+                Mgf1(hasher, maskedDB, seed);
 
                 // seed = seedMask XOR maskedSeed
                 for (int i = 0; i < seed.Length; i++)
@@ -196,7 +198,7 @@ namespace System.Security.Cryptography
                 {
                     Span<byte> dbMask = new Span<byte>(tmp, 0, maskedDB.Length);
                     // dbMask = MGF(seed, k - hLen - 1)
-                    Mgf1(hasher, _hLen, seed, dbMask);
+                    Mgf1(hasher, seed, dbMask);
 
                     // DB = dbMask XOR maskedDB
                     for (int i = 0; i < dbMask.Length; i++)
@@ -249,6 +251,204 @@ namespace System.Security.Cryptography
             }
         }
 
+        internal void EncodePss(ReadOnlySpan<byte> mHash, Span<byte> destination, int keySize)
+        {
+            // https://tools.ietf.org/html/rfc3447#section-9.1.1
+            int emBits = keySize - 1;
+            int emLen = (emBits + 7) / 8;
+            
+            // In this implementation, sLen is restricted to hLen.
+            int sLen = _hLen;
+
+            // 3.  if emLen < hLen + sLen + 2, encoding error.
+            //
+            // sLen = hLen in this implementation.
+
+            if (emLen < 2 + _hLen + sLen)
+            {
+                throw new CryptographicException("Input is too big.");
+            }
+
+            if (mHash.Length != _hLen)
+            {
+                throw new CryptographicException("Hash is of the wrong size.");
+            }
+
+            // Set any leading bytes to zero, since that will be required for the pending
+            // RSA operation.
+            destination.Slice(0, destination.Length - emLen).Clear();
+
+            // 12. Let EM = maskedDB || H || 0xbc (H has length hLen)
+            Span<byte> em = destination.Slice(destination.Length - emLen, emLen);
+
+            int dbLen = emLen - _hLen - 1;
+
+            Span<byte> db = em.Slice(0, dbLen);
+            Span<byte> hDest = em.Slice(dbLen, _hLen);
+            em[emLen - 1] = 0xBC;
+
+            byte[] dbMaskRented = ArrayPool<byte>.Shared.Rent(dbLen);
+            Span<byte> dbMask = new Span<byte>(dbMaskRented, 0, dbLen);
+
+            using (IncrementalHash hasher = IncrementalHash.CreateHash(_hashAlgorithmName))
+            {
+                // 4. Generate a random salt of length sLen
+                Span<byte> salt = stackalloc byte[sLen];
+
+                using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
+                {
+                    rng.GetBytes(salt);
+                }
+
+                // 5. Let M' = an octet string of 8 zeros concat mHash concat salt
+                // 6. Let H = Hash(M')
+
+                hasher.AppendData(s_eightZeros);
+                hasher.AppendData(mHash);
+                hasher.AppendData(salt);
+
+                if (!hasher.TryGetHashAndReset(hDest, out int hLen2) || hLen2 != _hLen)
+                {
+                    Debug.Fail("TryGetHashAndReset failed with exact-size destination");
+                    throw new CryptographicException();
+                }
+
+                // 7. Generate PS as zero-valued bytes of length emLen - sLen - hLen - 2.
+                // 8. Let DB = PS || 0x01 || salt
+                int psLen = emLen - sLen - _hLen - 2;
+                db.Slice(0, psLen).Clear();
+                db[psLen] = 0x01;
+                salt.CopyTo(db.Slice(psLen + 1));
+
+                // 9. Let dbMask = MGF(H, emLen - hLen - 1)
+                Mgf1(hasher, hDest, dbMask);
+
+                // 10. Let maskedDB = DB XOR dbMask
+                for (int i = 0; i < dbMask.Length; i++)
+                {
+                    db[i] ^= dbMask[i];
+                }
+
+                // 11. Set the "unused" bits in the leftmost byte of maskedDB to 0.
+                int unusedBits = 8 * emLen - emBits;
+
+                if (unusedBits != 0)
+                {
+                    byte mask = (byte)(0xFF >> unusedBits);
+                    db[0] &= mask;
+                }
+            }
+
+            dbMask.Clear();
+            ArrayPool<byte>.Shared.Return(dbMaskRented);
+        }
+
+        internal bool VerifyPss(ReadOnlySpan<byte> mHash, ReadOnlySpan<byte> em, int keySize)
+        {
+            int emBits = keySize - 1;
+            int emLen = (emBits + 7) / 8;
+
+            Debug.Assert(em.Length >= emLen);
+
+            // In this implementation, sLen is restricted to hLen.
+            int sLen = _hLen;
+
+            // 3. If emLen < hLen + sLen + 2, output "inconsistent" and stop.
+            if (emLen < _hLen + sLen + 2)
+            {
+                return false;
+            }
+
+            // 4. If the last byte is not 0xBC, output "inconsistent" and stop.
+            if (em[em.Length - 1] != 0xBC)
+            {
+                return false;
+            }
+
+            // 5. maskedDB is the leftmost emLen - hLen -1 bytes, H is the next hLen bytes.
+            int dbLen = emLen - _hLen - 1;
+
+            ReadOnlySpan<byte> maskedDb = em.Slice(0, dbLen);
+            ReadOnlySpan<byte> h = em.Slice(dbLen, _hLen);
+
+            // 6. If the unused bits aren't zero, output "inconsistent" and stop.
+            int unusedBits = 8 * emLen - emBits;
+            byte usedBitsMask = (byte)(0xFF >> unusedBits);
+
+            if ((maskedDb[0] & usedBitsMask) != maskedDb[0])
+            {
+                return false;
+            }
+
+            // 7. dbMask = MGF(H, emLen - hLen - 1)
+            byte[] dbMaskRented = ArrayPool<byte>.Shared.Rent(maskedDb.Length);
+            Span<byte> dbMask = new Span<byte>(dbMaskRented, 0, maskedDb.Length);
+
+            try
+            {
+                using (IncrementalHash hasher = IncrementalHash.CreateHash(_hashAlgorithmName))
+                {
+                    Mgf1(hasher, h, dbMask);
+
+                    // 8. DB = maskedDB XOR dbMask
+                    for (int i = 0; i < dbMask.Length; i++)
+                    {
+                        dbMask[i] ^= maskedDb[i];
+                    }
+
+                    // 9. Set the unused bits of DB to 0
+                    dbMask[0] &= usedBitsMask;
+
+                    // 10 ("a"): If the emLen - hLen - sLen - 2 leftmost bytes are not 0,
+                    // output "inconsistent" and stop.
+                    //
+                    // Since signature verification is a public key operation there's no need to
+                    // use fixed time equality checking here.
+                    for (int i = emLen - _hLen - sLen - 2 - 1; i >= 0; --i)
+                    {
+                        if (dbMask[i] != 0)
+                        {
+                            return false;
+                        }
+                    }
+
+                    // 10 ("b") If the octet at position emLen - hLen - sLen - 1 (under a 1-indexed scheme)
+                    // is not 0x01, output "inconsistent" and stop.
+                    if (dbMask[emLen - _hLen - sLen - 2] != 0x01)
+                    {
+                        return false;
+                    }
+
+                    // 11. Let salt be the last sLen octets of DB.
+                    ReadOnlySpan<byte> salt = dbMask.Slice(dbMask.Length - sLen);
+
+                    // 12/13. Let H' = Hash(eight zeros || mHash || salt)
+                    hasher.AppendData(s_eightZeros);
+                    hasher.AppendData(mHash);
+                    hasher.AppendData(salt);
+
+                    Span<byte> hPrime = stackalloc byte[_hLen];
+
+                    if (!hasher.TryGetHashAndReset(hPrime, out int hLen2) || hLen2 != _hLen)
+                    {
+                        Debug.Fail("TryGetHashAndReset failed with exact-size destination");
+                        throw new CryptographicException();
+                    }
+
+                    // 14. If H = H' output "consistent". Otherwise, output "inconsistent"
+                    //
+                    // Since this is a public key operation, no need to provide fixed time
+                    // checking.
+                    return h.SequenceEqual(hPrime);
+                }
+            }
+            finally
+            {
+                dbMask.Clear();
+                ArrayPool<byte>.Shared.Return(dbMaskRented);
+            }
+        }
+
         [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
         private static bool FixedTimeEquals(ReadOnlySpan<byte> left, ReadOnlySpan<byte> right)
         {
@@ -269,7 +469,7 @@ namespace System.Security.Cryptography
         }
 
         // https://tools.ietf.org/html/rfc3447#appendix-B.2.1
-        private static void Mgf1(IncrementalHash hasher, int hLen, ReadOnlySpan<byte> mgfSeed, Span<byte> mask)
+        private void Mgf1(IncrementalHash hasher, ReadOnlySpan<byte> mgfSeed, Span<byte> mask)
         {
             Span<byte> writePtr = mask;
             int count = 0;
@@ -281,7 +481,7 @@ namespace System.Security.Cryptography
                 BinaryPrimitives.WriteInt32BigEndian(bigEndianCount, count);
                 hasher.AppendData(bigEndianCount);
 
-                if (writePtr.Length > hLen)
+                if (writePtr.Length > _hLen)
                 {
                     if (!hasher.TryGetHashAndReset(writePtr, out int bytesWritten))
                     {
@@ -289,12 +489,12 @@ namespace System.Security.Cryptography
                         throw new CryptographicException();
                     }
 
-                    Debug.Assert(bytesWritten == hLen);
+                    Debug.Assert(bytesWritten == _hLen);
                     writePtr = writePtr.Slice(bytesWritten);
                 }
                 else
                 {
-                    Span<byte> tmp = stackalloc byte[hLen];
+                    Span<byte> tmp = stackalloc byte[_hLen];
 
                     if (!hasher.TryGetHashAndReset(tmp, out int bytesWritten))
                     {
@@ -302,7 +502,7 @@ namespace System.Security.Cryptography
                         throw new CryptographicException();
                     }
 
-                    Debug.Assert(bytesWritten == hLen);
+                    Debug.Assert(bytesWritten == _hLen);
                     tmp.Slice(0, writePtr.Length).CopyTo(writePtr);
                     break;
                 }
@@ -390,7 +590,7 @@ namespace System.Security.Cryptography
             if (padding == null)
                 throw new ArgumentNullException(nameof(padding));
 
-            Interop.Crypto.RsaPadding rsaPadding = GetInteropPadding(padding, out OaepProcessor oaepProcessor);
+            Interop.Crypto.RsaPadding rsaPadding = GetInteropPadding(padding, out RsaPaddingProcessor oaepProcessor);
             SafeRsaHandle key = _key.Value;
             CheckInvalidKey(key);
 
@@ -431,7 +631,7 @@ namespace System.Security.Cryptography
                 throw new ArgumentNullException(nameof(padding));
             }
 
-            Interop.Crypto.RsaPadding rsaPadding = GetInteropPadding(padding, out OaepProcessor oaepProcessor);
+            Interop.Crypto.RsaPadding rsaPadding = GetInteropPadding(padding, out RsaPaddingProcessor oaepProcessor);
             SafeRsaHandle key = _key.Value;
             CheckInvalidKey(key);
 
@@ -443,14 +643,14 @@ namespace System.Security.Cryptography
             ReadOnlySpan<byte> source,
             Span<byte> destination,
             Interop.Crypto.RsaPadding rsaPadding,
-            OaepProcessor oaepProcessor,
+            RsaPaddingProcessor rsaPaddingProcessor,
             out int bytesWritten)
         {
             // If rsaPadding is PKCS1 or OAEP-SHA1 then no depadding method should be present.
             // If rsaPadding is NoPadding then a depadding method should be present.
             Debug.Assert(
                 (rsaPadding == Interop.Crypto.RsaPadding.NoPadding) ==
-                (oaepProcessor != null));
+                (rsaPaddingProcessor != null));
 
             // Caller should have already checked this.
             Debug.Assert(!key.IsInvalid);
@@ -466,7 +666,7 @@ namespace System.Security.Cryptography
             Span<byte> decryptBuf = destination;
             byte[] paddingBuf = null;
 
-            if (oaepProcessor != null)
+            if (rsaPaddingProcessor != null)
             {
                 paddingBuf = ArrayPool<byte>.Shared.Rent(rsaSize);
                 decryptBuf = paddingBuf;
@@ -477,9 +677,9 @@ namespace System.Security.Cryptography
                 int returnValue = Interop.Crypto.RsaPrivateDecrypt(source.Length, source, decryptBuf, key, rsaPadding);
                 CheckReturn(returnValue);
 
-                if (oaepProcessor != null)
+                if (rsaPaddingProcessor != null)
                 {
-                    oaepProcessor.Depad(paddingBuf, destination, out bytesWritten);
+                    rsaPaddingProcessor.DepadOaep(paddingBuf, destination, out bytesWritten);
                 }
                 else
                 {
@@ -510,7 +710,7 @@ namespace System.Security.Cryptography
             if (padding == null)
                 throw new ArgumentNullException(nameof(padding));
 
-            Interop.Crypto.RsaPadding rsaPadding = GetInteropPadding(padding, out OaepProcessor oaepProcessor);
+            Interop.Crypto.RsaPadding rsaPadding = GetInteropPadding(padding, out RsaPaddingProcessor oaepProcessor);
             SafeRsaHandle key = _key.Value;
             CheckInvalidKey(key);
 
@@ -540,7 +740,7 @@ namespace System.Security.Cryptography
                 throw new ArgumentNullException(nameof(padding));
             }
 
-            Interop.Crypto.RsaPadding rsaPadding = GetInteropPadding(padding, out OaepProcessor oaepProcessor);
+            Interop.Crypto.RsaPadding rsaPadding = GetInteropPadding(padding, out RsaPaddingProcessor oaepProcessor);
             SafeRsaHandle key = _key.Value;
             CheckInvalidKey(key);
 
@@ -552,7 +752,7 @@ namespace System.Security.Cryptography
             ReadOnlySpan<byte> source,
             Span<byte> destination,
             Interop.Crypto.RsaPadding rsaPadding,
-            OaepProcessor oaepProcessor,
+            RsaPaddingProcessor rsaPaddingProcessor,
             out int bytesWritten)
         {
             int rsaSize = Interop.Crypto.RsaSize(key);
@@ -565,7 +765,7 @@ namespace System.Security.Cryptography
 
             int returnValue;
 
-            if (oaepProcessor != null)
+            if (rsaPaddingProcessor != null)
             {
                 Debug.Assert(rsaPadding == Interop.Crypto.RsaPadding.NoPadding);
                 byte[] rented = ArrayPool<byte>.Shared.Rent(rsaSize);
@@ -573,7 +773,7 @@ namespace System.Security.Cryptography
 
                 try
                 {
-                    oaepProcessor.Pad(source, tmp);
+                    rsaPaddingProcessor.PadOaep(source, tmp);
                     returnValue = Interop.Crypto.RsaPublicEncrypt(tmp.Length, tmp, destination, key, rsaPadding);
                 }
                 finally
@@ -599,23 +799,23 @@ namespace System.Security.Cryptography
 
         private static Interop.Crypto.RsaPadding GetInteropPadding(
             RSAEncryptionPadding padding,
-            out OaepProcessor oaepProcessor)
+            out RsaPaddingProcessor rsaPaddingProcessor)
         {
             if (padding == RSAEncryptionPadding.Pkcs1)
             {
-                oaepProcessor = null;
+                rsaPaddingProcessor = null;
                 return Interop.Crypto.RsaPadding.Pkcs1;
             }
 
             if (padding == RSAEncryptionPadding.OaepSHA1)
             {
-                oaepProcessor = null;
+                rsaPaddingProcessor = null;
                 return Interop.Crypto.RsaPadding.OaepSHA1;
             }
 
             if (padding.Mode == RSAEncryptionPaddingMode.Oaep)
             {
-                oaepProcessor = OaepProcessor.OpenProcessor(padding.OaepHashAlgorithm);
+                rsaPaddingProcessor = RsaPaddingProcessor.OpenProcessor(padding.OaepHashAlgorithm);
                 return Interop.Crypto.RsaPadding.NoPadding;
             }
 
@@ -819,43 +1019,29 @@ namespace System.Security.Cryptography
                 throw HashAlgorithmNameNullOrEmpty();
             if (padding == null)
                 throw new ArgumentNullException(nameof(padding));
-            if (padding != RSASignaturePadding.Pkcs1)
-                throw PaddingModeNotSupported();
 
-            return SignHash(hash, hashAlgorithm);
-        }
-
-        private byte[] SignHash(byte[] hash, HashAlgorithmName hashAlgorithmName)
-        {
-            int algorithmNid = GetAlgorithmNid(hashAlgorithmName);
-            SafeRsaHandle rsa = _key.Value;
-            byte[] signature = new byte[Interop.Crypto.RsaSize(rsa)];
-            int signatureSize;
-
-            bool success = Interop.Crypto.RsaSign(
-                algorithmNid,
+            if (!TrySignHash(
                 hash,
-                hash.Length,
-                signature,
-                out signatureSize,
-                rsa);
-
-            if (!success)
+                Span<byte>.Empty,
+                hashAlgorithm, padding,
+                true,
+                out int bytesWritten,
+                out byte[] signature))
             {
-                throw Interop.Crypto.CreateOpenSslCryptographicException();
+                Debug.Fail("TrySignHash should not return false in allocation mode");
+                throw new CryptographicException();
             }
 
-            Debug.Assert(
-                signatureSize == signature.Length,
-                "RSA_sign reported an unexpected signature size",
-                "RSA_sign reported signatureSize was {0}, when {1} was expected",
-                signatureSize,
-                signature.Length);
-
+            Debug.Assert(signature != null);
             return signature;
         }
 
-        public override bool TrySignHash(ReadOnlySpan<byte> source, Span<byte> destination, HashAlgorithmName hashAlgorithm, RSASignaturePadding padding, out int bytesWritten)
+        public override bool TrySignHash(
+            ReadOnlySpan<byte> source,
+            Span<byte> destination,
+            HashAlgorithmName hashAlgorithm,
+            RSASignaturePadding padding,
+            out int bytesWritten)
         {
             if (string.IsNullOrEmpty(hashAlgorithm.Name))
             {
@@ -865,30 +1051,110 @@ namespace System.Security.Cryptography
             {
                 throw new ArgumentNullException(nameof(padding));
             }
-            if (padding != RSASignaturePadding.Pkcs1)
+
+            bool ret = TrySignHash(
+                source,
+                destination,
+                hashAlgorithm,
+                padding,
+                false,
+                out bytesWritten,
+                out byte[] alloced);
+
+            Debug.Assert(alloced == null);
+            return ret;
+        }
+
+        private bool TrySignHash(
+            ReadOnlySpan<byte> hash,
+            Span<byte> destination,
+            HashAlgorithmName hashAlgorithm,
+            RSASignaturePadding padding,
+            bool allocateSignature,
+            out int bytesWritten,
+            out byte[] signature)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(hashAlgorithm.Name));
+            Debug.Assert(padding != null);
+
+            signature = null;
+
+            // Do not factor out getting _key.Value, since the key creation should not happen on
+            // invalid padding modes.
+
+            if (padding.Mode == RSASignaturePaddingMode.Pkcs1)
             {
-                throw PaddingModeNotSupported();
+                int algorithmNid = GetAlgorithmNid(hashAlgorithm);
+                SafeRsaHandle rsa = _key.Value;
+
+                int bytesRequired = Interop.Crypto.RsaSize(rsa);
+
+                if (allocateSignature)
+                {
+                    Debug.Assert(destination.Length == 0);
+                    signature = new byte[bytesRequired];
+                    destination = signature;
+                }
+
+                if (destination.Length < bytesRequired)
+                {
+                    bytesWritten = 0;
+                    return false;
+                }
+
+                if (!Interop.Crypto.RsaSign(algorithmNid, hash, hash.Length, destination, out int signatureSize, rsa))
+                {
+                    throw Interop.Crypto.CreateOpenSslCryptographicException();
+                }
+
+                Debug.Assert(
+                    signatureSize == bytesRequired,
+                    $"RSA_sign reported signatureSize was {signatureSize}, when {bytesRequired} was expected");
+
+                bytesWritten = signatureSize;
+                return true;
+            }
+            else if (padding.Mode == RSASignaturePaddingMode.Pss)
+            {
+                RsaPaddingProcessor processor = RsaPaddingProcessor.OpenProcessor(hashAlgorithm);
+                SafeRsaHandle rsa = _key.Value;
+
+                int bytesRequired = Interop.Crypto.RsaSize(rsa);
+
+                if (allocateSignature)
+                {
+                    Debug.Assert(destination.Length == 0);
+                    signature = new byte[bytesRequired];
+                    destination = signature;
+                }
+
+                if (destination.Length < bytesRequired)
+                {
+                    bytesWritten = 0;
+                    return false;
+                }
+
+                byte[] pssRented = ArrayPool<byte>.Shared.Rent(bytesRequired);
+                Span<byte> pssBytes = new Span<byte>(pssRented, 0, bytesRequired);
+
+                processor.EncodePss(hash, pssBytes, KeySize);
+
+                int ret = Interop.Crypto.RsaSignPrimitive(pssBytes, destination, rsa);
+
+                pssBytes.Clear();
+                ArrayPool<byte>.Shared.Return(pssRented);
+
+                CheckReturn(ret);
+
+                Debug.Assert(
+                    ret == signature.Length,
+                    $"RSA_private_encrypt returned {ret} when {signature.Length} was expected");
+
+                bytesWritten = ret;
+                return true;
             }
 
-            int algorithmNid = GetAlgorithmNid(hashAlgorithm);
-            SafeRsaHandle rsa = _key.Value;
-
-            int bytesRequired = Interop.Crypto.RsaSize(rsa);
-            if (destination.Length < bytesRequired)
-            {
-                bytesWritten = 0;
-                return false;
-            }
-
-            int signatureSize;
-            if (!Interop.Crypto.RsaSign(algorithmNid, source, source.Length, destination, out signatureSize, rsa))
-            {
-                throw Interop.Crypto.CreateOpenSslCryptographicException();
-            }
-
-            Debug.Assert(signatureSize == bytesRequired, $"RSA_sign reported signatureSize was {signatureSize}, when {bytesRequired} was expected");
-            bytesWritten = signatureSize;
-            return true;
+            throw PaddingModeNotSupported();
         }
 
         public override bool VerifyHash(
@@ -919,14 +1185,48 @@ namespace System.Security.Cryptography
             {
                 throw new ArgumentNullException(nameof(padding));
             }
-            if (padding != RSASignaturePadding.Pkcs1)
+
+            if (padding == RSASignaturePadding.Pkcs1)
             {
-                throw PaddingModeNotSupported();
+                int algorithmNid = GetAlgorithmNid(hashAlgorithm);
+                SafeRsaHandle rsa = _key.Value;
+                return Interop.Crypto.RsaVerify(algorithmNid, hash, hash.Length, signature, signature.Length, rsa);
+            }
+            else if (padding == RSASignaturePadding.Pss)
+            {
+                RsaPaddingProcessor processor = RsaPaddingProcessor.OpenProcessor(hashAlgorithm);
+                SafeRsaHandle rsa = _key.Value;
+
+                int requiredBytes = Interop.Crypto.RsaSize(rsa);
+
+                if (signature.Length != requiredBytes)
+                {
+                    return false;
+                }
+
+                byte[] rented = ArrayPool<byte>.Shared.Rent(requiredBytes);
+                Span<byte> unwrapped = new Span<byte>(rented, 0, requiredBytes);
+
+                try
+                {
+                    int ret = Interop.Crypto.RsaVerificationPrimitive(signature, unwrapped, rsa);
+
+                    CheckReturn(ret);
+
+                    Debug.Assert(
+                        ret == requiredBytes,
+                        $"RSA_private_encrypt returned {ret} when {requiredBytes} was expected");
+
+                    return processor.VerifyPss(hash, unwrapped, KeySize);
+                }
+                finally
+                {
+                    unwrapped.Clear();
+                    ArrayPool<byte>.Shared.Return(rented);
+                }
             }
 
-            int algorithmNid = GetAlgorithmNid(hashAlgorithm);
-            SafeRsaHandle rsa = _key.Value;
-            return Interop.Crypto.RsaVerify(algorithmNid, hash, hash.Length, signature, signature.Length, rsa);
+            throw PaddingModeNotSupported();
         }
 
         private static int GetAlgorithmNid(HashAlgorithmName hashAlgorithmName)

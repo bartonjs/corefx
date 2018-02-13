@@ -57,6 +57,32 @@ internal static partial class Interop
             SafeRsaHandle rsa,
             RsaPadding padding);
 
+        internal static int RsaSignPrimitive(
+            ReadOnlySpan<byte> from,
+            Span<byte> to,
+            SafeRsaHandle rsa) =>
+            RsaSignPrimitive(from.Length, ref MemoryMarshal.GetReference(from), ref MemoryMarshal.GetReference(to), rsa);
+
+        [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_RsaSignPrimitive")]
+        private static extern int RsaSignPrimitive(
+            int flen,
+            ref byte from,
+            ref byte to,
+            SafeRsaHandle rsa);
+
+        internal static int RsaVerificationPrimitive(
+            ReadOnlySpan<byte> from,
+            Span<byte> to,
+            SafeRsaHandle rsa) =>
+            RsaVerificationPrimitive(from.Length, ref MemoryMarshal.GetReference(from), ref MemoryMarshal.GetReference(to), rsa);
+
+        [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_RsaVerificationPrimitive")]
+        private static extern int RsaVerificationPrimitive(
+            int flen,
+            ref byte from,
+            ref byte to,
+            SafeRsaHandle rsa);
+
         [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_RsaSize")]
         internal static extern int RsaSize(SafeRsaHandle rsa);
 

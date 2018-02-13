@@ -29,6 +29,9 @@ namespace System.Security.Cryptography.Rsa.Tests
 
         public static bool SupportsSha2Oaep => s_provider.SupportsSha2Oaep;
 
+        // It's currently true on all our platforms that supporting PSS is equivalent to supporting OAEP-SHA-2.
+        public static bool SupportsPss => s_provider.SupportsSha2Oaep;
+
         public static bool SupportsDecryptingIntoExactSpaceRequired => s_provider.SupportsDecryptingIntoExactSpaceRequired;
     }
 }
