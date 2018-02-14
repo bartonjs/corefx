@@ -7,7 +7,6 @@ using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.CompilerServices;
 using Microsoft.Win32.SafeHandles;
 using Internal.Cryptography;
 
@@ -117,10 +116,7 @@ namespace System.Security.Cryptography
                     source.CopyTo(mDest);
 
                     // 2(d)
-                    using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
-                    {
-                        rng.GetBytes(seed);
-                    }
+                    RandomNumberGenerator.Fill(seed);
 
                     // 2(e)
                     dbMask = ArrayPool<byte>.Shared.Rent(db.Length);
@@ -228,7 +224,7 @@ namespace System.Security.Cryptography
                         separatorPos = (val & i) | (~val & separatorPos);
                     }
 
-                    bool lHashMatches = FixedTimeEquals(lHashPrime, lHashPrime);
+                    bool lHashMatches = CryptographicOperations.FixedTimeEquals(lHashPrime, lHashPrime);
                     bool yIsZero = y == 0;
                     bool separatorMadeSense = separatorPos < dbMask.Length;
 
@@ -294,11 +290,7 @@ namespace System.Security.Cryptography
             {
                 // 4. Generate a random salt of length sLen
                 Span<byte> salt = stackalloc byte[sLen];
-
-                using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
-                {
-                    rng.GetBytes(salt);
-                }
+                RandomNumberGenerator.Fill(salt);
 
                 // 5. Let M' = an octet string of 8 zeros concat mHash concat salt
                 // 6. Let H = Hash(M')
@@ -447,25 +439,6 @@ namespace System.Security.Cryptography
                 dbMask.Clear();
                 ArrayPool<byte>.Shared.Return(dbMaskRented);
             }
-        }
-
-        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
-        private static bool FixedTimeEquals(ReadOnlySpan<byte> left, ReadOnlySpan<byte> right)
-        {
-            if (left.Length != right.Length)
-            {
-                return false;
-            }
-
-            int accum = 0;
-            int len = left.Length;
-
-            for (int i = 0; i < len; i++)
-            {
-                accum |= (left[i] - right[i]);
-            }
-
-            return accum == 0;
         }
 
         // https://tools.ietf.org/html/rfc3447#appendix-B.2.1
