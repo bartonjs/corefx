@@ -320,6 +320,32 @@ namespace System.Security.Cryptography.Rsa.Tests
         }
 
         [Fact]
+        [ActiveIssue(27120, TestPlatforms.Windows, TargetFrameworkMonikers.Netcoreapp)]
+        public void RoundtripEmptyArray()
+        {
+            using (RSA rsa = RSAFactory.Create(TestData.RSA2048Params))
+            {
+                void RoundtripEmpty(RSAEncryptionPadding paddingMode)
+                {
+                    byte[] encrypted = Encrypt(rsa, Array.Empty<byte>(), paddingMode);
+                    byte[] decrypted = Decrypt(rsa, encrypted, paddingMode);
+
+                    Assert.Equal(Array.Empty<byte>(), decrypted);
+                }
+
+                RoundtripEmpty(RSAEncryptionPadding.Pkcs1);
+                RoundtripEmpty(RSAEncryptionPadding.OaepSHA1);
+
+                if (RSAFactory.SupportsSha2Oaep)
+                {
+                    RoundtripEmpty(RSAEncryptionPadding.OaepSHA256);
+                    RoundtripEmpty(RSAEncryptionPadding.OaepSHA384);
+                    RoundtripEmpty(RSAEncryptionPadding.OaepSHA512);
+                }
+            }
+        }
+
+        [Fact]
         public void RsaOaepMaxSize()
         {
             RSAParameters rsaParameters = TestData.RSA2048Params;
