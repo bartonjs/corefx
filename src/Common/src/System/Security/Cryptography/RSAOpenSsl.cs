@@ -454,7 +454,7 @@ namespace System.Security.Cryptography
                 BinaryPrimitives.WriteInt32BigEndian(bigEndianCount, count);
                 hasher.AppendData(bigEndianCount);
 
-                if (writePtr.Length > _hLen)
+                if (writePtr.Length >= _hLen)
                 {
                     if (!hasher.TryGetHashAndReset(writePtr, out int bytesWritten))
                     {
