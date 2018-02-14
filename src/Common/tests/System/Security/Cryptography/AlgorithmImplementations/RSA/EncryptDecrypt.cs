@@ -318,6 +318,28 @@ namespace System.Security.Cryptography.Rsa.Tests
             Assert.Equal(TestData.HelloBytes, output);
         }
 
+
+        [Fact]
+        public void RsaDecryptOaep_ExpectFailure()
+        {
+            // This particular byte pattern, when decrypting under OAEP-SHA-2-384 has
+            // an 0x01 in the correct range, and y=0, but lHash and lHashPrime do not agree
+            byte[] encrypted = (
+                "2A1914D11E2F6B9E286DAC9D76F32A008EC31457522CEA058D7C48C85085899F" +
+                "E9C2DBD4FCA5FAD936F2B747E0BEF131217F8521FA921DF807A83C1B34DB1547" +
+                "8D637EDFED222B6411C80D465332B2EE5208F87D4F8D1736FEBC291E14E77C4B" +
+                "75A1F06B5124F225F310BFFA83BCA9F11101BA67A64109C37F52BF00B84FFD9A" +
+                "D39282AD2BA9EEADADA0FE38998755B556B152EE8974F2C8158ACFA5F509DD4A" +
+                "BFE72218C0DF596DFF02C332F45ECC04280455F5D2666E93A3522BB8B41FC92E" +
+                "0176AFB1D3A5AE474B708B882ACA88447046E13D44E5EA8D66421DFC177A683B" +
+                "7B395F18886AAFD9CED072079739ED1D390354976D188C50A29AAD58784886E6").HexToByteArray();
+
+            using (RSA rsa = RSAFactory.Create(TestData.RSA2048Params))
+            {
+                Assert.ThrowsAny<CryptographicException>(
+                    () => Decrypt(rsa, encrypted, RSAEncryptionPadding.OaepSHA384));
+            }
+        }
         [ConditionalFact(nameof(EphemeralKeysAreExportable))]
         public void RsaDecryptAfterExport()
         {

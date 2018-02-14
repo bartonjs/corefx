@@ -224,7 +224,7 @@ namespace System.Security.Cryptography
                         separatorPos = (val & i) | (~val & separatorPos);
                     }
 
-                    bool lHashMatches = CryptographicOperations.FixedTimeEquals(lHashPrime, lHashPrime);
+                    bool lHashMatches = CryptographicOperations.FixedTimeEquals(lHash, lHashPrime);
                     bool yIsZero = y == 0;
                     bool separatorMadeSense = separatorPos < dbMask.Length;
 
