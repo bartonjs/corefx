@@ -83,7 +83,8 @@ namespace System.Security.Cryptography
                 // 1(b)
                 if (source.Length > maxInput)
                 {
-                    throw new CryptographicException("Message too long.");
+                    throw new CryptographicException(
+                        SR.Format(SR.Cryptography_Encryption_MessageTooLong, maxInput));
                 }
 
                 // The final message (step 2(i)) will be
@@ -232,7 +233,7 @@ namespace System.Security.Cryptography
 
                     if (!shouldContinue)
                     {
-                        throw new CryptographicException("Padding failed.");
+                        throw new CryptographicException(SR.Cryptography_OAEP_Decryption_Failed);
                     }
 
                     Span<byte> message = dbMask.Slice(separatorPos + 1);
@@ -262,7 +263,7 @@ namespace System.Security.Cryptography
 
             if (emLen < 2 + _hLen + sLen)
             {
-                throw new CryptographicException("Input is too big.");
+                throw new CryptographicException(SR.Cryptography_PSS_KeyTooSmall);
             }
 
             if (mHash.Length != _hLen)
