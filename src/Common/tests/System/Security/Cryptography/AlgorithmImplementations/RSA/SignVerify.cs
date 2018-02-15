@@ -1058,6 +1058,28 @@ namespace System.Security.Cryptography.Rsa.Tests
         }
 
         [ConditionalFact(nameof(SupportsPss))]
+        public void PssVerifyHash_MismatchedHashSize()
+        {
+            // This is a legal SHA-1 value, which we're going to use with SHA-2-256 instead.
+            byte[] hash = "75ED7E627DB9AECBD870E27EED49ED7D9AEB2F52".HexToByteArray();
+
+            byte[] sig = (
+                "837A17C13618030A6C0C17551D8A34CA5AE4BB1D45A5DAD091F4016C630E0838" +
+                "5F9D9F1F75EF4CCBBE723C0630AC699C43587D81BD16AFBD2F797215F68F8062" +
+                "87A352BB269FB9D042DA4D9D664172E4B3B39FC3457879C8DBDD56FAB44F2515" +
+                "71E2E607A964CB548CB36198004ACD8D3E3B80D10917CE582710BB65513C0310" +
+                "4A0A82C63D2B8898F5BAF97618B5EBE5F3B0824561C059FD7FC949B12837E8B1" +
+                "E86380E9A68F6D7E8E8BD5C57B04E831DBBDBDCA20403EC988635F62D4B48382" +
+                "56E2AF4213FDCA6BF801C06AF6381DAC61288C13B08806A323B3E956A13BCB29" +
+                "680F62CCA9880A8A1FD1A2CA61DCFE008AC7FC55E98ACCE9B7BE010E5BCB836A").HexToByteArray();
+
+            using (RSA rsa = RSAFactory.Create(TestData.RSA2048Params))
+            {
+                Assert.True(VerifyHash(rsa, hash, sig, HashAlgorithmName.SHA256, RSASignaturePadding.Pss));
+            }
+        }
+
+        [ConditionalFact(nameof(SupportsPss))]
         public void PssSignHash_MismatchedHashSize()
         {
             RSASignaturePadding padding = RSASignaturePadding.Pss;

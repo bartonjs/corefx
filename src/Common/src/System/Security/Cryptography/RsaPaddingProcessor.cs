@@ -251,8 +251,8 @@ namespace System.Security.Cryptography
             int emBits = keySize - 1;
             int emLen = (emBits + 7) / 8;
 
-            // In this implementation, sLen is restricted to the hLen of the declared hash.
-            int sLen = _hLen;
+            // In this implementation, sLen is restricted to the length of the input hash.
+            int sLen = mHash.Length;
 
             // 3.  if emLen < hLen + sLen + 2, encoding error.
             //
@@ -336,7 +336,7 @@ namespace System.Security.Cryptography
             Debug.Assert(em.Length >= emLen);
 
             // In this implementation, sLen is restricted to hLen.
-            int sLen = _hLen;
+            int sLen = mHash.Length;
 
             // 3. If emLen < hLen + sLen + 2, output "inconsistent" and stop.
             if (emLen < _hLen + sLen + 2)
