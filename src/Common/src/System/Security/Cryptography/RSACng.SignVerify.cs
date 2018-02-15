@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Buffers;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 using Internal.Cryptography;
@@ -82,6 +83,26 @@ namespace System.Security.Cryptography
 
             using (SafeNCryptKeyHandle keyHandle = GetDuplicatedKeyHandle())
             {
+                if (source.Length == 0 && padding.Mode == RSASignaturePaddingMode.Pss)
+                {
+                    int keySize = KeySize;
+                    int bufSize = (keySize + 7) / 8;
+                    byte[] rented = ArrayPool<byte>.Shared.Rent(bufSize);
+                    Span<byte> paddedMessage = new Span<byte>(rented, 0, bufSize);
+                    
+                    try
+                    {
+                        RsaPaddingProcessor processor = RsaPaddingProcessor.OpenProcessor(hashAlgorithm);
+                        processor.EncodePss(source, paddedMessage, keySize);
+                        return keyHandle.TrySignHash(paddedMessage, destination, AsymmetricPaddingMode.NCRYPT_NO_PADDING_FLAG, null, out bytesWritten);
+                    }
+                    finally
+                    {
+                        CryptographicOperations.ZeroMemory(paddedMessage);
+                        ArrayPool<byte>.Shared.Return(rented);
+                    }
+                }
+
                 IntPtr namePtr = Marshal.StringToHGlobalUni(hashAlgorithmName);
                 try
                 {
