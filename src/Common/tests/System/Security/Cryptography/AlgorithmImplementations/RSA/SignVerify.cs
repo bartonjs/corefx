@@ -548,6 +548,32 @@ namespace System.Security.Cryptography.Rsa.Tests
         }
 
         [Fact]
+        public void PkcsSignHash_MismatchedHashSize()
+        {
+            RSASignaturePadding padding = RSASignaturePadding.Pkcs1;
+
+            using (RSA rsa = RSAFactory.Create(TestData.RSA2048Params))
+            {
+                byte[] data152 = new byte[152 / 8];
+                byte[] data168 = new byte[168 / 8];
+                RandomNumberGenerator.Fill(data152);
+                RandomNumberGenerator.Fill(data168);
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => SignHash(rsa, data152, HashAlgorithmName.SHA1, padding));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => SignHash(rsa, data168, HashAlgorithmName.SHA1, padding));
+
+                byte[] data160 = new byte[160 / 8];
+                RandomNumberGenerator.Fill(data160);
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => SignHash(rsa, data160, HashAlgorithmName.SHA256, padding));
+            }
+        }
+
+        [Fact]
         public void ExpectedHashSignature_SHA1_2048()
         {
             byte[] expectedHashSignature = new byte[]
@@ -1024,10 +1050,56 @@ namespace System.Security.Cryptography.Rsa.Tests
             RSASignaturePadding padding = RSASignaturePadding.Pss;
             byte[] data = TestData.HelloBytes;
 
-            using (RSA rsa = RSAFactory.Create())
+            using (RSA rsa = RSAFactory.Create(TestData.RSA2048Params))
             {
                 byte[] signature = SignData(rsa, data, HashAlgorithmName.SHA256, padding);
                 Assert.False(VerifyData(rsa, data, signature, HashAlgorithmName.SHA384, padding));
+            }
+        }
+
+        [ConditionalFact(nameof(SupportsPss))]
+        public void PssSignHash_MismatchedHashSize()
+        {
+            RSASignaturePadding padding = RSASignaturePadding.Pss;
+
+            using (RSA rsa = RSAFactory.Create(TestData.RSA2048Params))
+            {
+                byte[] data152 = new byte[152 / 8];
+                byte[] data168 = new byte[168 / 8];
+                RandomNumberGenerator.Fill(data152);
+                RandomNumberGenerator.Fill(data168);
+
+                byte[] signed152 = SignHash(rsa, data152, HashAlgorithmName.SHA1, padding);
+                Assert.True(VerifyHash(rsa, data152, signed152, HashAlgorithmName.SHA1, padding));
+
+                byte[] signed168 = SignHash(rsa, data168, HashAlgorithmName.SHA1, padding);
+                Assert.True(VerifyHash(rsa, data168, signed168, HashAlgorithmName.SHA1, padding));
+
+                byte[] data160 = new byte[160 / 8];
+                RandomNumberGenerator.Fill(data160);
+
+                byte[] signed160 = SignHash(rsa, data160, HashAlgorithmName.SHA256, padding);
+                Assert.True(VerifyHash(rsa, data160, signed160, HashAlgorithmName.SHA256, padding));
+            }
+        }
+
+        [ConditionalFact(nameof(SupportsPss))]
+        public void PssSignHash_SignEmptyHash()
+        {
+            RSASignaturePadding padding = RSASignaturePadding.Pss;
+
+            using (RSA rsa = RSAFactory.Create(TestData.RSA2048Params))
+            {
+                byte[] data0 = Array.Empty<byte>();
+               
+                byte[] signed0 = SignHash(rsa, data0, HashAlgorithmName.SHA256, padding);
+                Assert.True(VerifyHash(rsa, data0, signed0, HashAlgorithmName.SHA256, padding));
+
+                signed0 = SignHash(rsa, data0, HashAlgorithmName.SHA384, padding);
+                Assert.True(VerifyHash(rsa, data0, signed0, HashAlgorithmName.SHA384, padding));
+
+                signed0 = SignHash(rsa, data0, HashAlgorithmName.SHA512, padding);
+                Assert.True(VerifyHash(rsa, data0, signed0, HashAlgorithmName.SHA512, padding));
             }
         }
 
@@ -1038,7 +1110,7 @@ namespace System.Security.Cryptography.Rsa.Tests
             byte[] dataCopy = (byte[])TestData.HelloBytes.Clone();
             HashAlgorithmName hashAlgorithmName = HashAlgorithmName.SHA256;
 
-            using (RSA rsa = RSAFactory.Create())
+            using (RSA rsa = RSAFactory.Create(TestData.RSA2048Params))
             {
                 byte[] signature = SignData(rsa, dataCopy, hashAlgorithmName, padding);
                 dataCopy[0] ^= 0xFF;
@@ -1053,7 +1125,7 @@ namespace System.Security.Cryptography.Rsa.Tests
             byte[] data = TestData.HelloBytes;
             HashAlgorithmName hashAlgorithmName = HashAlgorithmName.SHA256;
 
-            using (RSA rsa = RSAFactory.Create())
+            using (RSA rsa = RSAFactory.Create(TestData.RSA2048Params))
             {
                 byte[] signature = SignData(rsa, data, hashAlgorithmName, padding);
 

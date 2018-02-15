@@ -253,8 +253,8 @@ namespace System.Security.Cryptography
             // https://tools.ietf.org/html/rfc3447#section-9.1.1
             int emBits = keySize - 1;
             int emLen = (emBits + 7) / 8;
-            
-            // In this implementation, sLen is restricted to hLen.
+
+            // In this implementation, sLen is restricted to the hLen of the declared hash.
             int sLen = _hLen;
 
             // 3.  if emLen < hLen + sLen + 2, encoding error.
@@ -264,11 +264,6 @@ namespace System.Security.Cryptography
             if (emLen < 2 + _hLen + sLen)
             {
                 throw new CryptographicException(SR.Cryptography_PSS_KeyTooSmall);
-            }
-
-            if (mHash.Length != _hLen)
-            {
-                throw new CryptographicException("Hash is of the wrong size.");
             }
 
             // Set any leading bytes to zero, since that will be required for the pending
