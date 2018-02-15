@@ -175,6 +175,9 @@
   <data name="Cryptography_Invalid_IA5String" xml:space="preserve">
     <value>The string contains a character not in the 7 bit ASCII character set.</value>
   </data>
+  <data name="Cryptography_KeyTooSmall" xml:space="preserve">
+    <value>The key is too small for the requested operation.</value>
+  </data>
   <data name="Cryptography_MissingIV" xml:space="preserve">
     <value>The cipher mode specified requires that an initialization vector (IV) be used.</value>
   </data>
@@ -204,9 +207,6 @@
   </data>
   <data name="Cryptography_PasswordDerivedBytes_FewBytesSalt" xml:space="preserve">
     <value>Salt is not at least eight bytes.</value>
-  </data>
-  <data name="Cryptography_PSS_KeyTooSmall" xml:space="preserve">
-    <value>The key is too small to encode the signature.</value>
   </data>
   <data name="Cryptography_RC2_EKS40" xml:space="preserve">
     <value>EffectiveKeySize value must be at least 40 bits.</value>
