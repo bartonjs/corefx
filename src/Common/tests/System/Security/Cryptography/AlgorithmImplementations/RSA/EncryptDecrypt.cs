@@ -320,7 +320,6 @@ namespace System.Security.Cryptography.Rsa.Tests
         }
 
         [Fact]
-        [ActiveIssue(27120, TestPlatforms.Windows, TargetFrameworkMonikers.Netcoreapp)]
         public void RoundtripEmptyArray()
         {
             using (RSA rsa = RSAFactory.Create(TestData.RSA2048Params))
