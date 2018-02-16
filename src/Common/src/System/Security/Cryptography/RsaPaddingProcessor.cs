@@ -184,7 +184,7 @@ namespace System.Security.Cryptography
             }
         }
 
-        internal void DepadOaep(
+        internal bool DepadOaep(
             ReadOnlySpan<byte> source,
             Span<byte> destination,
             out int bytesWritten)
@@ -262,8 +262,18 @@ namespace System.Security.Cryptography
                     }
 
                     Span<byte> message = dbMask.Slice(separatorPos + 1);
-                    message.CopyTo(destination);
-                    bytesWritten = message.Length;
+
+                    if (message.Length <= destination.Length)
+                    {
+                        message.CopyTo(destination);
+                        bytesWritten = message.Length;
+                        return true;
+                    }
+                    else
+                    {
+                        bytesWritten = 0;
+                        return false;
+                    }
                 }
                 finally
                 {

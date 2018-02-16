@@ -883,7 +883,27 @@ namespace System.Security.Cryptography.Rsa.Tests
         }
 
         [Fact]
-        public void VerifyExpectedSignature_PssSha256()
+        public void VerifyExpectedSignature_PssSha256_RSA2048()
+        {
+            byte[] modulus2048Signature = (
+                "460CA7273FF6CC02DD57F07CB18E65E5AF23B0285E26122B810EC6D2F4EE7E1A" +
+                "1B01A203623E800C9940CE827614B2F1DC7C7B1CC3A976D27F82517EB64AC90B" +
+                "9A97D1CC17FB4731C63CA02C9F46B57A4A03981D73265CDB36E28EF08FCA77ED" +
+                "FAB34EE91FE6AABF00045489ACEB631FB004438344EA7997ADE2191C1A70E9F9" +
+                "2BA809FEFB4EFA0DBC1075A7EBBBCF57747DA8D0B3467BD3DAC5EA8B47F76F07" +
+                "7043497E7459A83349FE74320E77D471008CB7B43707561FA8DC9251F8EAE531" +
+                "5AC1894C4F9E6B7BECF993C146C5D6CF0DB60992A297F358A0895831965887C4" +
+                "B9153B96771C998CD61DA0C487D63555AE66F917F1BFDF509BFFEB21440F6A3C").HexToByteArray();
+
+            VerifyExpectedSignature_Pss(
+                TestData.RSA2048Params,
+                HashAlgorithmName.SHA256,
+                TestData.RSA2048Params.Modulus,
+                modulus2048Signature);
+        }
+
+        [Fact]
+        public void VerifyExpectedSignature_PssSha256_RSA16384()
         {
             byte[] modulus2048Signature = (
                 "1D92D529567F6922866FFDE4BF44C427FA511BF5EDF163ED51A0D14ADECD98FB" +
@@ -1013,7 +1033,16 @@ namespace System.Security.Cryptography.Rsa.Tests
             using (RSA rsaPublic = RSAFactory.Create())
             using (RSA rsaPrivate = RSAFactory.Create())
             {
-                rsaPublic.ImportParameters(publicParameters);
+                try
+                {
+                    rsaPublic.ImportParameters(publicParameters);
+                }
+                catch (CryptographicException)
+                {
+                    // The key didn't load, not anything else this test can do.
+                    return;
+                }
+
                 rsaPrivate.ImportParameters(keyParameters);
 
                 // Generator for new tests.
