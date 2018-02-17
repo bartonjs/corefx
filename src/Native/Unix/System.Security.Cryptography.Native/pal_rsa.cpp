@@ -59,7 +59,7 @@ static int HasNoPrivateKey(RSA* rsa)
     // The method has descibed itself as having the private key external to the structure.
     // That doesn't mean it's actually present, but we can't tell.
     if (meth->flags & RSA_FLAG_EXT_PKEY)
-       return 0;
+        return 0;
 
     // In the event that there's a middle-ground where we report failure when success is expected,
     // one could do something like check if the RSA_METHOD intercepts all private key operations:
