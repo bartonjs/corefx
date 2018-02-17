@@ -1104,7 +1104,7 @@ namespace System.Security.Cryptography.Rsa.Tests
 
             using (RSA rsa = RSAFactory.Create(TestData.RSA2048Params))
             {
-                Assert.True(VerifyHash(rsa, hash, sig, HashAlgorithmName.SHA256, RSASignaturePadding.Pss));
+                Assert.False(VerifyHash(rsa, hash, sig, HashAlgorithmName.SHA256, RSASignaturePadding.Pss));
             }
         }
 
@@ -1120,37 +1120,17 @@ namespace System.Security.Cryptography.Rsa.Tests
                 RandomNumberGenerator.Fill(data152);
                 RandomNumberGenerator.Fill(data168);
 
-                byte[] signed152 = SignHash(rsa, data152, HashAlgorithmName.SHA1, padding);
-                Assert.True(VerifyHash(rsa, data152, signed152, HashAlgorithmName.SHA1, padding));
+                Assert.ThrowsAny<CryptographicException>(
+                    () => SignHash(rsa, data152, HashAlgorithmName.SHA1, padding));
 
-                byte[] signed168 = SignHash(rsa, data168, HashAlgorithmName.SHA1, padding);
-                Assert.True(VerifyHash(rsa, data168, signed168, HashAlgorithmName.SHA1, padding));
+                Assert.ThrowsAny<CryptographicException>(
+                    () => SignHash(rsa, data168, HashAlgorithmName.SHA1, padding));
 
                 byte[] data160 = new byte[160 / 8];
                 RandomNumberGenerator.Fill(data160);
 
-                byte[] signed160 = SignHash(rsa, data160, HashAlgorithmName.SHA256, padding);
-                Assert.True(VerifyHash(rsa, data160, signed160, HashAlgorithmName.SHA256, padding));
-            }
-        }
-
-        [ConditionalFact(nameof(SupportsPss))]
-        public void PssSignHash_SignEmptyHash()
-        {
-            RSASignaturePadding padding = RSASignaturePadding.Pss;
-
-            using (RSA rsa = RSAFactory.Create(TestData.RSA2048Params))
-            {
-                byte[] data0 = Array.Empty<byte>();
-               
-                byte[] signed0 = SignHash(rsa, data0, HashAlgorithmName.SHA256, padding);
-                Assert.True(VerifyHash(rsa, data0, signed0, HashAlgorithmName.SHA256, padding));
-
-                signed0 = SignHash(rsa, data0, HashAlgorithmName.SHA384, padding);
-                Assert.True(VerifyHash(rsa, data0, signed0, HashAlgorithmName.SHA384, padding));
-
-                signed0 = SignHash(rsa, data0, HashAlgorithmName.SHA512, padding);
-                Assert.True(VerifyHash(rsa, data0, signed0, HashAlgorithmName.SHA512, padding));
+                Assert.ThrowsAny<CryptographicException>(
+                    () => SignHash(rsa, data160, HashAlgorithmName.SHA256, padding));
             }
         }
 

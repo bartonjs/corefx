@@ -105,7 +105,7 @@
       <Link>Internal\Cryptography\UniversalCryptoDecryptor.cs</Link>
     </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\RsaPaddingProcessor.cs">
-      <Link>System\Security\Cryptography\RsaPaddingProcessor.cs</Link>
+      <Link>Common\System\Security\Cryptography\RsaPaddingProcessor.cs</Link>
     </Compile>
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetsWindows)' == 'true' and '$(IsPartialFacadeAssembly)' != 'true'">

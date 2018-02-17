@@ -25,6 +25,8 @@ namespace System.Security.Cryptography
             _hLen = hLen;
         }
 
+        internal int HashLength => _hLen;
+
         internal static RsaPaddingProcessor OpenProcessor(HashAlgorithmName hashAlgorithmName)
         {
             if (s_lookup.TryGetValue(hashAlgorithmName, out RsaPaddingProcessor processor))
@@ -289,8 +291,13 @@ namespace System.Security.Cryptography
             int emBits = keySize - 1;
             int emLen = (emBits + 7) / 8;
 
+            if (mHash.Length != _hLen)
+            {
+                throw new CryptographicException(SR.Cryptography_SignHash_WrongSize);
+            }
+
             // In this implementation, sLen is restricted to the length of the input hash.
-            int sLen = mHash.Length;
+            int sLen = _hLen;
 
             // 3.  if emLen < hLen + sLen + 2, encoding error.
             //
@@ -371,10 +378,15 @@ namespace System.Security.Cryptography
             int emBits = keySize - 1;
             int emLen = (emBits + 7) / 8;
 
+            if (mHash.Length != _hLen)
+            {
+                return false;
+            }
+
             Debug.Assert(em.Length >= emLen);
 
             // In this implementation, sLen is restricted to hLen.
-            int sLen = mHash.Length;
+            int sLen = _hLen;
 
             // 3. If emLen < hLen + sLen + 2, output "inconsistent" and stop.
             if (emLen < _hLen + sLen + 2)

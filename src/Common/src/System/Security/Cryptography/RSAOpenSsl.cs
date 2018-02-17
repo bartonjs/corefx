@@ -702,6 +702,11 @@ namespace System.Security.Cryptography
                     return false;
                 }
 
+                if (hash.Length != processor.HashLength)
+                {
+                    return false;
+                }
+
                 byte[] rented = ArrayPool<byte>.Shared.Rent(requiredBytes);
                 Span<byte> unwrapped = new Span<byte>(rented, 0, requiredBytes);
 
