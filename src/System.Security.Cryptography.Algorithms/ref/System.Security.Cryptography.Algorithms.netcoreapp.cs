@@ -45,4 +45,13 @@ namespace System.Security.Cryptography
         public virtual bool VerifyData(System.ReadOnlySpan<byte> data, System.ReadOnlySpan<byte> signature, HashAlgorithmName hashAlgorithm, RSASignaturePadding padding) { throw null; }
         public virtual bool VerifyHash(System.ReadOnlySpan<byte> hash, System.ReadOnlySpan<byte> signature, HashAlgorithmName hashAlgorithm, RSASignaturePadding padding) { throw null; }
     }
+    public partial struct RSAParameters
+    {
+        public static RSAParameters FromPkcs1PublicKey(System.ReadOnlySpan<byte> source, out int bytesRead) => throw null;
+        public static RSAParameters FromPkcs1PrivateKey(System.ReadOnlySpan<byte> source, out int bytesRead) => throw null;
+        public byte[] ToPkcs1PublicKey() => throw null;
+        public byte[] ToPkcs1PrivateKey() => throw null;
+        public bool TryWritePkcs1PublicKey(System.Span<byte> destination, out int bytesWritten) => throw null;
+        public bool TryWritePkcs1PrivateKey(System.Span<byte> destination, out int bytesWritten) => throw null;
+    }
 }

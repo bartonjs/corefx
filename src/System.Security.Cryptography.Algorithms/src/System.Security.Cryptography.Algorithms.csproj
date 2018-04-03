@@ -20,6 +20,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'netcoreapp-Windows_NT-Release|AnyCPU'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'uap-Windows_NT-Debug|AnyCPU'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'uap-Windows_NT-Release|AnyCPU'" />
+  <PropertyGroup Condition="'$(TargetGroup)'=='netcoreapp'">
+    <DefineConstants>$(DefineConstants);netcoreapp</DefineConstants>
+  </PropertyGroup>
   <ItemGroup Condition="'$(IsPartialFacadeAssembly)' != 'true'">
     <Compile Include="Internal\Cryptography\AesImplementation.cs" />
     <Compile Include="Internal\Cryptography\DesImplementation.cs" />
@@ -106,6 +109,18 @@
     </Compile>
     <Compile Include="$(CommonPath)\Internal\Cryptography\UniversalCryptoDecryptor.cs">
       <Link>Internal\Cryptography\UniversalCryptoDecryptor.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1V2.cs">
+      <Link>Common\System\Security\Cryptography\Asn1V2.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1V2.Serializer.cs">
+      <Link>Common\System\Security\Cryptography\Asn1V2.Serializer.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\AsnReader.cs">
+      <Link>Common\System\Security\Cryptography\AsnReader.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\AsnWriter.cs">
+      <Link>Common\System\Security\Cryptography\AsnWriter.cs</Link>
     </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\RsaPaddingProcessor.cs">
       <Link>Common\System\Security\Cryptography\RsaPaddingProcessor.cs</Link>
@@ -549,15 +564,18 @@
     <Reference Include="System.Collections.Concurrent" />
     <Reference Include="System.Diagnostics.Debug" />
     <Reference Include="System.Diagnostics.Tools" />
+    <Reference Include="System.Linq" />
     <Reference Include="System.Memory" />
     <Reference Include="System.Resources.ResourceManager" />
     <Reference Include="System.Runtime" />
     <Reference Include="System.Runtime.Extensions" />
     <Reference Include="System.Runtime.InteropServices" />
     <Reference Include="System.Runtime.InteropServices.RuntimeInformation" />
+    <Reference Include="System.Runtime.Numerics" />
     <Reference Include="System.Security.Cryptography.Encoding" />
     <Reference Include="System.Security.Cryptography.Primitives" />
     <Reference Include="System.Threading" />
+    <Reference Include="System.Text.Encoding.Extensions" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetsUnix)' == 'true'">
     <Reference Include="System.Runtime.Numerics" />
