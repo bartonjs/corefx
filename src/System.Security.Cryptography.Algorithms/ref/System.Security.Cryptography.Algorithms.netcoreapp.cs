@@ -49,9 +49,18 @@ namespace System.Security.Cryptography
     {
         public static RSAParameters FromPkcs1PublicKey(System.ReadOnlySpan<byte> source, out int bytesRead) => throw null;
         public static RSAParameters FromPkcs1PrivateKey(System.ReadOnlySpan<byte> source, out int bytesRead) => throw null;
-        public byte[] ToPkcs1PublicKey() => throw null;
+        public static RSAParameters FromPkcs8PrivateKey(System.ReadOnlySpan<byte> source, out int bytesRead) => throw null;
+        public static RSAParameters FromPkcs8PrivateKey(System.ReadOnlySpan<char> password, System.ReadOnlySpan<byte> source, out int bytesRead) => throw null;
+        public static RSAParameters FromSubjectPublicKeyInfo(System.ReadOnlySpan<byte> source, out int bytesRead) => throw null;
         public byte[] ToPkcs1PrivateKey() => throw null;
-        public bool TryWritePkcs1PublicKey(System.Span<byte> destination, out int bytesWritten) => throw null;
+        public byte[] ToPkcs1PublicKey() => throw null;
+        public byte[] ToPkcs8PrivateKey() => throw null;
+        public byte[] ToPkcs8PrivateKey(System.ReadOnlySpan<char> password) => throw null;
+        public byte[] ToSubjectPublicKeyInfo() => throw null;
         public bool TryWritePkcs1PrivateKey(System.Span<byte> destination, out int bytesWritten) => throw null;
+        public bool TryWritePkcs1PublicKey(System.Span<byte> destination, out int bytesWritten) => throw null;
+        public bool TryWritePkcs8PrivateKey(System.Span<byte> destination, out int bytesWritten) => throw null;
+        public bool TryWritePkcs8PrivateKey(System.ReadOnlySpan<char> password, System.Span<byte> destination, out int bytesWritten) => throw null;
+        public bool TryWriteSubjectPublicKeyInfo(System.Span<byte> destination, out int bytesWritten) => throw null;
     }
 }

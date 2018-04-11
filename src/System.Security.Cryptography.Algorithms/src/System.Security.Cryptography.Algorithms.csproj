@@ -74,6 +74,7 @@
     <Compile Include="System\Security\Cryptography\HMACSHA384.cs" />
     <Compile Include="System\Security\Cryptography\HMACSHA512.cs" />
     <Compile Include="System\Security\Cryptography\IncrementalHash.cs" />
+    <Compile Include="System\Security\Cryptography\Oids.cs" />
     <Compile Include="System\Security\Cryptography\PKCS1MaskGenerationMethod.cs" />
     <Compile Include="System\Security\Cryptography\RandomNumberGenerator.cs" />
     <Compile Include="System\Security\Cryptography\RC2.cs" />
