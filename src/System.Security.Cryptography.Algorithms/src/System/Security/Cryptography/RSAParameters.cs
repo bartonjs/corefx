@@ -38,12 +38,9 @@ namespace System.Security.Cryptography
             }
         }
 
-        private static RSAParameters FromSubjectPublicKeyInfo(ReadOnlyMemory<byte> source, out int bytesRead)
+        private static void CheckAlgorithmIdentifier(in AlgorithmIdentifierAsn algorithmIdentifier)
         {
-            SubjectPublicKeyInfo spki =
-                AsnSerializer.Deserialize<SubjectPublicKeyInfo>(source, AsnEncodingRules.BER, out int read);
-
-            if (spki.Algorithm.Algorithm != Oids.RsaEncryption)
+            if (algorithmIdentifier.Algorithm != Oids.RsaEncryption)
             {
                 // TODO: Better message?
                 throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
@@ -65,9 +62,9 @@ namespace System.Security.Cryptography
             // (specific quote from https://www.ietf.org/rfc/rfc5754.txt, section 2)
             //
             // Since it's unambiguous, we can go ahead and be lax on read.
-            if (spki.Algorithm.Parameters.HasValue)
+            if (algorithmIdentifier.Parameters.HasValue)
             {
-                ReadOnlySpan<byte> algParameters = spki.Algorithm.Parameters.Value.Span;
+                ReadOnlySpan<byte> algParameters = algorithmIdentifier.Parameters.Value.Span;
 
                 if (algParameters.Length != 2 ||
                     algParameters[0] != 0x05 ||
@@ -77,6 +74,20 @@ namespace System.Security.Cryptography
                     throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
                 }
             }
+        }
+
+        private static RSAParameters FromSubjectPublicKeyInfo(ReadOnlyMemory<byte> source, out int bytesRead)
+        {
+            SubjectPublicKeyInfo spki =
+                AsnSerializer.Deserialize<SubjectPublicKeyInfo>(source, AsnEncodingRules.BER, out int read);
+
+            if (spki.Algorithm.Algorithm != Oids.RsaEncryption)
+            {
+                // TODO: Better message?
+                throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
+            }
+
+            CheckAlgorithmIdentifier(spki.Algorithm);
 
             RSAParameters key = FromPkcs1PublicKey(spki.SubjectPublicKey, out _);
             bytesRead = read;
@@ -118,36 +129,11 @@ namespace System.Security.Cryptography
         {
             byte[] buf = ArrayPool<byte>.Shared.Rent(source.Length);
             source.CopyTo(buf);
+            Memory<byte> tmp = buf.AsMemory(0, source.Length);
 
             try
             {
-                RSAPrivateKey privateKey =
-                    AsnSerializer.Deserialize<RSAPrivateKey>(buf, AsnEncodingRules.BER, out int read);
-
-                if (privateKey.Version != 0)
-                {
-                    throw new CryptographicException(
-                        SR.Format(SR.Cryptography_RSAPrivateKey_V0Only, privateKey.Version));
-                }
-
-                // The modulus size determines the encoded output size of the CRT parameters.
-                byte[] n = privateKey.Modulus.ToByteArray(isUnsigned: true, isBigEndian: true);
-                int halfModulusLength = (n.Length + 1) / 2;
-
-                RSAParameters rsaParameters = new RSAParameters
-                {
-                    Modulus = n,
-                    Exponent = privateKey.PublicExponent.ToByteArray(isUnsigned: true, isBigEndian: true),
-                    D = ExportMinimumSize(privateKey.PrivateExponent, n.Length),
-                    P = ExportMinimumSize(privateKey.Prime1, halfModulusLength),
-                    Q = ExportMinimumSize(privateKey.Prime2, halfModulusLength),
-                    DP = ExportMinimumSize(privateKey.Exponent1, halfModulusLength),
-                    DQ = ExportMinimumSize(privateKey.Exponent2, halfModulusLength),
-                    InverseQ = ExportMinimumSize(privateKey.Coefficient, halfModulusLength),
-                };
-
-                bytesRead = read;
-                return rsaParameters;
+                return FromPkcs1PrivateKey(tmp, out bytesRead);
             }
             finally
             {
@@ -156,12 +142,65 @@ namespace System.Security.Cryptography
             }
         }
 
-        public static RSAParameters FromPkcs8PrivateKey(ReadOnlySpan<byte> source, out int bytesRead)
+        private static RSAParameters FromPkcs1PrivateKey(ReadOnlyMemory<byte> source, out int bytesRead)
         {
-            throw new NotImplementedException();
+            RSAPrivateKey privateKey =
+                AsnSerializer.Deserialize<RSAPrivateKey>(source, AsnEncodingRules.BER, out int read);
+
+            if (privateKey.Version != 0)
+            {
+                throw new CryptographicException(
+                    SR.Format(SR.Cryptography_RSAPrivateKey_V0Only, privateKey.Version));
+            }
+
+            // The modulus size determines the encoded output size of the CRT parameters.
+            byte[] n = privateKey.Modulus.ToByteArray(isUnsigned: true, isBigEndian: true);
+            int halfModulusLength = (n.Length + 1) / 2;
+
+            RSAParameters rsaParameters = new RSAParameters
+            {
+                Modulus = n,
+                Exponent = privateKey.PublicExponent.ToByteArray(isUnsigned: true, isBigEndian: true),
+                D = ExportMinimumSize(privateKey.PrivateExponent, n.Length),
+                P = ExportMinimumSize(privateKey.Prime1, halfModulusLength),
+                Q = ExportMinimumSize(privateKey.Prime2, halfModulusLength),
+                DP = ExportMinimumSize(privateKey.Exponent1, halfModulusLength),
+                DQ = ExportMinimumSize(privateKey.Exponent2, halfModulusLength),
+                InverseQ = ExportMinimumSize(privateKey.Coefficient, halfModulusLength),
+            };
+
+            bytesRead = read;
+            return rsaParameters;
         }
 
-        public static RSAParameters FromPkcs8PrivateKey(ReadOnlySpan<char> password, ReadOnlySpan<byte> source, out int bytesRead)
+        public static RSAParameters FromPkcs8PrivateKey(ReadOnlySpan<byte> source, out int bytesRead)
+        {
+            byte[] buf = ArrayPool<byte>.Shared.Rent(source.Length);
+            source.CopyTo(buf);
+            Memory<byte> tmp = buf.AsMemory(0, source.Length);
+
+            try
+            {
+                PrivateKeyInfo privateKeyInfo =
+                    AsnSerializer.Deserialize<PrivateKeyInfo>(tmp, AsnEncodingRules.BER, out int read);
+
+                CheckAlgorithmIdentifier(privateKeyInfo.PrivateKeyAlgorithm);
+
+                RSAParameters rsaParameters = FromPkcs1PrivateKey(privateKeyInfo.PrivateKey, out _);
+                bytesRead = read;
+                return rsaParameters;
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(tmp.Span);
+                ArrayPool<byte>.Shared.Return(buf);
+            }
+        }
+
+        public static RSAParameters FromPkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            ReadOnlySpan<byte> source,
+            out int bytesRead)
         {
             throw new NotImplementedException();
         }
@@ -216,7 +255,13 @@ namespace System.Security.Cryptography
 
         public byte[] ToPkcs8PrivateKey(ReadOnlySpan<char> password)
         {
-            bool ret = TryWritePkcs8PrivateKey(true, password, Span<byte>.Empty, out int bytesWritten, out byte[] pkcs1);
+            bool ret = TryWritePkcs8PrivateKey(
+                true,
+                password,
+                Span<byte>.Empty,
+                out int bytesWritten,
+                out byte[] pkcs1);
+
             Debug.Assert(ret);
             return pkcs1;
         }
@@ -241,7 +286,10 @@ namespace System.Security.Cryptography
             return TryWritePkcs8PrivateKey(false, destination, out bytesWritten, out _);
         }
 
-        public bool TryWritePkcs8PrivateKey(ReadOnlySpan<char> password, Span<byte> destination, out int bytesWritten)
+        public bool TryWritePkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            Span<byte> destination,
+            out int bytesWritten)
         {
             return TryWritePkcs8PrivateKey(false, password, destination, out bytesWritten, out _);
         }
@@ -257,13 +305,10 @@ namespace System.Security.Cryptography
                 throw new InvalidOperationException(SR.Cryptography_InvalidRsaParameters);
             }
 
-            // If both of Modulus and Exponent had byte lengths in excess of 2^24
-            // then they would need 4 length bytes and one "length is 4 bytes" byte each,
-            // and the wrapping sequence would need the same.
-            // Therefore the maximum amount of overhead we could ever get is 15 (3 * 5),
-            // so just go ahead and ask for that much in the temporary buffer for the encoded
-            // public key.
-            int rentSize = Modulus.Length + Exponent.Length + 15;
+            // Each of the arrays could gain at most 4 bytes of true length, one byte of
+            // length-length, one byte of tag, and one integer padding byte.
+            // The outer sequence would have the length bytes and tag (6 total)
+            int rentSize = checked(3 + 7 + Modulus.Length + 7 + Exponent.Length);
             byte[] rented = ArrayPool<byte>.Shared.Rent(rentSize);
             Span<byte> pkcs1PublicKey = Span<byte>.Empty;
 
@@ -422,7 +467,103 @@ namespace System.Security.Cryptography
             out int bytesWritten,
             out byte[] createdArray)
         {
-            throw new NotImplementedException();
+            if (Modulus == null ||
+                Exponent == null ||
+                D == null ||
+                P == null ||
+                Q == null ||
+                DP == null ||
+                DQ == null ||
+                InverseQ == null)
+            {
+                throw new InvalidOperationException(SR.Cryptography_InvalidRsaParameters);
+            }
+
+            // Each of the arrays could gain at most 4 bytes of true length, one byte of
+            // length-length, one byte of tag, and one integer padding byte.
+            // The outer sequence would have the length bytes and tag (6 total)
+            // and the version number always encodes as 02 01 00 (3 total).
+            int rentSize = checked(
+                6 +
+                3 +
+                7 + Modulus.Length +
+                7 + Exponent.Length +
+                7 + D.Length +
+                7 + P.Length +
+                7 + Q.Length +
+                7 + DP.Length +
+                7 + DQ.Length +
+                7 + InverseQ.Length);
+
+            byte[] rented = ArrayPool<byte>.Shared.Rent(rentSize);
+            Span<byte> pkcs1PrivateKey = Span<byte>.Empty;
+
+            try
+            {
+                if (!TryWritePkcs1PrivateKey(rented, out int ppkSize))
+                {
+                    Debug.Fail($"Pre-allocated call to TryWritePkcs1PrivateKey failed");
+                    throw new CryptographicException();
+                }
+
+                pkcs1PrivateKey = rented.AsSpan(0, ppkSize);
+
+                // https://tools.ietf.org/html/rfc5208#section-5
+                //
+                // PrivateKeyInfo ::= SEQUENCE {
+                //   version                   Version,
+                //   privateKeyAlgorithm       PrivateKeyAlgorithmIdentifier,
+                //   privateKey                PrivateKey,
+                //   attributes           [0]  IMPLICIT Attributes OPTIONAL }
+                // 
+                // Version ::= INTEGER
+                // PrivateKeyAlgorithmIdentifier ::= AlgorithmIdentifier
+                // PrivateKey ::= OCTET STRING
+                AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
+
+                // PrivateKeyInfo
+                writer.PushSequence();
+
+                // https://tools.ietf.org/html/rfc5208#section-5 says the current version is 0.
+                writer.WriteInteger(0);
+
+                // PKI.Algorithm (AlgorithmIdentifier)
+                {
+                    writer.PushSequence();
+                    writer.WriteObjectIdentifier(Oids.RsaEncryption);
+
+                    // https://tools.ietf.org/html/rfc3447#appendix-C
+                    //
+                    // --
+                    // -- When rsaEncryption is used in an AlgorithmIdentifier the
+                    // -- parameters MUST be present and MUST be NULL.
+                    // --
+                    writer.WriteNull();
+
+                    writer.PopSequence();
+                }
+
+                // PKI.privateKey
+                writer.WriteOctetString(pkcs1PrivateKey);
+
+                // We don't currently accept attributes, so... done.
+                writer.PopSequence();
+
+                if (createArray)
+                {
+                    createdArray = writer.Encode();
+                    bytesWritten = createdArray.Length;
+                    return true;
+                }
+
+                createdArray = null;
+                return writer.TryEncode(destination, out bytesWritten);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(pkcs1PrivateKey);
+                ArrayPool<byte>.Shared.Return(rented);
+            }
         }
 
         private bool TryWritePkcs8PrivateKey(
@@ -434,6 +575,49 @@ namespace System.Security.Cryptography
         {
             throw new NotImplementedException();
         }
+    }
+
+    // https://tools.ietf.org/html/rfc5208#section-5
+    //
+    // PrivateKeyInfo ::= SEQUENCE {
+    //   version                   Version,
+    //   privateKeyAlgorithm       PrivateKeyAlgorithmIdentifier,
+    //   privateKey                PrivateKey,
+    //   attributes           [0]  IMPLICIT Attributes OPTIONAL }
+    // 
+    // Version ::= INTEGER
+    // PrivateKeyAlgorithmIdentifier ::= AlgorithmIdentifier
+    // PrivateKey ::= OCTET STRING
+    // Attributes ::= SET OF Attribute
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct PrivateKeyInfo
+    {
+        public byte Version;
+
+        public AlgorithmIdentifierAsn PrivateKeyAlgorithm;
+
+        [OctetString]
+        public ReadOnlyMemory<byte> PrivateKey;
+
+        [ExpectedTag(0)]
+        [OptionalValue]
+        public AttributeAsn[] Attributes;
+    }
+
+    // https://tools.ietf.org/html/rfc5652#section-5.3
+    //
+    // Attribute ::= SEQUENCE {
+    //   attrType OBJECT IDENTIFIER,
+    //   attrValues SET OF AttributeValue }
+    //
+    // AttributeValue ::= ANY
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct AttributeAsn
+    {
+        public Oid AttrType;
+
+        [AnyValue]
+        public ReadOnlyMemory<byte> AttrValues;
     }
 
     // https://tools.ietf.org/html/rfc3280#section-4.1.1.2
