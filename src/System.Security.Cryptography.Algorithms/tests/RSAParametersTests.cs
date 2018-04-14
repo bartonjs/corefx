@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Security.Cryptography.Rsa.Tests;
+using System.Text;
 using Test.Cryptography;
 using Xunit;
 
@@ -340,6 +341,323 @@ Ya8CHwiO/cUU9RIt8A2B84gf2ZfuV2nPMaSuZpTPFC/K5UsCIQCsJMzx1JuilQAN
 acPiMCuFTnRSFYAhozpmsqoLyTREqwIhAMLJlZTGjEB2N+sEazH5ToEczQzKqp7t
 9juGNbOPhoEL",
                 TestData.DiminishedDPParameters);
+        }
+
+        [Fact]
+        public static void ReadEncryptedDiminishedDP()
+        {
+            // PBES1: PbeWithMD5AndDESCBC
+            const string base64 = @"
+MIIBgTAbBgkqhkiG9w0BBQMwDgQI4cFTpQ4kAU0CAggABIIBYO1zEiMx+W9RzsbC
+rKGzDRko5PxWiX1xTya2pU2Nnt8FTstf2xWUQJtmPq3miMVHskgaXXgDc7O/cUkX
+aM01UqvUxe1+PwrcllZPT6WeDLKWD0mVLGsY2BZz52UmoShXkraYovuHehyATHeL
+CEZ1Nn0U+JBU0VlqwhAmD/sagZ7+aq0zggJGvr9wH0DZW5RWCncvG+iZXw/cPfQ9
+gTlrGm8FIWTEwtt+nHv38Ep1zfG3DjLZ/o6IXX+KGykxdkWJVTIFrgCZ+TZ2KH9b
+zL4zxrUq62QFTGlLiDXPmpua0ZksMlGfVAOyCdwZ/rfJQQomG4BeRF44jgVx5lkc
+tirn7aQDNItvjDcSTWsgFNBx37TQAet0Xp2Lebc9tgWUyFimBca3PinZbWrr8e99
+hw/nLtm9qs5I9nFM+RHdeqyhQ17FuH8hLEMXlre/3hkC2yGHEcgDQPWjTH+mSG2B
+YMSYHxE=";
+
+            byte[] derBytes = Convert.FromBase64String(base64);
+
+            RSAParameters rsaParameters =
+                RSAParameters.FromPkcs8PrivateKey("asdf", derBytes, out int bytesRead);
+
+            Assert.Equal(derBytes.Length, bytesRead);
+            ImportExport.AssertKeyEquals(TestData.DiminishedDPParameters, rsaParameters);
+        }
+
+        [Fact]
+        public static void ReadEncryptedRsa1032()
+        {
+            // PBES2: PBKDF2 + aes192
+            const string base64 = @"
+MIICzzBJBgkqhkiG9w0BBQ0wPDAbBgkqhkiG9w0BBQwwDgQINYt7wOn+km4CAggA
+MB0GCWCGSAFlAwQBFgQQcR2qtVNKVc4VgYqcPMBlwASCAoBEX5M21ImLfqUlgTEC
+oWc+QBANsfVV8xiWwXBLsVD7jZmoxY3LdpstO5POibHtVb2/6WtzbTitXO4QPRAu
+h8NM2tXKO4j0vnnuw5/he78Yn3gQFm2IIZG56a6rKFVF5bGL2hP3yMiJHfKztPzM
+bpwvTr8hhv/rsHCb1P93r57yAsSaJLmFfdhRMjghvPBMF8SvwLwkVaZf0qHDIpZS
+BwKpBH1GmROzxUtajSAvCRPRQvjEWJqCEPRPNA+yfUGBOvicpe0kCivdTPvMPoC4
+FtQp3UIg+RW295vSXy2qCZrRXxh8Svx+fYFqN1OZJcMtsbfFAv9QRvULvwMNsOUL
+Wk5Mp2dZrvjH9UV+wtko0MmEnkBVYmoittU5r8d+flvcbzW+UVKqZzCgM0UMEwyT
+M1gPgdGPGvRQDF31qfvw7OGYd6bRiJCABvvF9KOx2EUgNfBip/gNlKZA/aauDlpO
+IKTHWXSq3SM1JhoK67ll+CCgCdnkWZ4E8Jggf56lpdA/95EoaQ4R7fgM/kHZlYrT
+lkwaaY40AOzSGAqjVXOzU/xiLWijRv/oVkbgI9htXVkZMU3ZJm5+0fA3DjXwtSEV
+1YiN3Gl1JTPu6D5lu/A+AVb81F8wiEzFB3yiksGJOcFnaBoBTwMnov17br1r3C+C
+DUBFBkmtANNbN9l7pqcYxvQ5LcFhAn1Ndg+QoSNa9WSntHf+LPWC7meuRTFPp+la
+spgL5k2ltwkIUc3+lmccmAbzTTwIyHuLflDDr8riC49NjPckoewehtqQtdKabbNG
+T/fDiOpNfqEJV4QBWUd5k1Qd/qIDNmC7NsYerwJfwxZlOvGywAgO6gQEgwAsqY7a
+rBZc";
+
+            byte[] derBytes = Convert.FromBase64String(base64);
+            int correctLen = derBytes.Length;
+            Array.Resize(ref derBytes, correctLen + 24);
+
+            RSAParameters rsaParameters =
+                RSAParameters.FromPkcs8PrivateKey("easy", derBytes, out int bytesRead);
+
+            Assert.Equal(correctLen, bytesRead);
+            ImportExport.AssertKeyEquals(TestData.RSA1032Parameters, rsaParameters);
+
+            Assert.ThrowsAny<CryptographicException>(
+                () => RSAParameters.FromPkcs8PrivateKey("wrong", derBytes, out bytesRead));
+        }
+
+        [Fact]
+        public static void ReadEncryptedRsa16384()
+        {
+            // PBES2: PBKDF2 + des (single DES, not 3DES).
+            const string base64 = @"
+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";
+
+            byte[] derBytes = Convert.FromBase64String(base64);
+
+            RSAParameters rsaParameters =
+                RSAParameters.FromPkcs8PrivateKey("qwerty", derBytes, out int bytesRead);
+
+            Assert.Equal(derBytes.Length, bytesRead);
+            ImportExport.AssertKeyEquals(TestData.RSA16384Params, rsaParameters);
+        }
+
+        [Fact]
+        public static void ReadPbes2Rc2EncryptedDiminishedDP()
+        {
+            // PBES2: PBKDF2 + RC2-128
+            const string base64 = @"
+MIIBrjBIBgkqhkiG9w0BBQ0wOzAeBgkqhkiG9w0BBQwwEQQIKZEFT76zCFECAggA
+AgEQMBkGCCqGSIb3DQMCMA0CAToECE1Yyzk6++IPBIIBYDDvaYLkET8eudcYLQMf
+hw2nQEwDWDo4/E3wSzWJxsO6v4pdhyfCqVblHbxe/xVRKolJfj7DO6nzolcaA9/a
+tCM9vvqyCaqoNvnOJ3HnCh5BMPrCsKxND2k8jzMhVrW7tRP31J5oj7TaeIJla+Ps
++AlBQZuy5ws4f2evIo1llOX2DAbJHm4SKO697Bj9kwT9K7K26ZxNCg/Tv5NHCGmN
+4ykOIyhACyd27ICCR9mzvC48zJFAUdh2nZPeQRngSPW/bx83w+c7p3sBcAuKQfop
+/aGr6Gf7jRtOF4dUhfLUmyS0XTqhz1lRwJDsBJ4s21VzrrwqL+p+mvy12t4yQeN6
+L8jQJiKJgTAZa9e9YJ9YXEhTldvMY7WoCcaRbRvl3D+WvV1ibfnG5fl0BwFyTO6x
+RdMKfFP3he4C+CFyGGslffbxCaJhKebeuOil5xxlvP8aBPVNDtQfSS1HXHd1/Ikq
+1eo=";
+
+            byte[] derBytes = Convert.FromBase64String(base64);
+
+            RSAParameters rsaParameters =
+                RSAParameters.FromPkcs8PrivateKey("rc2", derBytes, out int bytesRead);
+
+            Assert.Equal(derBytes.Length, bytesRead);
+            ImportExport.AssertKeyEquals(TestData.DiminishedDPParameters, rsaParameters);
+        }
+
+        [Fact]
+        public static void ReadPbes1Rc2EncryptedRsa384()
+        {
+            // PbeWithSha1AndRC2CBC
+            const string base64 = @"
+MIIBMTAbBgkqhkiG9w0BBQswDgQIboOZHKKNEM8CAggABIIBEKOc+r+d5gI+TK7V
++cbYrqNfu7bJYI5CCdiQf87vslKQTZGqnmpGqh4NETq/oWXckWwN9I9PGyK2oCNt
+w3OUZQsFgcUXeEICCTf503KGifUGS1cG9TZ31iIF2f8xC34C/k2edICwqd5/wDAH
+uDdoj7ZESHfEpj9AF3mKPyxWWVGCNTYKXQZbPZMDCOWgfBSeNI7xQw6Cj0seR6C8
+hVbGcdL1z/MmM2dw3kIafjpwg3RcrL2qL803aKKl/Ypq6oxR8aCISTqThB46YByD
+Ac4+NzbL4Z4jfBWzxzXcua6ujp0jS+/5GxC57q1w+vtgaiJPmrtdierkJWyS9O5e
+pWre7nAO4O6sP1JzXvVmwrS5C/hw";
+
+            byte[] derBytes = Convert.FromBase64String(base64);
+
+            RSAParameters rsaParameters =
+                RSAParameters.FromPkcs8PrivateKey("pbes1rc2", derBytes, out int bytesRead);
+
+            Assert.Equal(derBytes.Length, bytesRead);
+            ImportExport.AssertKeyEquals(TestData.RSA384Parameters, rsaParameters);
         }
 
         private static void ReadWriteBase64PublicPkcs1(

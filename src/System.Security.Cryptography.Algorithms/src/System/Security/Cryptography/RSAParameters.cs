@@ -62,17 +62,9 @@ namespace System.Security.Cryptography
             // (specific quote from https://www.ietf.org/rfc/rfc5754.txt, section 2)
             //
             // Since it's unambiguous, we can go ahead and be lax on read.
-            if (algorithmIdentifier.Parameters.HasValue)
+            if (!algorithmIdentifier.HasNullEquivalentParameters())
             {
-                ReadOnlySpan<byte> algParameters = algorithmIdentifier.Parameters.Value.Span;
-
-                if (algParameters.Length != 2 ||
-                    algParameters[0] != 0x05 ||
-                    algParameters[1] != 0x00)
-                {
-                    // TODO: Better message?
-                    throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
-                }
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
             }
         }
 
@@ -181,14 +173,7 @@ namespace System.Security.Cryptography
 
             try
             {
-                PrivateKeyInfo privateKeyInfo =
-                    AsnSerializer.Deserialize<PrivateKeyInfo>(tmp, AsnEncodingRules.BER, out int read);
-
-                CheckAlgorithmIdentifier(privateKeyInfo.PrivateKeyAlgorithm);
-
-                RSAParameters rsaParameters = FromPkcs1PrivateKey(privateKeyInfo.PrivateKey, out _);
-                bytesRead = read;
-                return rsaParameters;
+                return FromPkcs8PrivateKey(tmp, out bytesRead);
             }
             finally
             {
@@ -197,12 +182,109 @@ namespace System.Security.Cryptography
             }
         }
 
+        private static RSAParameters FromPkcs8PrivateKey(ReadOnlyMemory<byte> source, out int bytesRead)
+        {
+            PrivateKeyInfo privateKeyInfo =
+                AsnSerializer.Deserialize<PrivateKeyInfo>(source, AsnEncodingRules.BER, out int read);
+
+            CheckAlgorithmIdentifier(privateKeyInfo.PrivateKeyAlgorithm);
+
+            RSAParameters rsaParameters = FromPkcs1PrivateKey(privateKeyInfo.PrivateKey, out _);
+            bytesRead = read;
+            return rsaParameters;
+        }
+
         public static RSAParameters FromPkcs8PrivateKey(
             ReadOnlySpan<char> password,
             ReadOnlySpan<byte> source,
             out int bytesRead)
         {
-            throw new NotImplementedException();
+            byte[] buf = ArrayPool<byte>.Shared.Rent(source.Length);
+            source.CopyTo(buf);
+            Memory<byte> tmp = buf.AsMemory(0, source.Length);
+
+            try
+            {
+                return FromPkcs8PrivateKey(password, tmp, out bytesRead);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(tmp.Span);
+                ArrayPool<byte>.Shared.Return(buf);
+            }
+        }
+
+        private static unsafe RSAParameters FromPkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            EncryptedPrivateKeyInfo epki =
+                AsnSerializer.Deserialize<EncryptedPrivateKeyInfo>(source, AsnEncodingRules.BER, out int read);
+
+            System.Text.Encoding encoding = System.Text.Encoding.UTF8;
+            int requiredBytes = encoding.GetByteCount(password);
+            Span<byte> passwordBytes = stackalloc byte[0];
+            byte[] rentedPasswordBytes = Array.Empty<byte>();
+            byte[] decrypted = ArrayPool<byte>.Shared.Rent(source.Length);
+
+            if (requiredBytes > 128)
+            {
+                rentedPasswordBytes = ArrayPool<byte>.Shared.Rent(requiredBytes);
+                passwordBytes = rentedPasswordBytes;
+            }
+            else
+            {
+                passwordBytes = stackalloc byte[requiredBytes];
+            }
+
+            try
+            {
+                fixed (byte* bytePtr = rentedPasswordBytes)
+                {
+                    int written = encoding.GetBytes(password, passwordBytes);
+
+                    if (written != requiredBytes)
+                    {
+                        Debug.Fail("UTF8 encoding length changed between size and convert");
+                        throw new CryptographicException();
+                    }
+
+                    passwordBytes = passwordBytes.Slice(0, written);
+
+                    try
+                    {
+                        int decryptedBytes = PasswordBasedEncryption.Decrypt(
+                            epki.EncryptionAlgorithm,
+                            passwordBytes,
+                            epki.EncryptedData.Span,
+                            decrypted);
+
+                        RSAParameters rsaParameters = FromPkcs8PrivateKey(
+                            decrypted.AsMemory(0, decryptedBytes),
+                            out _);
+
+                        bytesRead = read;
+                        return rsaParameters;
+                    }
+                    catch (CryptographicException e)
+                    {
+                        throw new CryptographicException(SR.Cryptography_Pkcs8_EncryptedReadFailed, e);
+                    }
+                }
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(passwordBytes);
+
+                if (rentedPasswordBytes.Length > 0)
+                {
+                    ArrayPool<byte>.Shared.Return(rentedPasswordBytes);
+                }
+
+                CryptographicOperations.ZeroMemory(decrypted.AsSpan(0, source.Length));
+                ArrayPool<byte>.Shared.Return(decrypted);
+            }
         }
 
         private static byte[] ExportMinimumSize(BigInteger value, int minimumLength)
@@ -577,6 +659,23 @@ namespace System.Security.Cryptography
         }
     }
 
+    // https://tools.ietf.org/html/rfc5208#section-6
+    //
+    // EncryptedPrivateKeyInfo ::= SEQUENCE {
+    //  encryptionAlgorithm  EncryptionAlgorithmIdentifier,
+    //  encryptedData        EncryptedData }
+    //
+    // EncryptionAlgorithmIdentifier ::= AlgorithmIdentifier
+    // EncryptedData ::= OCTET STRING
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct EncryptedPrivateKeyInfo
+    {
+        public AlgorithmIdentifierAsn EncryptionAlgorithm;
+
+        [OctetString]
+        public ReadOnlyMemory<byte> EncryptedData;
+    }
+
     // https://tools.ietf.org/html/rfc5208#section-5
     //
     // PrivateKeyInfo ::= SEQUENCE {
@@ -634,6 +733,24 @@ namespace System.Security.Cryptography
         [AnyValue]
         [OptionalValue]
         internal ReadOnlyMemory<byte>? Parameters;
+
+        internal bool HasNullEquivalentParameters()
+        {
+            if (Parameters == null)
+            {
+                return true;
+            }
+
+            ReadOnlyMemory<byte> parameters = Parameters.Value;
+
+            if (parameters.Length != 2)
+            {
+                return false;
+            }
+
+            ReadOnlySpan<byte> paramBytes = parameters.Span;
+            return paramBytes[0] == 0x05 && paramBytes[1] == 0x00;
+        }
     }
 
     // https://tools.ietf.org/html/rfc3280#section-4.1

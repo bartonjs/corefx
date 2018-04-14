@@ -7,7 +7,7 @@
     <AssemblyName>System.Security.Cryptography.Algorithms</AssemblyName>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DefineConstants>INTERNAL_ASYMMETRIC_IMPLEMENTATIONS</DefineConstants>
-    <NoWarn>CA5351;$(NoWarn)</NoWarn>
+    <NoWarn>CS3016;CA5351;$(NoWarn)</NoWarn>
     <DefineConstants Condition="'$(TargetGroup)' == 'uap'">$(DefineConstants);uap</DefineConstants>
     <IsPartialFacadeAssembly Condition="'$(TargetGroup)' == 'netfx' or '$(TargetGroup)' == 'net47'">true</IsPartialFacadeAssembly>
     <GenFacadesIgnoreMissingTypes Condition="'$(TargetGroup)' == 'netfx'">true</GenFacadesIgnoreMissingTypes>
@@ -75,6 +75,7 @@
     <Compile Include="System\Security\Cryptography\HMACSHA512.cs" />
     <Compile Include="System\Security\Cryptography\IncrementalHash.cs" />
     <Compile Include="System\Security\Cryptography\Oids.cs" />
+    <Compile Include="System\Security\Cryptography\PasswordBasedEncryption.cs" />
     <Compile Include="System\Security\Cryptography\PKCS1MaskGenerationMethod.cs" />
     <Compile Include="System\Security\Cryptography\RandomNumberGenerator.cs" />
     <Compile Include="System\Security\Cryptography\RC2.cs" />
