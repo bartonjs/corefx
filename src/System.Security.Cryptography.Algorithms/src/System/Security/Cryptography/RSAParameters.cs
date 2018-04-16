@@ -135,28 +135,12 @@ namespace System.Security.Cryptography
 
         public static RSAParameters FromPkcs8PrivateKey(ReadOnlySpan<byte> source, out int bytesRead)
         {
-            RSAParameters ret;
-
             KeyFormatHelper.ReadPkcs8<RSAParameters, RSAPrivateKey>(
                 Oids.RsaEncryption,
                 source,
                 FromPkcs1PrivateKey,
                 out bytesRead,
-                out ret);
-
-            return ret;
-        }
-
-        private static RSAParameters FromPkcs8PrivateKey(ReadOnlyMemory<byte> source, out int bytesRead)
-        {
-            RSAParameters ret;
-
-            KeyFormatHelper.ReadPkcs8<RSAParameters, RSAPrivateKey>(
-                Oids.RsaEncryption,
-                source,
-                FromPkcs1PrivateKey,
-                out bytesRead,
-                out ret);
+                out RSAParameters ret);
 
             return ret;
         }
@@ -166,92 +150,15 @@ namespace System.Security.Cryptography
             ReadOnlySpan<byte> source,
             out int bytesRead)
         {
-            byte[] buf = ArrayPool<byte>.Shared.Rent(source.Length);
-            source.CopyTo(buf);
-            Memory<byte> tmp = buf.AsMemory(0, source.Length);
+            KeyFormatHelper.ReadEncryptedPkcs8<RSAParameters, RSAPrivateKey>(
+                Oids.RsaEncryption,
+                source,
+                password,
+                FromPkcs1PrivateKey,
+                out bytesRead,
+                out RSAParameters ret);
 
-            try
-            {
-                return FromPkcs8PrivateKey(password, tmp, out bytesRead);
-            }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(tmp.Span);
-                ArrayPool<byte>.Shared.Return(buf);
-            }
-        }
-
-        private static unsafe RSAParameters FromPkcs8PrivateKey(
-            ReadOnlySpan<char> password,
-            ReadOnlyMemory<byte> source,
-            out int bytesRead)
-        {
-            EncryptedPrivateKeyInfo epki =
-                AsnSerializer.Deserialize<EncryptedPrivateKeyInfo>(source, AsnEncodingRules.BER, out int read);
-
-            System.Text.Encoding encoding = System.Text.Encoding.UTF8;
-            int requiredBytes = encoding.GetByteCount(password);
-            Span<byte> passwordBytes = stackalloc byte[0];
-            byte[] rentedPasswordBytes = Array.Empty<byte>();
-            byte[] decrypted = ArrayPool<byte>.Shared.Rent(source.Length);
-
-            if (requiredBytes > 128)
-            {
-                rentedPasswordBytes = ArrayPool<byte>.Shared.Rent(requiredBytes);
-                passwordBytes = rentedPasswordBytes;
-            }
-            else
-            {
-                passwordBytes = stackalloc byte[requiredBytes];
-            }
-
-            try
-            {
-                fixed (byte* bytePtr = rentedPasswordBytes)
-                {
-                    int written = encoding.GetBytes(password, passwordBytes);
-
-                    if (written != requiredBytes)
-                    {
-                        Debug.Fail("UTF8 encoding length changed between size and convert");
-                        throw new CryptographicException();
-                    }
-
-                    passwordBytes = passwordBytes.Slice(0, written);
-
-                    try
-                    {
-                        int decryptedBytes = PasswordBasedEncryption.Decrypt(
-                            epki.EncryptionAlgorithm,
-                            passwordBytes,
-                            epki.EncryptedData.Span,
-                            decrypted);
-
-                        RSAParameters rsaParameters = FromPkcs8PrivateKey(
-                            decrypted.AsMemory(0, decryptedBytes),
-                            out _);
-
-                        bytesRead = read;
-                        return rsaParameters;
-                    }
-                    catch (CryptographicException e)
-                    {
-                        throw new CryptographicException(SR.Cryptography_Pkcs8_EncryptedReadFailed, e);
-                    }
-                }
-            }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(passwordBytes);
-
-                if (rentedPasswordBytes.Length > 0)
-                {
-                    ArrayPool<byte>.Shared.Return(rentedPasswordBytes);
-                }
-
-                CryptographicOperations.ZeroMemory(decrypted.AsSpan(0, source.Length));
-                ArrayPool<byte>.Shared.Return(decrypted);
-            }
+            return ret;
         }
 
         private static byte[] ExportMinimumSize(BigInteger value, int minimumLength)
