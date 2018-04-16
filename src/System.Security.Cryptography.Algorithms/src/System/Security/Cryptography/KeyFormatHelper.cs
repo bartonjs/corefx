@@ -11,6 +11,54 @@ namespace System.Security.Cryptography
     {
         internal delegate void KeyReader<TRet, TParsed>(in TParsed key, in AlgorithmIdentifierAsn algId, out TRet ret);
 
+        internal static void ReadSubjectPublicKeyInfo<TRet, TParsed>(
+            string algorithmOid,
+            ReadOnlySpan<byte> source,
+            KeyReader<TRet, TParsed> keyReader,
+            out int bytesRead,
+            out TRet ret)
+        {
+            byte[] buf = ArrayPool<byte>.Shared.Rent(source.Length);
+            source.CopyTo(buf);
+            Memory<byte> rwTmp = buf.AsMemory(0, source.Length);
+            ReadOnlyMemory<byte> tmp = rwTmp;
+
+            try
+            {
+                ReadSubjectPublicKeyInfo(algorithmOid, tmp, keyReader, out bytesRead, out ret);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(rwTmp.Span);
+                ArrayPool<byte>.Shared.Return(buf);
+            }
+        }
+
+        internal static void ReadSubjectPublicKeyInfo<TRet, TParsed>(
+            string algorithmOid,
+            ReadOnlyMemory<byte> source,
+            KeyReader<TRet, TParsed> keyReader,
+            out int bytesRead,
+            out TRet ret)
+        {
+            SubjectPublicKeyInfo spki =
+                AsnSerializer.Deserialize<SubjectPublicKeyInfo>(source, AsnEncodingRules.BER, out int read);
+
+            if (spki.Algorithm.Algorithm != algorithmOid)
+            {
+                // TODO: Better message?
+                throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
+            }
+
+            // Fails if there are unconsumed bytes.
+            TParsed parsed = AsnSerializer.Deserialize<TParsed>(
+                spki.SubjectPublicKey,
+                AsnEncodingRules.BER);
+
+            keyReader(parsed, spki.Algorithm, out ret);
+            bytesRead = read;
+        }
+
         internal static void ReadPkcs8<TRet, TParsed>(
             string algorithmOid,
             ReadOnlySpan<byte> source,
@@ -20,7 +68,8 @@ namespace System.Security.Cryptography
         {
             byte[] buf = ArrayPool<byte>.Shared.Rent(source.Length);
             source.CopyTo(buf);
-            Memory<byte> tmp = buf.AsMemory(0, source.Length);
+            Memory<byte> rwTmp = buf.AsMemory(0, source.Length);
+            ReadOnlyMemory<byte> tmp = rwTmp;
 
             try
             {
@@ -28,7 +77,7 @@ namespace System.Security.Cryptography
             }
             finally
             {
-                CryptographicOperations.ZeroMemory(tmp.Span);
+                CryptographicOperations.ZeroMemory(rwTmp.Span);
                 ArrayPool<byte>.Shared.Return(buf);
             }
         }

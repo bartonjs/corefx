@@ -24,97 +24,56 @@ namespace System.Security.Cryptography
 
         public static RSAParameters FromSubjectPublicKeyInfo(ReadOnlySpan<byte> source, out int bytesRead)
         {
-            byte[] buf = ArrayPool<byte>.Shared.Rent(source.Length);
-            source.CopyTo(buf);
+            KeyFormatHelper.ReadSubjectPublicKeyInfo<RSAParameters, RSAPublicKey>(
+                Oids.RsaEncryption,
+                source,
+                FromPkcs1PublicKey,
+                out bytesRead,
+                out RSAParameters ret);
 
-            try
-            {
-                return FromSubjectPublicKeyInfo(buf.AsMemory(0, source.Length), out bytesRead);
-            }
-            finally
-            {
-                buf.AsSpan(0, source.Length).Clear();
-                ArrayPool<byte>.Shared.Return(buf);
-            }
-        }
-
-        private static void CheckAlgorithmIdentifier(in AlgorithmIdentifierAsn algorithmIdentifier)
-        {
-            if (algorithmIdentifier.Algorithm != Oids.RsaEncryption)
-            {
-                // TODO: Better message?
-                throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
-            }
-
-            // No RFC proscribes laxity with spki.algorithm.parameters being NULL vs omitted
-            // for RSA specifically, but many RFCs contain text like
-            //
-            //    NOTE: There are two possible encodings for the AlgorithmIdentifier
-            //    parameters field associated with these object identifiers.  The two
-            //    alternatives arise from the loss of the OPTIONAL associated with the
-            //    algorithm identifier parameters when the 1988 syntax for
-            //    AlgorithmIdentifier was translated into the 1997 syntax.  Later, the
-            //    OPTIONAL was recovered via a defect report, but by then many people
-            //    thought that algorithm parameters were mandatory.  Because of this
-            //    history, some implementations encode parameters as a NULL element
-            //    while others omit them entirely. [...]
-            //
-            // (specific quote from https://www.ietf.org/rfc/rfc5754.txt, section 2)
-            //
-            // Since it's unambiguous, we can go ahead and be lax on read.
-            if (!algorithmIdentifier.HasNullEquivalentParameters())
-            {
-                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
-            }
-        }
-
-        private static RSAParameters FromSubjectPublicKeyInfo(ReadOnlyMemory<byte> source, out int bytesRead)
-        {
-            SubjectPublicKeyInfo spki =
-                AsnSerializer.Deserialize<SubjectPublicKeyInfo>(source, AsnEncodingRules.BER, out int read);
-
-            if (spki.Algorithm.Algorithm != Oids.RsaEncryption)
-            {
-                // TODO: Better message?
-                throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
-            }
-
-            CheckAlgorithmIdentifier(spki.Algorithm);
-
-            RSAParameters key = FromPkcs1PublicKey(spki.SubjectPublicKey, out _);
-            bytesRead = read;
-            return key;
+            return ret;
         }
 
         public static RSAParameters FromPkcs1PublicKey(ReadOnlySpan<byte> source, out int bytesRead)
         {
             byte[] buf = ArrayPool<byte>.Shared.Rent(source.Length);
             source.CopyTo(buf);
+            Memory<byte> rwTmp = buf.AsMemory(0, source.Length);
+            ReadOnlyMemory<byte> tmp = rwTmp;
 
             try
             {
-                return FromPkcs1PublicKey(buf.AsMemory(0, source.Length), out bytesRead);
+                RSAPublicKey publicKey =
+                    AsnSerializer.Deserialize<RSAPublicKey>(tmp, AsnEncodingRules.BER, out int read);
+
+                AlgorithmIdentifierAsn ignored = default;
+                FromPkcs1PublicKey(publicKey, ignored, out RSAParameters ret);
+
+                bytesRead = read;
+                return ret;
             }
             finally
             {
-                buf.AsSpan(0, source.Length).Clear();
+                CryptographicOperations.ZeroMemory(rwTmp.Span);
                 ArrayPool<byte>.Shared.Return(buf);
             }
         }
 
-        private static RSAParameters FromPkcs1PublicKey(ReadOnlyMemory<byte> source, out int bytesRead)
+        private static void FromPkcs1PublicKey(
+            in RSAPublicKey key,
+            in AlgorithmIdentifierAsn algId,
+            out RSAParameters ret)
         {
-            RSAPublicKey publicKey =
-                AsnSerializer.Deserialize<RSAPublicKey>(source, AsnEncodingRules.BER, out int read);
-
-            RSAParameters rsaParameters = new RSAParameters()
+            if (!algId.HasNullEquivalentParameters())
             {
-                Modulus = publicKey.Modulus.ToByteArray(isUnsigned: true, isBigEndian: true),
-                Exponent = publicKey.PublicExponent.ToByteArray(isUnsigned: true, isBigEndian: true),
-            };
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
 
-            bytesRead = read;
-            return rsaParameters;
+            ret = new RSAParameters()
+            {
+                Modulus = key.Modulus.ToByteArray(isUnsigned: true, isBigEndian: true),
+                Exponent = key.PublicExponent.ToByteArray(isUnsigned: true, isBigEndian: true),
+            };
         }
 
         public static RSAParameters FromPkcs1PrivateKey(ReadOnlySpan<byte> source, out int bytesRead)
