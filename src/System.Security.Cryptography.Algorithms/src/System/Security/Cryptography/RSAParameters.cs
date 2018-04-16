@@ -80,11 +80,18 @@ namespace System.Security.Cryptography
         {
             byte[] buf = ArrayPool<byte>.Shared.Rent(source.Length);
             source.CopyTo(buf);
-            Memory<byte> tmp = buf.AsMemory(0, source.Length);
+            Memory<byte> rwTmp = buf.AsMemory(0, source.Length);
+            ReadOnlyMemory<byte> tmp = rwTmp;
 
             try
             {
-                return FromPkcs1PrivateKey(tmp, out bytesRead);
+                RSAPrivateKey privateKey =
+                    AsnSerializer.Deserialize<RSAPrivateKey>(tmp, AsnEncodingRules.BER, out int read);
+
+                AlgorithmIdentifierAsn ignored = default;
+                FromPkcs1PrivateKey(privateKey, ignored, out RSAParameters ret);
+                bytesRead = read;
+                return ret;
             }
             finally
             {
@@ -103,11 +110,6 @@ namespace System.Security.Cryptography
                 throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
             }
 
-            FromPkcs1PrivateKey(key, out ret);
-        }
-
-        private static void FromPkcs1PrivateKey(in RSAPrivateKey key, out RSAParameters ret)
-        {
             if (key.Version != 0)
             {
                 throw new CryptographicException(
@@ -129,37 +131,6 @@ namespace System.Security.Cryptography
                 DQ = ExportMinimumSize(key.Exponent2, halfModulusLength),
                 InverseQ = ExportMinimumSize(key.Coefficient, halfModulusLength),
             };
-        }
-
-        private static RSAParameters FromPkcs1PrivateKey(ReadOnlyMemory<byte> source, out int bytesRead)
-        {
-            RSAPrivateKey privateKey =
-                AsnSerializer.Deserialize<RSAPrivateKey>(source, AsnEncodingRules.BER, out int read);
-
-            if (privateKey.Version != 0)
-            {
-                throw new CryptographicException(
-                    SR.Format(SR.Cryptography_RSAPrivateKey_V0Only, privateKey.Version));
-            }
-
-            // The modulus size determines the encoded output size of the CRT parameters.
-            byte[] n = privateKey.Modulus.ToByteArray(isUnsigned: true, isBigEndian: true);
-            int halfModulusLength = (n.Length + 1) / 2;
-
-            RSAParameters rsaParameters = new RSAParameters
-            {
-                Modulus = n,
-                Exponent = privateKey.PublicExponent.ToByteArray(isUnsigned: true, isBigEndian: true),
-                D = ExportMinimumSize(privateKey.PrivateExponent, n.Length),
-                P = ExportMinimumSize(privateKey.Prime1, halfModulusLength),
-                Q = ExportMinimumSize(privateKey.Prime2, halfModulusLength),
-                DP = ExportMinimumSize(privateKey.Exponent1, halfModulusLength),
-                DQ = ExportMinimumSize(privateKey.Exponent2, halfModulusLength),
-                InverseQ = ExportMinimumSize(privateKey.Coefficient, halfModulusLength),
-            };
-
-            bytesRead = read;
-            return rsaParameters;
         }
 
         public static RSAParameters FromPkcs8PrivateKey(ReadOnlySpan<byte> source, out int bytesRead)
