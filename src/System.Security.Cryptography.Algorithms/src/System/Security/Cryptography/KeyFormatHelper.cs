@@ -4,6 +4,7 @@
 
 using System.Buffers;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography.Asn1;
 
 namespace System.Security.Cryptography
@@ -24,7 +25,7 @@ namespace System.Security.Cryptography
         internal delegate void KeyReader<TRet, TParsed>(in TParsed key, in AlgorithmIdentifierAsn algId, out TRet ret);
 
         internal static void ReadSubjectPublicKeyInfo<TRet, TParsed>(
-            string algorithmOid,
+            string[] validOids,
             ReadOnlySpan<byte> source,
             KeyReader<TRet, TParsed> keyReader,
             out int bytesRead,
@@ -37,7 +38,7 @@ namespace System.Security.Cryptography
 
             try
             {
-                ReadSubjectPublicKeyInfo(algorithmOid, tmp, keyReader, out bytesRead, out ret);
+                ReadSubjectPublicKeyInfo(validOids, tmp, keyReader, out bytesRead, out ret);
             }
             finally
             {
@@ -47,32 +48,42 @@ namespace System.Security.Cryptography
         }
 
         internal static void ReadSubjectPublicKeyInfo<TRet, TParsed>(
-            string algorithmOid,
+            string[] validOids,
             ReadOnlyMemory<byte> source,
             KeyReader<TRet, TParsed> keyReader,
             out int bytesRead,
             out TRet ret)
         {
+            // X.509 SubjectPublicKeyInfo is described as DER.
             SubjectPublicKeyInfo spki =
-                AsnSerializer.Deserialize<SubjectPublicKeyInfo>(source, AsnEncodingRules.BER, out int read);
+                AsnSerializer.Deserialize<SubjectPublicKeyInfo>(source, AsnEncodingRules.DER, out int read);
 
-            if (spki.Algorithm.Algorithm != algorithmOid)
+            if (Array.IndexOf(validOids, spki.Algorithm.Algorithm) < 0)
             {
                 // TODO: Better message?
                 throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
             }
 
-            // Fails if there are unconsumed bytes.
-            TParsed parsed = AsnSerializer.Deserialize<TParsed>(
-                spki.SubjectPublicKey,
-                AsnEncodingRules.BER);
+            TParsed parsed;
+
+            if (typeof(TParsed) == typeof(ReadOnlyMemory<byte>))
+            {
+                ReadOnlyMemory<byte> tmp = spki.SubjectPublicKey;
+                parsed = Unsafe.As<ReadOnlyMemory<byte>, TParsed>(ref tmp);
+            }
+            else
+            {
+                parsed = AsnSerializer.Deserialize<TParsed>(
+                    spki.SubjectPublicKey,
+                    AsnEncodingRules.DER);
+            }
 
             keyReader(parsed, spki.Algorithm, out ret);
             bytesRead = read;
         }
 
         internal static void ReadPkcs8<TRet, TParsed>(
-            string algorithmOid,
+            string[] validOids,
             ReadOnlySpan<byte> source,
             KeyReader<TRet, TParsed> keyReader,
             out int bytesRead,
@@ -85,7 +96,7 @@ namespace System.Security.Cryptography
 
             try
             {
-                ReadPkcs8(algorithmOid, tmp, keyReader, out bytesRead, out ret);
+                ReadPkcs8(validOids, tmp, keyReader, out bytesRead, out ret);
             }
             finally
             {
@@ -95,7 +106,7 @@ namespace System.Security.Cryptography
         }
 
         internal static void ReadPkcs8<TRet, TParsed>(
-            string algorithmOid,
+            string[] validOids,
             ReadOnlyMemory<byte> source,
             KeyReader<TRet, TParsed> keyReader,
             out int bytesRead,
@@ -104,7 +115,7 @@ namespace System.Security.Cryptography
             PrivateKeyInfo privateKeyInfo =
                 AsnSerializer.Deserialize<PrivateKeyInfo>(source, AsnEncodingRules.BER, out int read);
 
-            if (privateKeyInfo.PrivateKeyAlgorithm.Algorithm != algorithmOid)
+            if (Array.IndexOf(validOids, privateKeyInfo.PrivateKeyAlgorithm.Algorithm) < 0)
             {
                 // TODO: Better message?
                 throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
@@ -120,7 +131,7 @@ namespace System.Security.Cryptography
         }
 
         internal static unsafe void ReadEncryptedPkcs8<TRet, TParsed>(
-            string algorithmOid,
+            string[] validOids,
             ReadOnlySpan<byte> source,
             ReadOnlySpan<char> password,
             KeyReader<TRet, TParsed> keyReader,
@@ -157,7 +168,7 @@ namespace System.Security.Cryptography
                     passwordBytes = passwordBytes.Slice(0, written);
 
                     ReadEncryptedPkcs8(
-                        algorithmOid,
+                        validOids,
                         source,
                         passwordBytes,
                         keyReader,
@@ -177,7 +188,7 @@ namespace System.Security.Cryptography
         }
 
         internal static void ReadEncryptedPkcs8<TRet, TParsed>(
-            string algorithmOid,
+            string[] validOids,
             ReadOnlySpan<byte> source,
             ReadOnlySpan<byte> passwordBytes,
             KeyReader<TRet, TParsed> keyReader,
@@ -191,7 +202,7 @@ namespace System.Security.Cryptography
 
             try
             {
-                ReadEncryptedPkcs8(algorithmOid, tmp, passwordBytes, keyReader, out bytesRead, out ret);
+                ReadEncryptedPkcs8(validOids, tmp, passwordBytes, keyReader, out bytesRead, out ret);
             }
             finally
             {
@@ -201,7 +212,7 @@ namespace System.Security.Cryptography
         }
 
         internal static void ReadEncryptedPkcs8<TRet, TParsed>(
-            string algorithmOid,
+            string[] validOids,
             ReadOnlyMemory<byte> source,
             ReadOnlySpan<byte> passwordBytes,
             KeyReader<TRet, TParsed> keyReader,
@@ -227,7 +238,7 @@ namespace System.Security.Cryptography
                 decryptedMemory = decryptedMemory.Slice(0, decryptedBytes);
 
                 ReadPkcs8(
-                    algorithmOid,
+                    validOids,
                     decryptedMemory,
                     keyReader,
                     out int innerRead,

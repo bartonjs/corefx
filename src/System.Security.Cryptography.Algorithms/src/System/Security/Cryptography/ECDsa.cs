@@ -235,5 +235,89 @@ namespace System.Security.Cryptography
 
         public virtual bool VerifyHash(ReadOnlySpan<byte> hash, ReadOnlySpan<byte> signature) =>
             VerifyHash(hash.ToArray(), signature.ToArray());
+
+        public virtual void ImportEncryptedkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            ReadOnlySpan<byte> source,
+            out int bytesRead)
+        {
+            ImportParameters(ECParameters.FromEncryptedPkcs8PrivateKey(password, source, out bytesRead));
+        }
+
+        public virtual void ImportEncryptedkcs8PrivateKey(
+            ReadOnlySpan<byte> passwordBytes,
+            ReadOnlySpan<byte> source,
+            out int bytesRead)
+        {
+            ImportParameters(ECParameters.FromEncryptedPkcs8PrivateKey(passwordBytes, source, out bytesRead));
+        }
+
+        public virtual byte[] ExportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            HashAlgorithmName pbkdf2HashAlgorithm,
+            int pbkdf2IterationCount,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm)
+        {
+            ECParameters privateParameters = ExportParameters(includePrivateParameters: true);
+
+            return privateParameters.ToEncryptedPkcs8PrivateKey(
+                password,
+                pbkdf2HashAlgorithm,
+                pbkdf2IterationCount,
+                encryptionAlgorithm);
+        }
+
+        public virtual byte[] ExportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<byte> passwordBytes,
+            HashAlgorithmName pbkdf2HashAlgorithm,
+            int pbkdf2IterationCount,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm)
+        {
+            ECParameters privateParameters = ExportParameters(includePrivateParameters: true);
+
+            return privateParameters.ToEncryptedPkcs8PrivateKey(
+                passwordBytes,
+                pbkdf2HashAlgorithm,
+                pbkdf2IterationCount,
+                encryptionAlgorithm);
+        }
+
+        public virtual bool TryExportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            HashAlgorithmName pbkdf2HashAlgorithm,
+            int pbkdf2IterationCount,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            ECParameters privateParameters = ExportParameters(includePrivateParameters: true);
+
+            return privateParameters.TryWriteEncryptedPkcs8PrivateKey(
+                password,
+                pbkdf2HashAlgorithm,
+                pbkdf2IterationCount,
+                encryptionAlgorithm,
+                destination,
+                out bytesWritten);
+        }
+
+        public virtual bool TryExportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<byte> passwordBytes,
+            HashAlgorithmName pbkdf2HashAlgorithm,
+            int pbkdf2IterationCount,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            ECParameters privateParameters = ExportParameters(includePrivateParameters: true);
+
+            return privateParameters.TryWriteEncryptedPkcs8PrivateKey(
+                passwordBytes,
+                pbkdf2HashAlgorithm,
+                pbkdf2IterationCount,
+                encryptionAlgorithm,
+                destination,
+                out bytesWritten);
+        }
     }
 }

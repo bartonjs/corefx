@@ -13,6 +13,12 @@ namespace System.Security.Cryptography
     [StructLayout(LayoutKind.Sequential)]
     public struct RSAParameters
     {
+        private static readonly string[] s_validOids =
+        {
+            Oids.RsaEncryption,
+            // RSA-PSS, also?
+        };
+
         public byte[] D;
         public byte[] DP;
         public byte[] DQ;
@@ -25,7 +31,7 @@ namespace System.Security.Cryptography
         public static RSAParameters FromSubjectPublicKeyInfo(ReadOnlySpan<byte> source, out int bytesRead)
         {
             KeyFormatHelper.ReadSubjectPublicKeyInfo<RSAParameters, RSAPublicKey>(
-                Oids.RsaEncryption,
+                s_validOids,
                 source,
                 FromPkcs1PublicKey,
                 out bytesRead,
@@ -136,7 +142,7 @@ namespace System.Security.Cryptography
         public static RSAParameters FromPkcs8PrivateKey(ReadOnlySpan<byte> source, out int bytesRead)
         {
             KeyFormatHelper.ReadPkcs8<RSAParameters, RSAPrivateKey>(
-                Oids.RsaEncryption,
+                s_validOids,
                 source,
                 FromPkcs1PrivateKey,
                 out bytesRead,
@@ -151,7 +157,7 @@ namespace System.Security.Cryptography
             out int bytesRead)
         {
             KeyFormatHelper.ReadEncryptedPkcs8<RSAParameters, RSAPrivateKey>(
-                Oids.RsaEncryption,
+                s_validOids,
                 source,
                 password,
                 FromPkcs1PrivateKey,
@@ -167,7 +173,7 @@ namespace System.Security.Cryptography
             out int bytesRead)
         {
             KeyFormatHelper.ReadEncryptedPkcs8<RSAParameters, RSAPrivateKey>(
-                Oids.RsaEncryption,
+                s_validOids,
                 source,
                 passwordBytes,
                 FromPkcs1PrivateKey,
@@ -516,15 +522,19 @@ namespace System.Security.Cryptography
             out byte[] createdArray)
         {
             if (Modulus == null ||
-                Exponent == null ||
-                D == null ||
+                Exponent == null)
+            {
+                throw new CryptographicException(SR.Cryptography_InvalidRsaParameters);
+            }
+
+            if (D == null ||
                 P == null ||
                 Q == null ||
                 DP == null ||
                 DQ == null ||
                 InverseQ == null)
             {
-                throw new InvalidOperationException(SR.Cryptography_InvalidRsaParameters);
+                throw new CryptographicException(SR.Cryptography_CSP_NoPrivateKey);
             }
 
             int rentSize = CalculateMaximumPkcs1Size();

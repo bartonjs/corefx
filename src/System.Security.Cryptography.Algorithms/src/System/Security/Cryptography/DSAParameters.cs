@@ -17,5 +17,18 @@ namespace System.Security.Cryptography
         public byte[] X;
         public byte[] Seed;
         public int Counter;
+
+        public static DSAParameters FromPkcs8PrivateKey(System.ReadOnlySpan<byte> source, out int bytesRead) => throw null;
+        public static DSAParameters FromEncryptedPkcs8PrivateKey(System.ReadOnlySpan<char> password, System.ReadOnlySpan<byte> source, out int bytesRead) => throw null;
+        public static DSAParameters FromEncryptedPkcs8PrivateKey(System.ReadOnlySpan<byte> passwordBytes, System.ReadOnlySpan<byte> source, out int bytesRead) => throw null;
+        public static DSAParameters FromSubjectPublicKeyInfo(System.ReadOnlySpan<byte> source, out int bytesRead) => throw null;
+        public byte[] ToPkcs8PrivateKey() => throw null;
+        public byte[] ToEncryptedPkcs8PrivateKey(System.ReadOnlySpan<char> password, HashAlgorithmName pbkdf2HashAlgorithm, int pbkdf2IterationCount, Pkcs8.EncryptionAlgorithm encryptionAlgorithm) => throw null;
+        public byte[] ToEncryptedPkcs8PrivateKey(System.ReadOnlySpan<byte> passwordBytes, HashAlgorithmName pbkdf2HashAlgorithm, int pbkdf2IterationCount, Pkcs8.EncryptionAlgorithm encryptionAlgorithm) => throw null;
+        public byte[] ToSubjectPublicKeyInfo() => throw null;
+        public bool TryWritePkcs8PrivateKey(System.Span<byte> destination, out int bytesWritten) => throw null;
+        public bool TryWriteEncryptedPkcs8PrivateKey(System.ReadOnlySpan<char> password, HashAlgorithmName pbkdf2HashAlgorithm, int pbkdf2IterationCount, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, System.Span<byte> destination, out int bytesWritten) => throw null;
+        public bool TryWriteEncryptedPkcs8PrivateKey(System.ReadOnlySpan<byte> passwordBytes, HashAlgorithmName pbkdf2HashAlgorithm, int pbkdf2IterationCount, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, System.Span<byte> destination, out int bytesWritten) => throw null;
+        public bool TryWriteSubjectPublicKeyInfo(System.Span<byte> destination, out int bytesWritten) => throw null;
     }
 }

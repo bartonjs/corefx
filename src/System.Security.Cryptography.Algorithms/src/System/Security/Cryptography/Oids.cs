@@ -23,11 +23,19 @@ namespace System.Security.Cryptography
         internal const string HmacWithSha384 = RsaDsiDigestAlgorithmPrefix + "10";
         internal const string HmacWithSha512 = RsaDsiDigestAlgorithmPrefix + "11";
 
-        public const string Rc2Cbc = "1.2.840.113549.3.2";
-        public const string TripleDesCbc = "1.2.840.113549.3.7";
-        public const string DesCbc = "1.3.14.3.2.7";
-        public const string Aes128Cbc = "2.16.840.1.101.3.4.1.2";
-        public const string Aes192Cbc = "2.16.840.1.101.3.4.1.22";
-        public const string Aes256Cbc = "2.16.840.1.101.3.4.1.42";
+        internal const string Rc2Cbc = "1.2.840.113549.3.2";
+        internal const string TripleDesCbc = "1.2.840.113549.3.7";
+        internal const string DesCbc = "1.3.14.3.2.7";
+        internal const string Aes128Cbc = "2.16.840.1.101.3.4.1.2";
+        internal const string Aes192Cbc = "2.16.840.1.101.3.4.1.22";
+        internal const string Aes256Cbc = "2.16.840.1.101.3.4.1.42";
+
+        internal const string EcPublicKey = "1.2.840.10045.2.1";
+        internal const string EcDiffieHellman = "1.3.132.1.12";
+        internal const string EcMQV = "1.3.132.1.13";
+
+        internal const string secp256r1 = "1.2.840.10045.3.1.7";
+        internal const string secp384r1 = "1.3.132.0.34";
+        internal const string secp521r1 = "1.3.132.0.35";
     }
 }

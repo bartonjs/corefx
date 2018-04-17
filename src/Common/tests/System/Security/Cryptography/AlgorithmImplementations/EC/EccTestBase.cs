@@ -165,14 +165,14 @@ namespace System.Security.Cryptography.Tests
             }
         }
 
-        internal static void AssertEqual(ECParameters p1, ECParameters p2)
+        internal static void AssertEqual(in ECParameters p1, in ECParameters p2)
         {
             ComparePrivateKey(p1, p2);
             ComparePublicKey(p1.Q, p2.Q);
             CompareCurve(p1.Curve, p2.Curve);
         }
 
-        internal static void ComparePrivateKey(ECParameters p1, ECParameters p2, bool isEqual = true)
+        internal static void ComparePrivateKey(in ECParameters p1, in ECParameters p2, bool isEqual = true)
         {
             if (isEqual)
             {
@@ -184,7 +184,7 @@ namespace System.Security.Cryptography.Tests
             }
         }
 
-        internal static void ComparePublicKey(ECPoint q1, ECPoint q2, bool isEqual = true)
+        internal static void ComparePublicKey(in ECPoint q1, in ECPoint q2, bool isEqual = true)
         {
             if (isEqual)
             {
@@ -198,7 +198,7 @@ namespace System.Security.Cryptography.Tests
             }
         }
 
-        internal static void CompareCurve(ECCurve c1, ECCurve c2)
+        internal static void CompareCurve(in ECCurve c1, in ECCurve c2)
         {
             if (c1.IsNamed)
             {
