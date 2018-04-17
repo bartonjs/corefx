@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Security.Cryptography.Rsa.Tests;
-using System.Text;
 using Test.Cryptography;
 using Xunit;
 
@@ -361,7 +360,7 @@ YMSYHxE=";
             byte[] derBytes = Convert.FromBase64String(base64);
 
             RSAParameters rsaParameters =
-                RSAParameters.FromPkcs8PrivateKey("asdf", derBytes, out int bytesRead);
+                RSAParameters.FromEncryptedPkcs8PrivateKey("asdf", derBytes, out int bytesRead);
 
             Assert.Equal(derBytes.Length, bytesRead);
             ImportExport.AssertKeyEquals(TestData.DiminishedDPParameters, rsaParameters);
@@ -394,13 +393,13 @@ rBZc";
             Array.Resize(ref derBytes, correctLen + 24);
 
             RSAParameters rsaParameters =
-                RSAParameters.FromPkcs8PrivateKey("easy", derBytes, out int bytesRead);
+                RSAParameters.FromEncryptedPkcs8PrivateKey("easy", derBytes, out int bytesRead);
 
             Assert.Equal(correctLen, bytesRead);
             ImportExport.AssertKeyEquals(TestData.RSA1032Parameters, rsaParameters);
 
             Assert.ThrowsAny<CryptographicException>(
-                () => RSAParameters.FromPkcs8PrivateKey("wrong", derBytes, out bytesRead));
+                () => RSAParameters.FromEncryptedPkcs8PrivateKey("wrong", derBytes, out bytesRead));
         }
 
         [Fact]
@@ -607,7 +606,7 @@ pgCJTk846cb+AizgZMeOsYpTOgu2UL6cQiLtsYNz7WpDK3iS7Agj9EoL2ao7QxA=";
             byte[] derBytes = Convert.FromBase64String(base64);
 
             RSAParameters rsaParameters =
-                RSAParameters.FromPkcs8PrivateKey("qwerty", derBytes, out int bytesRead);
+                RSAParameters.FromEncryptedPkcs8PrivateKey("qwerty", derBytes, out int bytesRead);
 
             Assert.Equal(derBytes.Length, bytesRead);
             ImportExport.AssertKeyEquals(TestData.RSA16384Params, rsaParameters);
@@ -632,7 +631,7 @@ RdMKfFP3he4C+CFyGGslffbxCaJhKebeuOil5xxlvP8aBPVNDtQfSS1HXHd1/Ikq
             byte[] derBytes = Convert.FromBase64String(base64);
 
             RSAParameters rsaParameters =
-                RSAParameters.FromPkcs8PrivateKey("rc2", derBytes, out int bytesRead);
+                RSAParameters.FromEncryptedPkcs8PrivateKey("rc2", derBytes, out int bytesRead);
 
             Assert.Equal(derBytes.Length, bytesRead);
             ImportExport.AssertKeyEquals(TestData.DiminishedDPParameters, rsaParameters);
@@ -654,10 +653,26 @@ pWre7nAO4O6sP1JzXvVmwrS5C/hw";
             byte[] derBytes = Convert.FromBase64String(base64);
 
             RSAParameters rsaParameters =
-                RSAParameters.FromPkcs8PrivateKey("pbes1rc2", derBytes, out int bytesRead);
+                RSAParameters.FromEncryptedPkcs8PrivateKey("pbes1rc2", derBytes, out int bytesRead);
 
             Assert.Equal(derBytes.Length, bytesRead);
             ImportExport.AssertKeyEquals(TestData.RSA384Parameters, rsaParameters);
+        }
+
+        [Fact]
+        public static void ExportImportRsa384Encrypted()
+        {
+            byte[] encryptedBytes = TestData.RSA384Parameters.ToEncryptedPkcs8PrivateKey(
+                "asdf",
+                HashAlgorithmName.SHA256,
+                125000,
+                Pkcs8.EncryptionAlgorithm.Aes256Cbc);
+
+            int originalSize = encryptedBytes.Length;
+            Array.Resize(ref encryptedBytes, originalSize + 31);
+            RSAParameters readBack = RSAParameters.FromEncryptedPkcs8PrivateKey("asdf", encryptedBytes, out int written);
+            Assert.Equal(originalSize, written);
+            ImportExport.AssertKeyEquals(TestData.RSA384Parameters, readBack);
         }
 
         private static void ReadWriteBase64PublicPkcs1(

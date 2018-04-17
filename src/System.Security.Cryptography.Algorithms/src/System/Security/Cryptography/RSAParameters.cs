@@ -145,7 +145,7 @@ namespace System.Security.Cryptography
             return ret;
         }
 
-        public static RSAParameters FromPkcs8PrivateKey(
+        public static RSAParameters FromEncryptedPkcs8PrivateKey(
             ReadOnlySpan<char> password,
             ReadOnlySpan<byte> source,
             out int bytesRead)
@@ -154,6 +154,22 @@ namespace System.Security.Cryptography
                 Oids.RsaEncryption,
                 source,
                 password,
+                FromPkcs1PrivateKey,
+                out bytesRead,
+                out RSAParameters ret);
+
+            return ret;
+        }
+
+        public static RSAParameters FromEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<byte> passwordBytes,
+            ReadOnlySpan<byte> source,
+            out int bytesRead)
+        {
+            KeyFormatHelper.ReadEncryptedPkcs8<RSAParameters, RSAPrivateKey>(
+                Oids.RsaEncryption,
+                source,
+                passwordBytes,
                 FromPkcs1PrivateKey,
                 out bytesRead,
                 out RSAParameters ret);
@@ -209,11 +225,38 @@ namespace System.Security.Cryptography
             return pkcs1;
         }
 
-        public byte[] ToPkcs8PrivateKey(ReadOnlySpan<char> password)
+        public byte[] ToEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            HashAlgorithmName pbkdf2HashAlgorithm,
+            int pbkdf2IterationCount,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm)
         {
-            bool ret = TryWritePkcs8PrivateKey(
+            bool ret = TryWriteEncryptedPkcs8PrivateKey(
                 true,
                 password,
+                pbkdf2HashAlgorithm,
+                pbkdf2IterationCount,
+                encryptionAlgorithm,
+                Span<byte>.Empty,
+                out int bytesWritten,
+                out byte[] pkcs1);
+
+            Debug.Assert(ret);
+            return pkcs1;
+        }
+
+        public byte[] ToEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<byte> passwordBytes,
+            HashAlgorithmName pbkdf2HashAlgorithm,
+            int pbkdf2IterationCount,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm)
+        {
+            bool ret = TryWriteEncryptedPkcs8PrivateKey(
+                true,
+                passwordBytes,
+                pbkdf2HashAlgorithm,
+                pbkdf2IterationCount,
+                encryptionAlgorithm,
                 Span<byte>.Empty,
                 out int bytesWritten,
                 out byte[] pkcs1);
@@ -242,12 +285,42 @@ namespace System.Security.Cryptography
             return TryWritePkcs8PrivateKey(false, destination, out bytesWritten, out _);
         }
 
-        public bool TryWritePkcs8PrivateKey(
+        public bool TryWriteEncryptedPkcs8PrivateKey(
             ReadOnlySpan<char> password,
+            HashAlgorithmName pbkdf2HashAlgorithm,
+            int pbkdf2IterationCount,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
             Span<byte> destination,
             out int bytesWritten)
         {
-            return TryWritePkcs8PrivateKey(false, password, destination, out bytesWritten, out _);
+            return TryWriteEncryptedPkcs8PrivateKey(
+                false,
+                password,
+                pbkdf2HashAlgorithm,
+                pbkdf2IterationCount,
+                encryptionAlgorithm,
+                destination,
+                out bytesWritten,
+                out _);
+        }
+
+        public bool TryWriteEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<byte> passwordBytes,
+            HashAlgorithmName pbkdf2HashAlgorithm,
+            int pbkdf2IterationCount,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            return TryWriteEncryptedPkcs8PrivateKey(
+                false,
+                passwordBytes,
+                pbkdf2HashAlgorithm,
+                pbkdf2IterationCount,
+                encryptionAlgorithm,
+                destination,
+                out bytesWritten,
+                out _);
         }
 
         private bool TryWriteSubjectPublicKeyInfo(
@@ -417,6 +490,25 @@ namespace System.Security.Cryptography
             }
         }
 
+        private int CalculateMaximumPkcs1Size()
+        {
+            // Each of the arrays could gain at most 4 bytes of true length, one byte of
+            // length-length, one byte of tag, and one integer padding byte.
+            // The outer sequence would have the length bytes and tag (6 total)
+            // and the version number always encodes as 02 01 00 (3 total).
+            return checked(
+                6 +
+                3 +
+                7 + Modulus.Length +
+                7 + Exponent.Length +
+                7 + D.Length +
+                7 + P.Length +
+                7 + Q.Length +
+                7 + DP.Length +
+                7 + DQ.Length +
+                7 + InverseQ.Length);
+        }
+
         private bool TryWritePkcs8PrivateKey(
             bool createArray,
             Span<byte> destination,
@@ -435,22 +527,7 @@ namespace System.Security.Cryptography
                 throw new InvalidOperationException(SR.Cryptography_InvalidRsaParameters);
             }
 
-            // Each of the arrays could gain at most 4 bytes of true length, one byte of
-            // length-length, one byte of tag, and one integer padding byte.
-            // The outer sequence would have the length bytes and tag (6 total)
-            // and the version number always encodes as 02 01 00 (3 total).
-            int rentSize = checked(
-                6 +
-                3 +
-                7 + Modulus.Length +
-                7 + Exponent.Length +
-                7 + D.Length +
-                7 + P.Length +
-                7 + Q.Length +
-                7 + DP.Length +
-                7 + DQ.Length +
-                7 + InverseQ.Length);
-
+            int rentSize = CalculateMaximumPkcs1Size();
             byte[] rented = ArrayPool<byte>.Shared.Rent(rentSize);
             Span<byte> pkcs1PrivateKey = Span<byte>.Empty;
 
@@ -462,7 +539,12 @@ namespace System.Security.Cryptography
                     throw new CryptographicException();
                 }
 
+                // Assign before the assert so that the clear happens on assert.
                 pkcs1PrivateKey = rented.AsSpan(0, ppkSize);
+
+                Debug.Assert(
+                    ppkSize <= rentSize,
+                    $"Pkcs1PrivateKey was {ppkSize} but should have been bounded by {rentSize}");
 
                 // https://tools.ietf.org/html/rfc5208#section-5
                 //
@@ -522,14 +604,144 @@ namespace System.Security.Cryptography
             }
         }
 
-        private bool TryWritePkcs8PrivateKey(
+        private unsafe bool TryWriteEncryptedPkcs8PrivateKey(
             bool createArray,
             ReadOnlySpan<char> password,
+            HashAlgorithmName pbkdf2HashAlgorithm,
+            int pbkdf2IterationCount,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
             Span<byte> destination,
             out int bytesWritten,
             out byte[] createdArray)
         {
-            throw new NotImplementedException();
+            if (Modulus == null ||
+                Exponent == null ||
+                D == null ||
+                P == null ||
+                Q == null ||
+                DP == null ||
+                DQ == null ||
+                InverseQ == null)
+            {
+                throw new InvalidOperationException(SR.Cryptography_InvalidRsaParameters);
+            }
+
+            int rentSize = CalculateMaximumPkcs1Size();
+
+            // Now add maximal PKCS8 overhead:
+            // 6 bytes for the outer sequence,
+            // 3 bytes for the version identifier,
+            // 15 bytes for the RSA AlgorithmIdentifier
+            // 6 bytes for the OCTET STRING wrapper
+            rentSize = checked(rentSize + 6 + 3 + 15 + 6);
+
+            byte[] rented = ArrayPool<byte>.Shared.Rent(rentSize);
+            Memory<byte> pkcs8Buf = Memory<byte>.Empty;
+
+            fixed (byte* rentedPtr = rented)
+            {
+                try
+                {
+                    if (!TryWritePkcs8PrivateKey(false, rented, out int pkcs8Size, out _))
+                    {
+                        Debug.Fail("TryWritePkcs8PrivateKey failed with a pre-sized input");
+                    }
+
+                    // Assign before the assert so that the clear happens on assert.
+                    pkcs8Buf = rented.AsMemory(0, pkcs8Size);
+
+                    Debug.Assert(
+                        pkcs8Size <= rentSize,
+                        $"Pkcs1PrivateKey was {pkcs8Size} but should have been bounded by {rentSize}");
+
+                    return KeyFormatHelper.TryWriteEncryptedPkcs8(
+                        createArray,
+                        password,
+                        rented,
+                        pkcs8Size,
+                        encryptionAlgorithm,
+                        pbkdf2HashAlgorithm,
+                        pbkdf2IterationCount,
+                        destination,
+                        out bytesWritten,
+                        out createdArray);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(pkcs8Buf.Span);
+                    ArrayPool<byte>.Shared.Return(rented);
+                }
+            }
+        }
+
+        private unsafe bool TryWriteEncryptedPkcs8PrivateKey(
+            bool createArray,
+            ReadOnlySpan<byte> passwordBytes,
+            HashAlgorithmName pbkdf2HashAlgorithm,
+            int pbkdf2IterationCount,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
+            Span<byte> destination,
+            out int bytesWritten,
+            out byte[] createdArray)
+        {
+            if (Modulus == null ||
+                Exponent == null ||
+                D == null ||
+                P == null ||
+                Q == null ||
+                DP == null ||
+                DQ == null ||
+                InverseQ == null)
+            {
+                throw new InvalidOperationException(SR.Cryptography_InvalidRsaParameters);
+            }
+
+            int rentSize = CalculateMaximumPkcs1Size();
+
+            // Now add maximal PKCS8 overhead:
+            // 6 bytes for the outer sequence,
+            // 3 bytes for the version identifier,
+            // 15 bytes for the RSA AlgorithmIdentifier
+            // 6 bytes for the OCTET STRING wrapper
+            rentSize = checked(rentSize + 6 + 3 + 15 + 6);
+
+            byte[] rented = ArrayPool<byte>.Shared.Rent(rentSize);
+            Memory<byte> pkcs8Buf = Memory<byte>.Empty;
+
+            fixed (byte* rentedPtr = rented)
+            {
+                try
+                {
+                    if (!TryWritePkcs8PrivateKey(false, rented, out int pkcs8Size, out _))
+                    {
+                        Debug.Fail("TryWritePkcs8PrivateKey failed with a pre-sized input");
+                    }
+
+                    // Assign before the assert so that the clear happens on assert.
+                    pkcs8Buf = rented.AsMemory(0, pkcs8Size);
+
+                    Debug.Assert(
+                        pkcs8Size <= rentSize,
+                        $"Pkcs1PrivateKey was {pkcs8Size} but should have been bounded by {rentSize}");
+
+                    return KeyFormatHelper.TryWriteEncryptedPkcs8(
+                        createArray,
+                        passwordBytes,
+                        rented,
+                        pkcs8Size,
+                        encryptionAlgorithm,
+                        pbkdf2HashAlgorithm,
+                        pbkdf2IterationCount,
+                        destination,
+                        out bytesWritten,
+                        out createdArray);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(pkcs8Buf.Span);
+                    ArrayPool<byte>.Shared.Return(rented);
+                }
+            }
         }
     }
 

@@ -8,6 +8,17 @@ using System.Security.Cryptography.Asn1;
 
 namespace System.Security.Cryptography
 {
+    public static partial class Pkcs8
+    {
+        public enum EncryptionAlgorithm
+        {
+            Unknown,
+            Aes128Cbc,
+            Aes192Cbc,
+            Aes256Cbc,
+        }
+    }
+
     internal static class KeyFormatHelper
     {
         internal delegate void KeyReader<TRet, TParsed>(in TParsed key, in AlgorithmIdentifierAsn algId, out TRet ret);
@@ -234,6 +245,96 @@ namespace System.Security.Cryptography
             {
                 throw new CryptographicException(SR.Cryptography_Pkcs8_EncryptedReadFailed, e);
             }
+        }
+
+        internal static unsafe bool TryWriteEncryptedPkcs8(
+            bool createArray,
+            ReadOnlySpan<char> password,
+            byte[] privateKeyInfoBlob,
+            int privateKeyInfoBlobLength,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
+            HashAlgorithmName pbkdf2Prf,
+            int pbkdf2IterationCount,
+            Span<byte> destination,
+            out int bytesWritten,
+            out byte[] createdArray)
+        {
+            System.Text.Encoding encoding = System.Text.Encoding.UTF8;
+            int requiredBytes = encoding.GetByteCount(password);
+            Span<byte> passwordBytes = stackalloc byte[0];
+            byte[] rentedPasswordBytes = Array.Empty<byte>();
+
+            if (requiredBytes > 128)
+            {
+                rentedPasswordBytes = ArrayPool<byte>.Shared.Rent(requiredBytes);
+                passwordBytes = rentedPasswordBytes;
+            }
+            else
+            {
+                passwordBytes = stackalloc byte[requiredBytes];
+            }
+
+            try
+            {
+                fixed (byte* bytePtr = rentedPasswordBytes)
+                {
+                    int written = encoding.GetBytes(password, passwordBytes);
+
+                    if (written != requiredBytes)
+                    {
+                        Debug.Fail("UTF8 encoding length changed between size and convert");
+                        throw new CryptographicException();
+                    }
+
+                    passwordBytes = passwordBytes.Slice(0, written);
+
+                    return TryWriteEncryptedPkcs8(
+                        createArray,
+                        passwordBytes,
+                        privateKeyInfoBlob,
+                        privateKeyInfoBlobLength,
+                        encryptionAlgorithm,
+                        pbkdf2Prf,
+                        pbkdf2IterationCount,
+                        destination,
+                        out bytesWritten,
+                        out createdArray);
+                }
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(passwordBytes);
+
+                if (rentedPasswordBytes.Length > 0)
+                {
+                    ArrayPool<byte>.Shared.Return(rentedPasswordBytes);
+                }
+            }
+        }
+
+        internal static bool TryWriteEncryptedPkcs8(
+            bool createArray,
+            ReadOnlySpan<byte> passwordBytes,
+            byte[] privateKeyInfoBlob,
+            int privateKeyInfoBlobLength,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
+            HashAlgorithmName pbkdf2Prf,
+            int pbkdf2IterationCount,
+            Span<byte> destination,
+            out int bytesWritten,
+            out byte[] createdArray)
+        {
+            return PasswordBasedEncryption.TryWriteEncryptedPkcs8(
+                createArray,
+                passwordBytes,
+                privateKeyInfoBlob,
+                privateKeyInfoBlobLength,
+                encryptionAlgorithm,
+                pbkdf2Prf,
+                pbkdf2IterationCount,
+                destination,
+                out bytesWritten,
+                out createdArray);
         }
     }
 }
