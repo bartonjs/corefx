@@ -10,32 +10,42 @@ namespace System.Security.Cryptography.Algorithms.Tests
 {
     public static class ECParametersTests
     {
+        private static readonly ECParameters NistP521Key1 = new ECParameters
+        {
+            Curve = ECCurve.NamedCurves.nistP521,
+
+            Q =
+            {
+                X = (
+                    "00751F26324C73CEF5D45EBB32937E3060E351960A57594AD03EB1CA0C5EA747" +
+                    "1213366BA991D24406717F86FDEFDE086E09B954A57DC0F5E9459756D60C2AAE" +
+                    "6DE0").HexToByteArray(),
+
+                Y = (
+                    "01A8DDBB3F02C8C23524729F548B7E23325233EF67DD30752B924F297459E3C2" +
+                    "E12AE8D8F4FE4454E3847C18B255CACEF59737B918E1DE40F95E9FFE4F57B791" +
+                    "53A0").HexToByteArray(),
+            },
+
+            D = (
+                "01A55F8785A5730BAEE1D6B3D301069F7FD64D8B04CCEA57EFD5961E68F33FAB" +
+                "43545166CA6553CD38FF713D1289C698BD7D086B55E01B5BD5ED27E3630376B1" +
+                "1666").HexToByteArray(),
+        };
+
+        [Fact]
+        public static void WritePkcs8ForNamedCurveRaw()
+        {
+            ECParameters expected = NistP521Key1;
+
+            byte[] pkcs8 = expected.ToPkcs8PrivateKey();
+            ECParameters readBack = ECParameters.FromPkcs8PrivateKey(pkcs8, out _);
+            EccTestBase.AssertEqual(expected, readBack);
+        }
+
         [Fact]
         public static void ReadWriteNistP521Pkcs8()
         {
-            ECParameters expected = new ECParameters
-            {
-                Curve = ECCurve.NamedCurves.nistP521,
-
-                Q =
-                {
-                    X = (
-                        "00751F26324C73CEF5D45EBB32937E3060E351960A57594AD03EB1CA0C5EA747" +
-                        "1213366BA991D24406717F86FDEFDE086E09B954A57DC0F5E9459756D60C2AAE" +
-                        "6DE0").HexToByteArray(),
-
-                    Y = (
-                        "01A8DDBB3F02C8C23524729F548B7E23325233EF67DD30752B924F297459E3C2" +
-                        "E12AE8D8F4FE4454E3847C18B255CACEF59737B918E1DE40F95E9FFE4F57B791" +
-                        "53A0").HexToByteArray(),
-                },
-
-                D = (
-                    "01A55F8785A5730BAEE1D6B3D301069F7FD64D8B04CCEA57EFD5961E68F33FAB" +
-                    "43545166CA6553CD38FF713D1289C698BD7D086B55E01B5BD5ED27E3630376B1" +
-                    "1666").HexToByteArray(),
-            };
-
             const string base64 = @"
 MIHuAgEAMBAGByqGSM49AgEGBSuBBAAjBIHWMIHTAgEBBEIBpV+HhaVzC67h1rPT
 AQaff9ZNiwTM6lfv1ZYeaPM/q0NUUWbKZVPNOP9xPRKJxpi9fQhrVeAbW9XtJ+Nj
@@ -44,7 +54,19 @@ a6mR0kQGcX+G/e/eCG4JuVSlfcD16UWXVtYMKq5t4AGo3bs/AsjCNSRyn1SLfiMy
 UjPvZ90wdSuSTyl0WePC4Sro2PT+RFTjhHwYslXKzvWXN7kY4d5A+V6f/k9Xt5FT
 oA==";
 
-            ReadWriteBase64Pkcs8(base64, expected);
+            ReadWriteBase64Pkcs8(base64, NistP521Key1);
+        }
+
+        [Fact]
+        public static void ReadWriteNistP521SubjectPublicKeyInfo()
+        {
+            const string base64 = @"
+MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQAdR8mMkxzzvXUXrsyk34wYONRlgpX
+WUrQPrHKDF6nRxITNmupkdJEBnF/hv3v3ghuCblUpX3A9elFl1bWDCqubeABqN27
+PwLIwjUkcp9Ui34jMlIz72fdMHUrkk8pdFnjwuEq6Nj0/kRU44R8GLJVys71lze5
+GOHeQPlen/5PV7eRU6A=";
+
+            ReadWriteBase64SubjectPublicKeyInfo(base64, NistP521Key1);
         }
 
         private static void ReadWriteBase64Pkcs8(string base64Pkcs8, in ECParameters expected)
@@ -56,6 +78,22 @@ oA==";
                 p => p.ToPkcs8PrivateKey(),
                 (ECParameters p, Span<byte> destination, out int bytesWritten) =>
                     p.TryWritePkcs8PrivateKey(destination, out bytesWritten));
+        }
+
+        private static void ReadWriteBase64SubjectPublicKeyInfo(
+            string base64SubjectPublicKeyInfo,
+            in ECParameters expected)
+        {
+            ECParameters expectedPublic = expected;
+            expectedPublic.D = null;
+
+            ReadWriteKey(
+                base64SubjectPublicKeyInfo,
+                expectedPublic,
+                ECParameters.FromSubjectPublicKeyInfo,
+                p => p.ToSubjectPublicKeyInfo(),
+                (ECParameters p, Span<byte> destination, out int bytesWritten) =>
+                    p.TryWriteSubjectPublicKeyInfo(destination, out bytesWritten));
         }
 
         private static void ReadWriteKey(
