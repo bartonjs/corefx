@@ -254,8 +254,37 @@ namespace System.Security.Cryptography
             return ret;
         }
 
-        public static ECParameters FromEncryptedPkcs8PrivateKey(ReadOnlySpan<char> password, ReadOnlySpan<byte> source, out int bytesRead) => throw null;
-        public static ECParameters FromEncryptedPkcs8PrivateKey(ReadOnlySpan<byte> passwordBytes, ReadOnlySpan<byte> source, out int bytesRead) => throw null;
+        public static ECParameters FromEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            ReadOnlySpan<byte> source,
+            out int bytesRead)
+        {
+            KeyFormatHelper.ReadEncryptedPkcs8<ECParameters, ECPrivateKey>(
+                s_validOids,
+                source,
+                password,
+                FromECPrivateKey,
+                out bytesRead,
+                out ECParameters ret);
+
+            return ret;
+        }
+
+        public static ECParameters FromEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<byte> passwordBytes,
+            ReadOnlySpan<byte> source,
+            out int bytesRead)
+        {
+            KeyFormatHelper.ReadEncryptedPkcs8<ECParameters, ECPrivateKey>(
+                s_validOids,
+                source,
+                passwordBytes,
+                FromECPrivateKey,
+                out bytesRead,
+                out ECParameters ret);
+
+            return ret;
+        }
 
         public static ECParameters FromSubjectPublicKeyInfo(ReadOnlySpan<byte> source, out int bytesRead)
         {

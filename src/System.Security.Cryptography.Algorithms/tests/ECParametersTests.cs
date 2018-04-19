@@ -69,6 +69,29 @@ GOHeQPlen/5PV7eRU6A=";
             ReadWriteBase64SubjectPublicKeyInfo(base64, NistP521Key1);
         }
 
+        [Fact]
+        public static void ReadNistP521EncryptedPkcs8_Pbes2_Aes128_Sha384()
+        {
+            // PBES2, PBKDF2 (SHA384), AES128
+            const string base64 = @"
+MIIBXTBXBgkqhkiG9w0BBQ0wSjApBgkqhkiG9w0BBQwwHAQI/JyXWyp/t3kCAggA
+MAwGCCqGSIb3DQIKBQAwHQYJYIZIAWUDBAECBBA3H8mbFK5afB5GzIemCCQkBIIB
+AKAz1z09ATUA8UfoDMwTyXiHUS8Mb/zkUCH+I7rav4orhAnSyYAyLKcHeGne+kUa
+8ewQ5S7oMMLXE0HHQ8CpORlSgxTssqTAHigXEqdRb8nQ8hJJa2dFtNXyUeFtxZ7p
+x+aSLD6Y3J+mgzeVp1ICgROtuRjA9RYjUdd/3cy2BAlW+Atfs/300Jhkke3H0Gqc
+F71o65UNB+verEgN49rQK7FAFtoVI2oRjHLO1cGjxZkbWe2KLtgJWsgmexRq3/a+
+Pfuapj3LAHALZtDNMZ+QCFN2ZXUSFNWiBSwnwCAtfFCn/EchPo3MFR3K0q/qXTua
+qtlbnispri1a/EghiaPQ0po=";
+
+            byte[] derBytes = Convert.FromBase64String(base64);
+
+            ECParameters ecParameters =
+                ECParameters.FromEncryptedPkcs8PrivateKey("qwerty", derBytes, out int bytesRead);
+
+            Assert.Equal(derBytes.Length, bytesRead);
+            EccTestBase.AssertEqual(NistP521Key1, ecParameters);
+        }
+
         private static void ReadWriteBase64Pkcs8(string base64Pkcs8, in ECParameters expected)
         {
             ReadWriteKey(
