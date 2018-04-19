@@ -92,6 +92,34 @@ qtlbnispri1a/EghiaPQ0po=";
             EccTestBase.AssertEqual(NistP521Key1, ecParameters);
         }
 
+        [Fact]
+        public static void WriteEncryptedPkcs8()
+        {
+            ECParameters generated;
+
+            using (ECDsa ecdsa = ECDsa.Create())
+            {
+                generated = ecdsa.ExportParameters(true);
+            }
+
+            byte[] encryptedKey = generated.ToEncryptedPkcs8PrivateKey(
+                nameof(WriteEncryptedPkcs8),
+                HashAlgorithmName.SHA512,
+                1048576,
+                Pkcs8.EncryptionAlgorithm.Aes128Cbc);
+
+            Assert.ThrowsAny<CryptographicException>(
+                () => ECParameters.FromEncryptedPkcs8PrivateKey("wrong answer", encryptedKey, out _));
+
+            ECParameters readBack = ECParameters.FromEncryptedPkcs8PrivateKey(
+                System.Text.Encoding.UTF8.GetBytes(nameof(WriteEncryptedPkcs8)),
+                encryptedKey,
+                out int bytesRead);
+
+            Assert.Equal(encryptedKey.Length, bytesRead);
+            EccTestBase.AssertEqual(generated, readBack);
+        }
+
         private static void ReadWriteBase64Pkcs8(string base64Pkcs8, in ECParameters expected)
         {
             ReadWriteKey(

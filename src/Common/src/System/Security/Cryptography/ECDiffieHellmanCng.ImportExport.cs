@@ -60,7 +60,7 @@ namespace System.Security.Cryptography
             {
                 ECParameters ecparams = new ECParameters();
 
-                string curveName = GetCurveName();
+                string curveName = GetCurveName(out string oidValue);
                 byte[] blob = null;
 
                 try
@@ -74,7 +74,7 @@ namespace System.Security.Cryptography
                     {
                         blob = ExportKeyBlob(includePrivateParameters);
                         ECCng.ExportNamedCurveParameters(ref ecparams, blob, includePrivateParameters);
-                        ecparams.Curve = ECCurve.CreateFromFriendlyName(curveName);
+                        ecparams.Curve = ECCurve.CreateFromOid(new Oid(oidValue, curveName));
                     }
 
                     return ecparams;

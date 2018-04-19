@@ -258,6 +258,61 @@ namespace System.Security.Cryptography
             }
         }
 
+        internal static unsafe AsnWriter WriteEncryptedPkcs8(
+            ReadOnlySpan<char> password,
+            AsnWriter pkcs8Writer,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
+            HashAlgorithmName pbkdf2Prf,
+            int pbkdf2IterationCount)
+        {
+            System.Text.Encoding encoding = System.Text.Encoding.UTF8;
+            int requiredBytes = encoding.GetByteCount(password);
+            Span<byte> passwordBytes = stackalloc byte[0];
+            byte[] rentedPasswordBytes = Array.Empty<byte>();
+
+            if (requiredBytes > 128)
+            {
+                rentedPasswordBytes = ArrayPool<byte>.Shared.Rent(requiredBytes);
+                passwordBytes = rentedPasswordBytes;
+            }
+            else
+            {
+                passwordBytes = stackalloc byte[requiredBytes];
+            }
+
+            try
+            {
+                fixed (byte* bytePtr = rentedPasswordBytes)
+                {
+                    int written = encoding.GetBytes(password, passwordBytes);
+
+                    if (written != requiredBytes)
+                    {
+                        Debug.Fail("UTF8 encoding length changed between size and convert");
+                        throw new CryptographicException();
+                    }
+
+                    passwordBytes = passwordBytes.Slice(0, written);
+
+                    return WriteEncryptedPkcs8(
+                        passwordBytes,
+                        pkcs8Writer,
+                        encryptionAlgorithm,
+                        pbkdf2Prf,
+                        pbkdf2IterationCount);
+                }
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(passwordBytes);
+
+                if (rentedPasswordBytes.Length > 0)
+                {
+                    ArrayPool<byte>.Shared.Return(rentedPasswordBytes);
+                }
+            }
+        }
+
         internal static unsafe bool TryWriteEncryptedPkcs8(
             bool createArray,
             ReadOnlySpan<char> password,
@@ -321,6 +376,21 @@ namespace System.Security.Cryptography
                     ArrayPool<byte>.Shared.Return(rentedPasswordBytes);
                 }
             }
+        }
+
+        internal static AsnWriter WriteEncryptedPkcs8(
+            ReadOnlySpan<byte> passwordBytes,
+            AsnWriter pkcs8Writer,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
+            HashAlgorithmName pbkdf2Prf,
+            int pbkdf2IterationCount)
+        {
+            return PasswordBasedEncryption.WriteEncryptedPkcs8(
+                passwordBytes,
+                pkcs8Writer,
+                encryptionAlgorithm,
+                pbkdf2Prf,
+                pbkdf2IterationCount);
         }
 
         internal static bool TryWriteEncryptedPkcs8(

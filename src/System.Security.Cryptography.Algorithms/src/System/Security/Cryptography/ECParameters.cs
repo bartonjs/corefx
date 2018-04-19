@@ -300,13 +300,10 @@ namespace System.Security.Cryptography
 
         public byte[] ToPkcs8PrivateKey()
         {
-            if (!TryWritePkcs8PrivateKey(true, Span<byte>.Empty, out _, out byte[] ret))
+            using (AsnWriter writer = WritePkcs8PrivateKey())
             {
-                Debug.Fail("TryWritePkcs8PrivateKey failed in allocation mode");
-                throw new CryptographicException();
+                return writer.Encode();
             }
-
-            return ret;
         }
 
         public byte[] ToSubjectPublicKeyInfo()
@@ -320,14 +317,89 @@ namespace System.Security.Cryptography
             return ret;
         }
 
-        public byte[] ToEncryptedPkcs8PrivateKey(ReadOnlySpan<char> password, HashAlgorithmName pbkdf2HashAlgorithm, int pbkdf2IterationCount, Pkcs8.EncryptionAlgorithm encryptionAlgorithm) => throw null;
-        public byte[] ToEncryptedPkcs8PrivateKey(ReadOnlySpan<byte> passwordBytes, HashAlgorithmName pbkdf2HashAlgorithm, int pbkdf2IterationCount, Pkcs8.EncryptionAlgorithm encryptionAlgorithm) => throw null;
+        public byte[] ToEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            HashAlgorithmName pbkdf2HashAlgorithm,
+            int pbkdf2IterationCount,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm)
+        {
+            using (AsnWriter pkcs8Writer = WritePkcs8PrivateKey())
+            using (AsnWriter encryptedWriter = KeyFormatHelper.WriteEncryptedPkcs8(
+                password,
+                pkcs8Writer,
+                encryptionAlgorithm,
+                pbkdf2HashAlgorithm,
+                pbkdf2IterationCount))
+            {
+                return encryptedWriter.Encode();
+            }
+        }
 
-        public bool TryWritePkcs8PrivateKey(Span<byte> destination, out int bytesWritten) =>
-            TryWritePkcs8PrivateKey(false, destination, out bytesWritten, out _);
+        public byte[] ToEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<byte> passwordBytes,
+            HashAlgorithmName pbkdf2HashAlgorithm,
+            int pbkdf2IterationCount,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm)
+        {
+            using (AsnWriter pkcs8Writer = WritePkcs8PrivateKey())
+            using (AsnWriter encryptedWriter = KeyFormatHelper.WriteEncryptedPkcs8(
+                passwordBytes,
+                pkcs8Writer,
+                encryptionAlgorithm,
+                pbkdf2HashAlgorithm,
+                pbkdf2IterationCount))
+            {
+                return encryptedWriter.Encode();
+            }
+        }
 
-        public bool TryWriteEncryptedPkcs8PrivateKey(ReadOnlySpan<char> password, HashAlgorithmName pbkdf2HashAlgorithm, int pbkdf2IterationCount, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, Span<byte> destination, out int bytesWritten) => throw null;
-        public bool TryWriteEncryptedPkcs8PrivateKey(ReadOnlySpan<byte> passwordBytes, HashAlgorithmName pbkdf2HashAlgorithm, int pbkdf2IterationCount, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, Span<byte> destination, out int bytesWritten) => throw null;
+        public bool TryWritePkcs8PrivateKey(Span<byte> destination, out int bytesWritten)
+        {
+            using (AsnWriter writer = WritePkcs8PrivateKey())
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
+        }
+
+        public bool TryWriteEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            HashAlgorithmName pbkdf2HashAlgorithm,
+            int pbkdf2IterationCount,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            using (AsnWriter pkcs8Writer = WritePkcs8PrivateKey())
+            using (AsnWriter encryptedWriter = KeyFormatHelper.WriteEncryptedPkcs8(
+                password,
+                pkcs8Writer,
+                encryptionAlgorithm,
+                pbkdf2HashAlgorithm,
+                pbkdf2IterationCount))
+            {
+                return encryptedWriter.TryEncode(destination, out bytesWritten);
+            }
+        }
+
+        public bool TryWriteEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<byte> passwordBytes,
+            HashAlgorithmName pbkdf2HashAlgorithm,
+            int pbkdf2IterationCount,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            using (AsnWriter pkcs8Writer = WritePkcs8PrivateKey())
+            using (AsnWriter encryptedWriter = KeyFormatHelper.WriteEncryptedPkcs8(
+                passwordBytes,
+                pkcs8Writer,
+                encryptionAlgorithm,
+                pbkdf2HashAlgorithm,
+                pbkdf2IterationCount))
+            {
+                return encryptedWriter.TryEncode(destination, out bytesWritten);
+            }
+        }
 
         public bool TryWriteSubjectPublicKeyInfo(Span<byte> destination, out int bytesWritten) =>
             TryWriteSubjectPublicKeyInfo(false, destination, out bytesWritten, out _);
@@ -372,11 +444,7 @@ namespace System.Security.Cryptography
             }
         }
 
-        private bool TryWritePkcs8PrivateKey(
-            bool createArray,
-            Span<byte> destination,
-            out int bytesWritten,
-            out byte[] createdArray)
+        private AsnWriter WritePkcs8PrivateKey()
         {
             Validate();
 
@@ -385,36 +453,43 @@ namespace System.Security.Cryptography
                 throw new CryptographicException(SR.Cryptography_CSP_NoPrivateKey);
             }
 
-            using (AsnWriter writer = new AsnWriter(AsnEncodingRules.DER))
-            using (AsnWriter ecPrivateKey = WriteEcPrivateKey())
+            AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
+            bool returning = false;
+
+            try
             {
-                // PrivateKeyInfo
-                writer.PushSequence();
-
-                // version 0 format
-                writer.WriteInteger(0);
-
-                // privateKeyAlgorithm
+                using (AsnWriter ecPrivateKey = WriteEcPrivateKey())
                 {
+                    // PrivateKeyInfo
                     writer.PushSequence();
-                    writer.WriteObjectIdentifier(Oids.EcPublicKey);
-                    WriteEcParameters(writer);
+
+                    // version 0 format
+                    writer.WriteInteger(0);
+
+                    // privateKeyAlgorithm
+                    {
+                        writer.PushSequence();
+                        writer.WriteObjectIdentifier(Oids.EcPublicKey);
+                        WriteEcParameters(writer);
+                        writer.PopSequence();
+                    }
+
+                    writer.WriteOctetString(ecPrivateKey.EncodeAsSpan());
+
                     writer.PopSequence();
+
+                    // Ensure that the stack is balanced.
+                    writer.EncodeAsSpan();
+                    returning = true;
+                    return writer;
                 }
-
-                writer.WriteOctetString(ecPrivateKey.EncodeAsSpan());
-
-                writer.PopSequence();
-
-                if (createArray)
+            }
+            finally
+            {
+                if (!returning)
                 {
-                    createdArray = writer.Encode();
-                    bytesWritten = createdArray.Length;
-                    return true;
+                    writer.Dispose();
                 }
-
-                createdArray = null;
-                return writer.TryEncode(destination, out bytesWritten);
             }
         }
 

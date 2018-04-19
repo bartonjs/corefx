@@ -70,6 +70,208 @@ namespace System.Security.Cryptography
             }
         }
 
+        internal static unsafe AsnWriter WriteEncryptedPkcs8(
+            ReadOnlySpan<byte> passwordBytes,
+            AsnWriter pkcs8Writer,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
+            HashAlgorithmName pbkdf2Prf,
+            int pbkdf2IterationCount)
+        {
+            SymmetricAlgorithm cipher;
+            int keySizeBytes;
+            string hmacOid;
+            string encryptionAlgorithmOid;
+
+            switch (encryptionAlgorithm)
+            {
+                case Pkcs8.EncryptionAlgorithm.Aes128Cbc:
+                    cipher = Aes.Create();
+                    keySizeBytes = 128 / 8;
+                    encryptionAlgorithmOid = Oids.Aes128Cbc;
+                    break;
+                case Pkcs8.EncryptionAlgorithm.Aes192Cbc:
+                    cipher = Aes.Create();
+                    keySizeBytes = 192 / 8;
+                    encryptionAlgorithmOid = Oids.Aes192Cbc;
+                    break;
+                case Pkcs8.EncryptionAlgorithm.Aes256Cbc:
+                    cipher = Aes.Create();
+                    keySizeBytes = 256 / 8;
+                    encryptionAlgorithmOid = Oids.Aes256Cbc;
+                    break;
+                default:
+                    throw new CryptographicException(
+                        SR.Format(
+                            SR.Cryptography_UnknownAlgorithmIdentifier,
+                            encryptionAlgorithm));
+            }
+
+            if (pbkdf2Prf == HashAlgorithmName.SHA256)
+            {
+                hmacOid = Oids.HmacWithSha256;
+            }
+            else if (pbkdf2Prf == HashAlgorithmName.SHA384)
+            {
+                hmacOid = Oids.HmacWithSha384;
+            }
+            else if (pbkdf2Prf == HashAlgorithmName.SHA512)
+            {
+                hmacOid = Oids.HmacWithSha512;
+            }
+            else if (pbkdf2Prf == HashAlgorithmName.SHA1)
+            {
+                hmacOid = Oids.HmacWithSha1;
+            }
+            else
+            {
+                throw new CryptographicException(SR.Cryptography_UnknownHashAlgorithm, pbkdf2Prf.Name);
+            }
+
+            byte[] pwdTmpBytes = new byte[passwordBytes.Length];
+            byte[] salt = new byte[16];
+            RandomNumberGenerator.Fill(salt);
+            byte[] derivedKey;
+            byte[] iv = cipher.IV;
+
+            ReadOnlySpan<byte> pkcs8Span = pkcs8Writer.EncodeAsSpan();
+            byte[] pkcs8Rent = ArrayPool<byte>.Shared.Rent(pkcs8Span.Length);
+            byte[] encryptedRent = ArrayPool<byte>.Shared.Rent(checked(pkcs8Span.Length + 16));
+            Span<byte> encryptedSpan = default;
+
+            fixed (byte* pkcs8RentPin = pkcs8Rent)
+            fixed (byte* pwdTmpBytesPtr = pwdTmpBytes)
+            {
+                passwordBytes.CopyTo(pwdTmpBytes);
+
+                using (var pbkdf2 = new Rfc2898DeriveBytes(pwdTmpBytes, salt, pbkdf2IterationCount, pbkdf2Prf))
+                {
+                    derivedKey = pbkdf2.GetBytes(keySizeBytes);
+                }
+
+                fixed (byte* keyPtr = derivedKey)
+                {
+                    CryptographicOperations.ZeroMemory(pwdTmpBytes);
+
+                    using (ICryptoTransform encryptor = cipher.CreateEncryptor(derivedKey, iv))
+                    {
+                        Debug.Assert(encryptor.CanTransformMultipleBlocks);
+
+                        int remaining = pkcs8Span.Length % (cipher.BlockSize / 8);
+
+                        try
+                        {
+                            pkcs8Span.CopyTo(pkcs8Rent);
+
+                            int written = encryptor.TransformBlock(
+                                pkcs8Rent,
+                                0,
+                                pkcs8Span.Length - remaining,
+                                encryptedRent,
+                                0);
+
+                            byte[] lastBlock = encryptor.TransformFinalBlock(
+                                pkcs8Rent,
+                                written,
+                                remaining);
+
+                            lastBlock.AsSpan().CopyTo(encryptedRent.AsSpan(written));
+                            encryptedSpan = encryptedRent.AsSpan(0, written + lastBlock.Length);
+                        }
+                        finally
+                        {
+                            CryptographicOperations.ZeroMemory(pkcs8Rent.AsSpan(0, pkcs8Span.Length));
+                            ArrayPool<byte>.Shared.Return(pkcs8Rent);
+                            pkcs8Rent = null;
+                        }
+                    }
+                }
+            }
+
+            bool returning = false;
+            AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
+
+            try
+            {
+                // PKCS8 EncryptedPrivateKeyInfo
+                writer.PushSequence();
+
+                // EncryptedPrivateKeyInfo.encryptionAlgorithm
+                {
+                    writer.PushSequence();
+                    writer.WriteObjectIdentifier(Oids.PasswordBasedEncryptionScheme2);
+
+                    // PBES2-params
+                    {
+                        writer.PushSequence();
+
+                        // keyDerivationFunc
+                        {
+                            writer.PushSequence();
+                            writer.WriteObjectIdentifier(Oids.Pbkdf2);
+
+                            // PBKDF2-params
+                            {
+                                writer.PushSequence();
+
+                                writer.WriteOctetString(salt);
+                                writer.WriteInteger(pbkdf2IterationCount);
+
+                                // RC2 needs to write the keyLength.
+                                // No other algorithms have that requirement.
+                                Debug.Assert(
+                                    !(cipher is RC2),
+                                    "RC2 keys require special handling here");
+
+                                // prf
+                                if (hmacOid != Oids.HmacWithSha1)
+                                {
+                                    writer.PushSequence();
+                                    writer.WriteObjectIdentifier(hmacOid);
+                                    writer.WriteNull();
+                                    writer.PopSequence();
+                                }
+
+                                writer.PopSequence();
+                            }
+
+                            writer.PopSequence();
+                        }
+
+                        // encryptionScheme
+                        {
+                            writer.PushSequence();
+                            writer.WriteObjectIdentifier(encryptionAlgorithmOid);
+                            writer.WriteOctetString(iv);
+                            writer.PopSequence();
+                        }
+
+                        writer.PopSequence();
+                    }
+
+                    writer.PopSequence();
+                }
+
+                // encryptedData
+                writer.WriteOctetString(encryptedSpan);
+                writer.PopSequence();
+
+                // Ensure the stack is balanced
+                writer.EncodeAsSpan();
+                returning = true;
+                return writer;
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(encryptedSpan);
+                ArrayPool<byte>.Shared.Return(encryptedRent);
+
+                if (!returning)
+                {
+                    writer.Dispose();
+                }
+            }
+        }
+
         internal static unsafe bool TryWriteEncryptedPkcs8(
             bool createArray,
             ReadOnlySpan<byte> passwordBytes,

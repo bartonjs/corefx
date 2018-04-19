@@ -81,7 +81,8 @@ namespace System.Security.Cryptography
             {
                 ECParameters ecparams = new ECParameters();
 
-                string curveName = GetCurveName();
+                string curveName = GetCurveName(out string oidValue);
+
                 if (string.IsNullOrEmpty(curveName))
                 {
                     byte[] fullKeyBlob = ExportFullKeyBlob(includePrivateParameters);
@@ -91,7 +92,7 @@ namespace System.Security.Cryptography
                 {
                     byte[] keyBlob = ExportKeyBlob(includePrivateParameters);
                     ECCng.ExportNamedCurveParameters(ref ecparams, keyBlob, includePrivateParameters);
-                    ecparams.Curve = ECCurve.CreateFromFriendlyName(curveName);
+                    ecparams.Curve = ECCurve.CreateFromOid(new Oid(oidValue, curveName));
                 }
 
                 return ecparams;
