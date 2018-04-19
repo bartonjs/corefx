@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Buffers;
-using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.Asn1;
@@ -205,30 +204,34 @@ namespace System.Security.Cryptography
 
         public byte[] ToPkcs1PublicKey()
         {
-            bool ret = TryWritePkcs1PublicKey(true, Span<byte>.Empty, out int bytesWritten, out byte[] pkcs1);
-            Debug.Assert(ret);
-            return pkcs1;
+            using (AsnWriter writer = WritePkcs1PublicKey())
+            {
+                return writer.Encode();
+            }
         }
 
         public byte[] ToSubjectPublicKeyInfo()
         {
-            bool ret = TryWriteSubjectPublicKeyInfo(true, Span<byte>.Empty, out int bytesWritten, out byte[] spki);
-            Debug.Assert(ret);
-            return spki;
+            using (AsnWriter writer = WriteSubjectPublicKeyInfo())
+            {
+                return writer.Encode();
+            }
         }
 
         public byte[] ToPkcs1PrivateKey()
         {
-            bool ret = TryWritePkcs1PrivateKey(true, Span<byte>.Empty, out int bytesWritten, out byte[] pkcs1);
-            Debug.Assert(ret);
-            return pkcs1;
+            using (AsnWriter writer = WritePkcs1PrivateKey())
+            {
+                return writer.Encode();
+            }
         }
 
         public byte[] ToPkcs8PrivateKey()
         {
-            bool ret = TryWritePkcs8PrivateKey(true, Span<byte>.Empty, out int bytesWritten, out byte[] pkcs1);
-            Debug.Assert(ret);
-            return pkcs1;
+            using (AsnWriter writer = WritePkcs8PrivateKey())
+            {
+                return writer.Encode();
+            }
         }
 
         public byte[] ToEncryptedPkcs8PrivateKey(
@@ -237,18 +240,16 @@ namespace System.Security.Cryptography
             int pbkdf2IterationCount,
             Pkcs8.EncryptionAlgorithm encryptionAlgorithm)
         {
-            bool ret = TryWriteEncryptedPkcs8PrivateKey(
-                true,
+            using (AsnWriter pkcs8PrivateKey = WritePkcs8PrivateKey())
+            using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(
                 password,
-                pbkdf2HashAlgorithm,
-                pbkdf2IterationCount,
+                pkcs8PrivateKey,
                 encryptionAlgorithm,
-                Span<byte>.Empty,
-                out int bytesWritten,
-                out byte[] pkcs1);
-
-            Debug.Assert(ret);
-            return pkcs1;
+                pbkdf2HashAlgorithm,
+                pbkdf2IterationCount))
+            {
+                return writer.Encode();
+            }
         }
 
         public byte[] ToEncryptedPkcs8PrivateKey(
@@ -257,38 +258,48 @@ namespace System.Security.Cryptography
             int pbkdf2IterationCount,
             Pkcs8.EncryptionAlgorithm encryptionAlgorithm)
         {
-            bool ret = TryWriteEncryptedPkcs8PrivateKey(
-                true,
+            using (AsnWriter pkcs8PrivateKey = WritePkcs8PrivateKey())
+            using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(
                 passwordBytes,
-                pbkdf2HashAlgorithm,
-                pbkdf2IterationCount,
+                pkcs8PrivateKey,
                 encryptionAlgorithm,
-                Span<byte>.Empty,
-                out int bytesWritten,
-                out byte[] pkcs1);
-
-            Debug.Assert(ret);
-            return pkcs1;
+                pbkdf2HashAlgorithm,
+                pbkdf2IterationCount))
+            {
+                return writer.Encode();
+            }
         }
 
         public bool TryWritePkcs1PublicKey(Span<byte> destination, out int bytesWritten)
         {
-            return TryWritePkcs1PublicKey(false, destination, out bytesWritten, out _);
+            using (AsnWriter writer = WritePkcs1PublicKey())
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
         }
 
         public bool TryWriteSubjectPublicKeyInfo(Span<byte> destination, out int bytesWritten)
         {
-            return TryWriteSubjectPublicKeyInfo(false, destination, out bytesWritten, out _);
+            using (AsnWriter writer = WriteSubjectPublicKeyInfo())
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
         }
 
         public bool TryWritePkcs1PrivateKey(Span<byte> destination, out int bytesWritten)
         {
-            return TryWritePkcs1PrivateKey(false, destination, out bytesWritten, out _);
+            using (AsnWriter writer = WritePkcs1PrivateKey())
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
         }
 
         public bool TryWritePkcs8PrivateKey(Span<byte> destination, out int bytesWritten)
         {
-            return TryWritePkcs8PrivateKey(false, destination, out bytesWritten, out _);
+            using (AsnWriter writer = WritePkcs8PrivateKey())
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
         }
 
         public bool TryWriteEncryptedPkcs8PrivateKey(
@@ -299,15 +310,16 @@ namespace System.Security.Cryptography
             Span<byte> destination,
             out int bytesWritten)
         {
-            return TryWriteEncryptedPkcs8PrivateKey(
-                false,
+            using (AsnWriter pkcs8PrivateKey = WritePkcs8PrivateKey())
+            using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(
                 password,
-                pbkdf2HashAlgorithm,
-                pbkdf2IterationCount,
+                pkcs8PrivateKey,
                 encryptionAlgorithm,
-                destination,
-                out bytesWritten,
-                out _);
+                pbkdf2HashAlgorithm,
+                pbkdf2IterationCount))
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
         }
 
         public bool TryWriteEncryptedPkcs8PrivateKey(
@@ -318,103 +330,70 @@ namespace System.Security.Cryptography
             Span<byte> destination,
             out int bytesWritten)
         {
-            return TryWriteEncryptedPkcs8PrivateKey(
-                false,
+            using (AsnWriter pkcs8PrivateKey = WritePkcs8PrivateKey())
+            using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(
                 passwordBytes,
-                pbkdf2HashAlgorithm,
-                pbkdf2IterationCount,
+                pkcs8PrivateKey,
                 encryptionAlgorithm,
-                destination,
-                out bytesWritten,
-                out _);
+                pbkdf2HashAlgorithm,
+                pbkdf2IterationCount))
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
         }
 
-        private bool TryWriteSubjectPublicKeyInfo(
-            bool createArray,
-            Span<byte> destination,
-            out int bytesWritten,
-            out byte[] createdArray)
+        private AsnWriter WriteSubjectPublicKeyInfo()
         {
             if (Modulus == null || Exponent == null)
             {
                 throw new InvalidOperationException(SR.Cryptography_InvalidRsaParameters);
             }
 
-            // Each of the arrays could gain at most 4 bytes of true length, one byte of
-            // length-length, one byte of tag, and one integer padding byte.
-            // The outer sequence would have the length bytes and tag (6 total)
-            int rentSize = checked(3 + 7 + Modulus.Length + 7 + Exponent.Length);
-            byte[] rented = ArrayPool<byte>.Shared.Rent(rentSize);
-            Span<byte> pkcs1PublicKey = Span<byte>.Empty;
+            AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
+            bool returning = false;
 
             try
             {
-                if (!TryWritePkcs1PublicKey(rented, out int ppkSize))
+                using (AsnWriter pkcs1Writer = WritePkcs1PublicKey())
                 {
-                    Debug.Fail($"Pre-allocated call to TryWritePkcs1PublicKey failed");
-                    throw new CryptographicException();
-                }
-
-                pkcs1PublicKey = rented.AsSpan(0, ppkSize);
-
-                // https://tools.ietf.org/html/rfc3280#section-4.1
-                //
-                // SubjectPublicKeyInfo  ::=  SEQUENCE  {
-                //   algorithm            AlgorithmIdentifier,
-                //   subjectPublicKey     BIT STRING  }
-                //
-                // https://tools.ietf.org/html/rfc3280#section-4.1.1.2
-                //
-                // AlgorithmIdentifier  ::=  SEQUENCE  {
-                //   algorithm               OBJECT IDENTIFIER,
-                //   parameters              ANY DEFINED BY algorithm OPTIONAL  }
-                AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
-
-                // SubjectPublicKeyInfo
-                writer.PushSequence();
-
-                // SPKI.Algorithm (AlgorithmIdentifier)
-                {
+                    // SubjectPublicKeyInfo
                     writer.PushSequence();
-                    writer.WriteObjectIdentifier(Oids.RsaEncryption);
 
-                    // https://tools.ietf.org/html/rfc3447#appendix-C
-                    //
-                    // --
-                    // -- When rsaEncryption is used in an AlgorithmIdentifier the
-                    // -- parameters MUST be present and MUST be NULL.
-                    // --
-                    writer.WriteNull();
+                    // SPKI.Algorithm (AlgorithmIdentifier)
+                    {
+                        writer.PushSequence();
+                        writer.WriteObjectIdentifier(Oids.RsaEncryption);
+
+                        // https://tools.ietf.org/html/rfc3447#appendix-C
+                        //
+                        // --
+                        // -- When rsaEncryption is used in an AlgorithmIdentifier the
+                        // -- parameters MUST be present and MUST be NULL.
+                        // --
+                        writer.WriteNull();
+
+                        writer.PopSequence();
+                    }
+
+                    // SPKI.subjectPublicKey
+                    writer.WriteBitString(pkcs1Writer.EncodeAsSpan());
 
                     writer.PopSequence();
                 }
 
-                // SPKI.subjectPublicKey
-                writer.WriteBitString(pkcs1PublicKey);
-                writer.PopSequence();
-
-                if (createArray)
-                {
-                    createdArray = writer.Encode();
-                    bytesWritten = createdArray.Length;
-                    return true;
-                }
-
-                createdArray = null;
-                return writer.TryEncode(destination, out bytesWritten);
+                returning = true;
+                return writer;
             }
             finally
             {
-                pkcs1PublicKey.Clear();
-                ArrayPool<byte>.Shared.Return(rented);
+                if (!returning)
+                {
+                    writer.Dispose();
+                }
             }
         }
 
-        private bool TryWritePkcs1PublicKey(
-            bool createArray,
-            Span<byte> destination,
-            out int bytesWritten,
-            out byte[] createdArray)
+        private AsnWriter WritePkcs1PublicKey()
         {
             if (Modulus == null || Exponent == null)
             {
@@ -424,41 +403,30 @@ namespace System.Security.Cryptography
             BigInteger n = new BigInteger(Modulus, isUnsigned: true, isBigEndian: true);
             BigInteger e = new BigInteger(Exponent, isUnsigned: true, isBigEndian: true);
 
-            using (AsnWriter writer = new AsnWriter(AsnEncodingRules.DER))
-            {
-                writer.PushSequence();
-                writer.WriteInteger(n);
-                writer.WriteInteger(e);
-                writer.PopSequence();
+            AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
+            writer.PushSequence();
+            writer.WriteInteger(n);
+            writer.WriteInteger(e);
+            writer.PopSequence();
 
-                if (createArray)
-                {
-                    createdArray = writer.Encode();
-                    bytesWritten = createdArray.Length;
-                    return true;
-                }
-
-                createdArray = null;
-                return writer.TryEncode(destination, out bytesWritten);
-            }
+            return writer;
         }
 
-        private bool TryWritePkcs1PrivateKey(
-            bool createArray,
-            Span<byte> destination,
-            out int bytesWritten,
-            out byte[] createdArray)
+        private AsnWriter WritePkcs1PrivateKey()
         {
-            if (Modulus == null ||
-                Exponent == null ||
-                D == null ||
+            if (Modulus == null || Exponent == null)
+            {
+                throw new InvalidOperationException(SR.Cryptography_InvalidRsaParameters);
+            }
+
+            if (D == null ||
                 P == null ||
                 Q == null ||
                 DP == null ||
                 DQ == null ||
                 InverseQ == null)
             {
-                throw new InvalidOperationException(SR.Cryptography_InvalidRsaParameters);
+                throw new InvalidOperationException(SR.Cryptography_NotValidPrivateKey);
             }
 
             BigInteger n = new BigInteger(Modulus, isUnsigned: true, isBigEndian: true);
@@ -470,91 +438,31 @@ namespace System.Security.Cryptography
             BigInteger dq = new BigInteger(DQ, isUnsigned: true, isBigEndian: true);
             BigInteger qInv = new BigInteger(InverseQ, isUnsigned: true, isBigEndian: true);
 
-            using (AsnWriter writer = new AsnWriter(AsnEncodingRules.DER))
-            {
-                writer.PushSequence();
-                writer.WriteInteger(0);
-                writer.WriteInteger(n);
-                writer.WriteInteger(e);
-                writer.WriteInteger(d);
-                writer.WriteInteger(p);
-                writer.WriteInteger(q);
-                writer.WriteInteger(dp);
-                writer.WriteInteger(dq);
-                writer.WriteInteger(qInv);
-                writer.PopSequence();
+            AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
 
-                if (createArray)
-                {
-                    createdArray = writer.Encode();
-                    bytesWritten = createdArray.Length;
-                    return true;
-                }
+            writer.PushSequence();
 
-                createdArray = null;
-                return writer.TryEncode(destination, out bytesWritten);
-            }
+            // Format version 0
+            writer.WriteInteger(0);
+            writer.WriteInteger(n);
+            writer.WriteInteger(e);
+            writer.WriteInteger(d);
+            writer.WriteInteger(p);
+            writer.WriteInteger(q);
+            writer.WriteInteger(dp);
+            writer.WriteInteger(dq);
+            writer.WriteInteger(qInv);
+
+            writer.PopSequence();
+
+            return writer;
         }
 
-        private int CalculateMaximumPkcs1Size()
+        private AsnWriter WritePkcs8PrivateKey()
         {
-            // Each of the arrays could gain at most 4 bytes of true length, one byte of
-            // length-length, one byte of tag, and one integer padding byte.
-            // The outer sequence would have the length bytes and tag (6 total)
-            // and the version number always encodes as 02 01 00 (3 total).
-            return checked(
-                6 +
-                3 +
-                7 + Modulus.Length +
-                7 + Exponent.Length +
-                7 + D.Length +
-                7 + P.Length +
-                7 + Q.Length +
-                7 + DP.Length +
-                7 + DQ.Length +
-                7 + InverseQ.Length);
-        }
-
-        private bool TryWritePkcs8PrivateKey(
-            bool createArray,
-            Span<byte> destination,
-            out int bytesWritten,
-            out byte[] createdArray)
-        {
-            if (Modulus == null ||
-                Exponent == null)
+            using (AsnWriter pkcs1Writer = WritePkcs1PrivateKey())
             {
-                throw new CryptographicException(SR.Cryptography_InvalidRsaParameters);
-            }
-
-            if (D == null ||
-                P == null ||
-                Q == null ||
-                DP == null ||
-                DQ == null ||
-                InverseQ == null)
-            {
-                throw new CryptographicException(SR.Cryptography_CSP_NoPrivateKey);
-            }
-
-            int rentSize = CalculateMaximumPkcs1Size();
-            byte[] rented = ArrayPool<byte>.Shared.Rent(rentSize);
-            Span<byte> pkcs1PrivateKey = Span<byte>.Empty;
-
-            try
-            {
-                if (!TryWritePkcs1PrivateKey(rented, out int ppkSize))
-                {
-                    Debug.Fail($"Pre-allocated call to TryWritePkcs1PrivateKey failed");
-                    throw new CryptographicException();
-                }
-
-                // Assign before the assert so that the clear happens on assert.
-                pkcs1PrivateKey = rented.AsSpan(0, ppkSize);
-
-                Debug.Assert(
-                    ppkSize <= rentSize,
-                    $"Pkcs1PrivateKey was {ppkSize} but should have been bounded by {rentSize}");
+                ReadOnlySpan<byte> pkcs1PrivateKey = pkcs1Writer.EncodeAsSpan();
 
                 // https://tools.ietf.org/html/rfc5208#section-5
                 //
@@ -596,161 +504,7 @@ namespace System.Security.Cryptography
 
                 // We don't currently accept attributes, so... done.
                 writer.PopSequence();
-
-                if (createArray)
-                {
-                    createdArray = writer.Encode();
-                    bytesWritten = createdArray.Length;
-                    return true;
-                }
-
-                createdArray = null;
-                return writer.TryEncode(destination, out bytesWritten);
-            }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(pkcs1PrivateKey);
-                ArrayPool<byte>.Shared.Return(rented);
-            }
-        }
-
-        private unsafe bool TryWriteEncryptedPkcs8PrivateKey(
-            bool createArray,
-            ReadOnlySpan<char> password,
-            HashAlgorithmName pbkdf2HashAlgorithm,
-            int pbkdf2IterationCount,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
-            Span<byte> destination,
-            out int bytesWritten,
-            out byte[] createdArray)
-        {
-            if (Modulus == null ||
-                Exponent == null ||
-                D == null ||
-                P == null ||
-                Q == null ||
-                DP == null ||
-                DQ == null ||
-                InverseQ == null)
-            {
-                throw new InvalidOperationException(SR.Cryptography_InvalidRsaParameters);
-            }
-
-            int rentSize = CalculateMaximumPkcs1Size();
-
-            // Now add maximal PKCS8 overhead:
-            // 6 bytes for the outer sequence,
-            // 3 bytes for the version identifier,
-            // 15 bytes for the RSA AlgorithmIdentifier
-            // 6 bytes for the OCTET STRING wrapper
-            rentSize = checked(rentSize + 6 + 3 + 15 + 6);
-
-            byte[] rented = ArrayPool<byte>.Shared.Rent(rentSize);
-            Memory<byte> pkcs8Buf = Memory<byte>.Empty;
-
-            fixed (byte* rentedPtr = rented)
-            {
-                try
-                {
-                    if (!TryWritePkcs8PrivateKey(false, rented, out int pkcs8Size, out _))
-                    {
-                        Debug.Fail("TryWritePkcs8PrivateKey failed with a pre-sized input");
-                    }
-
-                    // Assign before the assert so that the clear happens on assert.
-                    pkcs8Buf = rented.AsMemory(0, pkcs8Size);
-
-                    Debug.Assert(
-                        pkcs8Size <= rentSize,
-                        $"Pkcs1PrivateKey was {pkcs8Size} but should have been bounded by {rentSize}");
-
-                    return KeyFormatHelper.TryWriteEncryptedPkcs8(
-                        createArray,
-                        password,
-                        rented,
-                        pkcs8Size,
-                        encryptionAlgorithm,
-                        pbkdf2HashAlgorithm,
-                        pbkdf2IterationCount,
-                        destination,
-                        out bytesWritten,
-                        out createdArray);
-                }
-                finally
-                {
-                    CryptographicOperations.ZeroMemory(pkcs8Buf.Span);
-                    ArrayPool<byte>.Shared.Return(rented);
-                }
-            }
-        }
-
-        private unsafe bool TryWriteEncryptedPkcs8PrivateKey(
-            bool createArray,
-            ReadOnlySpan<byte> passwordBytes,
-            HashAlgorithmName pbkdf2HashAlgorithm,
-            int pbkdf2IterationCount,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
-            Span<byte> destination,
-            out int bytesWritten,
-            out byte[] createdArray)
-        {
-            if (Modulus == null ||
-                Exponent == null ||
-                D == null ||
-                P == null ||
-                Q == null ||
-                DP == null ||
-                DQ == null ||
-                InverseQ == null)
-            {
-                throw new InvalidOperationException(SR.Cryptography_InvalidRsaParameters);
-            }
-
-            int rentSize = CalculateMaximumPkcs1Size();
-
-            // Now add maximal PKCS8 overhead:
-            // 6 bytes for the outer sequence,
-            // 3 bytes for the version identifier,
-            // 15 bytes for the RSA AlgorithmIdentifier
-            // 6 bytes for the OCTET STRING wrapper
-            rentSize = checked(rentSize + 6 + 3 + 15 + 6);
-
-            byte[] rented = ArrayPool<byte>.Shared.Rent(rentSize);
-            Memory<byte> pkcs8Buf = Memory<byte>.Empty;
-
-            fixed (byte* rentedPtr = rented)
-            {
-                try
-                {
-                    if (!TryWritePkcs8PrivateKey(false, rented, out int pkcs8Size, out _))
-                    {
-                        Debug.Fail("TryWritePkcs8PrivateKey failed with a pre-sized input");
-                    }
-
-                    // Assign before the assert so that the clear happens on assert.
-                    pkcs8Buf = rented.AsMemory(0, pkcs8Size);
-
-                    Debug.Assert(
-                        pkcs8Size <= rentSize,
-                        $"Pkcs1PrivateKey was {pkcs8Size} but should have been bounded by {rentSize}");
-
-                    return KeyFormatHelper.TryWriteEncryptedPkcs8(
-                        createArray,
-                        passwordBytes,
-                        rented,
-                        pkcs8Size,
-                        encryptionAlgorithm,
-                        pbkdf2HashAlgorithm,
-                        pbkdf2IterationCount,
-                        destination,
-                        out bytesWritten,
-                        out createdArray);
-                }
-                finally
-                {
-                    CryptographicOperations.ZeroMemory(pkcs8Buf.Span);
-                    ArrayPool<byte>.Shared.Return(rented);
-                }
+                return writer;
             }
         }
     }
