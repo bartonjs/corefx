@@ -50,5 +50,14 @@ namespace Internal.Cryptography
         public const string ApplicationCertPolicies     = "1.3.6.1.4.1.311.21.10";
         public const string AuthorityInformationAccess  = "1.3.6.1.5.5.7.1.1";
         public const string CertificateAuthorityIssuers = "1.3.6.1.5.5.7.48.2";
+
+        private const string Pkcs12Prefix               = "1.2.840.113549.1.12.";
+        private const string Pkcs12BagTypesPrefix       = Pkcs12Prefix + "10.1.";
+        internal const string Pkcs12KeyBag              = Pkcs12BagTypesPrefix + "1";
+        internal const string Pkcs12ShroudedKeyBag      = Pkcs12BagTypesPrefix + "2";
+        internal const string Pkcs12CertBag             = Pkcs12BagTypesPrefix + "3";
+        internal const string Pkcs12CrlBag              = Pkcs12BagTypesPrefix + "4";
+        internal const string Pkcs12SecretBag           = Pkcs12BagTypesPrefix + "5";
+        internal const string Pkcs12SafeContentsBag     = Pkcs12BagTypesPrefix + "6";
     }
 }
