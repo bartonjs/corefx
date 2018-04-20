@@ -5,6 +5,7 @@
 using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.Asn1;
 
 namespace System.Security.Cryptography
@@ -258,6 +259,33 @@ namespace System.Security.Cryptography
             }
         }
 
+        internal static AsnWriter WriteSubjectPublicKeyInfo(
+            AsnWriter algorithmIdentifierWriter,
+            AsnWriter publicKeyWriter)
+        {
+            // Ensure both input writers are balanced.
+            ReadOnlySpan<byte> algorithmIdentifier = algorithmIdentifierWriter.EncodeAsSpan();
+            ReadOnlySpan<byte> publicKey = publicKeyWriter.EncodeAsSpan();
+
+            Debug.Assert(algorithmIdentifier.Length > 0, "algorithmIdentifier was empty");
+            Debug.Assert(algorithmIdentifier[0] == 0x30, "algorithmIdentifier is not a constructed sequence");
+            Debug.Assert(publicKey.Length > 0, "publicKey was empty");
+
+            AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
+
+            // SubjectPublicKeyInfo
+            writer.PushSequence();
+
+            // SPKI.Algorithm (AlgorithmIdentifier)
+            WriteEncodedSpan(writer, algorithmIdentifier);
+
+            // SPKI.subjectPublicKey
+            writer.WriteBitString(publicKey);
+
+            writer.PopSequence();
+            return writer;
+        }
+
         internal static AsnWriter WritePkcs8(AsnWriter algorithmIdentifierWriter, AsnWriter privateKeyWriter)
         {
             // Ensure both input writers are balanced.
@@ -288,22 +316,7 @@ namespace System.Security.Cryptography
             writer.WriteInteger(0);
 
             // PKI.Algorithm (AlgorithmIdentifier)
-            {
-                byte[] tmpAlgId = ArrayPool<byte>.Shared.Rent(algorithmIdentifier.Length);
-                Memory<byte> tmpAlgIdMemory = tmpAlgId.AsMemory(0, algorithmIdentifier.Length);
-
-                try
-                {
-                    algorithmIdentifier.CopyTo(tmpAlgIdMemory.Span);
-
-                    writer.WriteEncodedValue(tmpAlgIdMemory);
-                }
-                finally
-                {
-                    CryptographicOperations.ZeroMemory(tmpAlgIdMemory.Span);
-                    ArrayPool<byte>.Shared.Return(tmpAlgId);
-                }
-            }
+            WriteEncodedSpan(writer, algorithmIdentifier);
             
             // PKI.privateKey
             writer.WriteOctetString(privateKey);
@@ -382,5 +395,131 @@ namespace System.Security.Cryptography
                 pbkdf2Prf,
                 pbkdf2IterationCount);
         }
+
+        private static void WriteEncodedSpan(AsnWriter writer, ReadOnlySpan<byte> encodedValue)
+        {
+            byte[] rented = ArrayPool<byte>.Shared.Rent(encodedValue.Length);
+            Memory<byte> encodedMemory = rented.AsMemory(0, encodedValue.Length);
+
+            try
+            {
+                encodedValue.CopyTo(encodedMemory.Span);
+
+                writer.WriteEncodedValue(encodedMemory);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(encodedMemory.Span);
+                ArrayPool<byte>.Shared.Return(rented);
+            }
+        }
+    }
+
+    // https://tools.ietf.org/html/rfc5208#section-6
+    //
+    // EncryptedPrivateKeyInfo ::= SEQUENCE {
+    //  encryptionAlgorithm  EncryptionAlgorithmIdentifier,
+    //  encryptedData        EncryptedData }
+    //
+    // EncryptionAlgorithmIdentifier ::= AlgorithmIdentifier
+    // EncryptedData ::= OCTET STRING
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct EncryptedPrivateKeyInfo
+    {
+        public AlgorithmIdentifierAsn EncryptionAlgorithm;
+
+        [OctetString]
+        public ReadOnlyMemory<byte> EncryptedData;
+    }
+
+    // https://tools.ietf.org/html/rfc5208#section-5
+    //
+    // PrivateKeyInfo ::= SEQUENCE {
+    //   version                   Version,
+    //   privateKeyAlgorithm       PrivateKeyAlgorithmIdentifier,
+    //   privateKey                PrivateKey,
+    //   attributes           [0]  IMPLICIT Attributes OPTIONAL }
+    // 
+    // Version ::= INTEGER
+    // PrivateKeyAlgorithmIdentifier ::= AlgorithmIdentifier
+    // PrivateKey ::= OCTET STRING
+    // Attributes ::= SET OF Attribute
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct PrivateKeyInfo
+    {
+        public byte Version;
+
+        public AlgorithmIdentifierAsn PrivateKeyAlgorithm;
+
+        [OctetString]
+        public ReadOnlyMemory<byte> PrivateKey;
+
+        [ExpectedTag(0)]
+        [OptionalValue]
+        public AttributeAsn[] Attributes;
+    }
+
+    // https://tools.ietf.org/html/rfc5652#section-5.3
+    //
+    // Attribute ::= SEQUENCE {
+    //   attrType OBJECT IDENTIFIER,
+    //   attrValues SET OF AttributeValue }
+    //
+    // AttributeValue ::= ANY
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct AttributeAsn
+    {
+        public Oid AttrType;
+
+        [AnyValue]
+        public ReadOnlyMemory<byte> AttrValues;
+    }
+
+    // https://tools.ietf.org/html/rfc3280#section-4.1.1.2
+    //
+    // AlgorithmIdentifier  ::=  SEQUENCE  {
+    //   algorithm               OBJECT IDENTIFIER,
+    //   parameters              ANY DEFINED BY algorithm OPTIONAL  }
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct AlgorithmIdentifierAsn
+    {
+        [ObjectIdentifier]
+        internal string Algorithm;
+
+        [AnyValue]
+        [OptionalValue]
+        internal ReadOnlyMemory<byte>? Parameters;
+
+        internal bool HasNullEquivalentParameters()
+        {
+            if (Parameters == null)
+            {
+                return true;
+            }
+
+            ReadOnlyMemory<byte> parameters = Parameters.Value;
+
+            if (parameters.Length != 2)
+            {
+                return false;
+            }
+
+            ReadOnlySpan<byte> paramBytes = parameters.Span;
+            return paramBytes[0] == 0x05 && paramBytes[1] == 0x00;
+        }
+    }
+
+    // https://tools.ietf.org/html/rfc3280#section-4.1
+    //
+    // SubjectPublicKeyInfo  ::=  SEQUENCE  {
+    //   algorithm            AlgorithmIdentifier,
+    //   subjectPublicKey     BIT STRING  }
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct SubjectPublicKeyInfo
+    {
+        internal AlgorithmIdentifierAsn Algorithm;
+
+        [BitString]
+        internal ReadOnlyMemory<byte> SubjectPublicKey;
     }
 }

@@ -144,7 +144,10 @@ namespace System.Security.Cryptography
             ret.Validate();
         }
 
-        private static void FromECPublicKey(in ReadOnlyMemory<byte> key, in AlgorithmIdentifierAsn algId, out ECParameters ret)
+        private static void FromECPublicKey(
+            in ReadOnlyMemory<byte> key,
+            in AlgorithmIdentifierAsn algId,
+            out ECParameters ret)
         {
             if (algId.Parameters == null)
             {
@@ -410,6 +413,15 @@ namespace System.Security.Cryptography
         {
             Validate();
 
+            // Temporary limitation (WriteEcParameters).
+            if (!Curve.IsNamed)
+            {
+                throw new CryptographicException(SR.Cryptography_ECC_NamedCurvesOnly);
+            }
+
+            // Since the public key format for EC keys is not ASN.1,
+            // write the SPKI structure manually.
+
             AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
             
             // SubjectPublicKeyInfo
@@ -449,6 +461,12 @@ namespace System.Security.Cryptography
             if (D == null)
             {
                 throw new CryptographicException(SR.Cryptography_CSP_NoPrivateKey);
+            }
+
+            // Temporary limitation (WriteEcParameters).
+            if (!Curve.IsNamed)
+            {
+                throw new CryptographicException(SR.Cryptography_ECC_NamedCurvesOnly);
             }
 
             using (AsnWriter ecPrivateKey = WriteEcPrivateKey())

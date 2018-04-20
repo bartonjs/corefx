@@ -344,52 +344,10 @@ namespace System.Security.Cryptography
 
         private AsnWriter WriteSubjectPublicKeyInfo()
         {
-            if (Modulus == null || Exponent == null)
+            using (AsnWriter publicKey = WritePkcs1PublicKey())
+            using (AsnWriter algId = WriteAlgorithmIdentifier())
             {
-                throw new InvalidOperationException(SR.Cryptography_InvalidRsaParameters);
-            }
-
-            AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
-            bool returning = false;
-
-            try
-            {
-                using (AsnWriter pkcs1Writer = WritePkcs1PublicKey())
-                {
-                    // SubjectPublicKeyInfo
-                    writer.PushSequence();
-
-                    // SPKI.Algorithm (AlgorithmIdentifier)
-                    {
-                        writer.PushSequence();
-                        writer.WriteObjectIdentifier(Oids.RsaEncryption);
-
-                        // https://tools.ietf.org/html/rfc3447#appendix-C
-                        //
-                        // --
-                        // -- When rsaEncryption is used in an AlgorithmIdentifier the
-                        // -- parameters MUST be present and MUST be NULL.
-                        // --
-                        writer.WriteNull();
-
-                        writer.PopSequence();
-                    }
-
-                    // SPKI.subjectPublicKey
-                    writer.WriteBitString(pkcs1Writer.EncodeAsSpan());
-
-                    writer.PopSequence();
-                }
-
-                returning = true;
-                return writer;
-            }
-            finally
-            {
-                if (!returning)
-                {
-                    writer.Dispose();
-                }
+                return KeyFormatHelper.WriteSubjectPublicKeyInfo(algId, publicKey);
             }
         }
 
@@ -458,163 +416,32 @@ namespace System.Security.Cryptography
             return writer;
         }
 
+        private static AsnWriter WriteAlgorithmIdentifier()
+        {
+            AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
+            writer.PushSequence();
+
+            // https://tools.ietf.org/html/rfc3447#appendix-C
+            //
+            // --
+            // -- When rsaEncryption is used in an AlgorithmIdentifier the
+            // -- parameters MUST be present and MUST be NULL.
+            // --
+            writer.WriteObjectIdentifier(Oids.RsaEncryption);
+            writer.WriteNull();
+
+            writer.PopSequence();
+            return writer;
+        }
+
         private AsnWriter WritePkcs8PrivateKey()
         {
             using (AsnWriter pkcs1Writer = WritePkcs1PrivateKey())
+            using (AsnWriter algIdWriter = WriteAlgorithmIdentifier())
             {
-                ReadOnlySpan<byte> pkcs1PrivateKey = pkcs1Writer.EncodeAsSpan();
-
-                // https://tools.ietf.org/html/rfc5208#section-5
-                //
-                // PrivateKeyInfo ::= SEQUENCE {
-                //   version                   Version,
-                //   privateKeyAlgorithm       PrivateKeyAlgorithmIdentifier,
-                //   privateKey                PrivateKey,
-                //   attributes           [0]  IMPLICIT Attributes OPTIONAL }
-                // 
-                // Version ::= INTEGER
-                // PrivateKeyAlgorithmIdentifier ::= AlgorithmIdentifier
-                // PrivateKey ::= OCTET STRING
-                AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
-
-                // PrivateKeyInfo
-                writer.PushSequence();
-
-                // https://tools.ietf.org/html/rfc5208#section-5 says the current version is 0.
-                writer.WriteInteger(0);
-
-                // PKI.Algorithm (AlgorithmIdentifier)
-                {
-                    writer.PushSequence();
-                    writer.WriteObjectIdentifier(Oids.RsaEncryption);
-
-                    // https://tools.ietf.org/html/rfc3447#appendix-C
-                    //
-                    // --
-                    // -- When rsaEncryption is used in an AlgorithmIdentifier the
-                    // -- parameters MUST be present and MUST be NULL.
-                    // --
-                    writer.WriteNull();
-
-                    writer.PopSequence();
-                }
-
-                // PKI.privateKey
-                writer.WriteOctetString(pkcs1PrivateKey);
-
-                // We don't currently accept attributes, so... done.
-                writer.PopSequence();
-                return writer;
+                return KeyFormatHelper.WritePkcs8(algIdWriter, pkcs1Writer);
             }
         }
-    }
-
-    // https://tools.ietf.org/html/rfc5208#section-6
-    //
-    // EncryptedPrivateKeyInfo ::= SEQUENCE {
-    //  encryptionAlgorithm  EncryptionAlgorithmIdentifier,
-    //  encryptedData        EncryptedData }
-    //
-    // EncryptionAlgorithmIdentifier ::= AlgorithmIdentifier
-    // EncryptedData ::= OCTET STRING
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct EncryptedPrivateKeyInfo
-    {
-        public AlgorithmIdentifierAsn EncryptionAlgorithm;
-
-        [OctetString]
-        public ReadOnlyMemory<byte> EncryptedData;
-    }
-
-    // https://tools.ietf.org/html/rfc5208#section-5
-    //
-    // PrivateKeyInfo ::= SEQUENCE {
-    //   version                   Version,
-    //   privateKeyAlgorithm       PrivateKeyAlgorithmIdentifier,
-    //   privateKey                PrivateKey,
-    //   attributes           [0]  IMPLICIT Attributes OPTIONAL }
-    // 
-    // Version ::= INTEGER
-    // PrivateKeyAlgorithmIdentifier ::= AlgorithmIdentifier
-    // PrivateKey ::= OCTET STRING
-    // Attributes ::= SET OF Attribute
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct PrivateKeyInfo
-    {
-        public byte Version;
-
-        public AlgorithmIdentifierAsn PrivateKeyAlgorithm;
-
-        [OctetString]
-        public ReadOnlyMemory<byte> PrivateKey;
-
-        [ExpectedTag(0)]
-        [OptionalValue]
-        public AttributeAsn[] Attributes;
-    }
-
-    // https://tools.ietf.org/html/rfc5652#section-5.3
-    //
-    // Attribute ::= SEQUENCE {
-    //   attrType OBJECT IDENTIFIER,
-    //   attrValues SET OF AttributeValue }
-    //
-    // AttributeValue ::= ANY
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct AttributeAsn
-    {
-        public Oid AttrType;
-
-        [AnyValue]
-        public ReadOnlyMemory<byte> AttrValues;
-    }
-
-    // https://tools.ietf.org/html/rfc3280#section-4.1.1.2
-    //
-    // AlgorithmIdentifier  ::=  SEQUENCE  {
-    //   algorithm               OBJECT IDENTIFIER,
-    //   parameters              ANY DEFINED BY algorithm OPTIONAL  }
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct AlgorithmIdentifierAsn
-    {
-        [ObjectIdentifier]
-        internal string Algorithm;
-
-        [AnyValue]
-        [OptionalValue]
-        internal ReadOnlyMemory<byte>? Parameters;
-
-        internal bool HasNullEquivalentParameters()
-        {
-            if (Parameters == null)
-            {
-                return true;
-            }
-
-            ReadOnlyMemory<byte> parameters = Parameters.Value;
-
-            if (parameters.Length != 2)
-            {
-                return false;
-            }
-
-            ReadOnlySpan<byte> paramBytes = parameters.Span;
-            return paramBytes[0] == 0x05 && paramBytes[1] == 0x00;
-        }
-    }
-
-    // https://tools.ietf.org/html/rfc3280#section-4.1
-    //
-    // SubjectPublicKeyInfo  ::=  SEQUENCE  {
-    //   algorithm            AlgorithmIdentifier,
-    //   subjectPublicKey     BIT STRING  }
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct SubjectPublicKeyInfo
-    {
-        internal AlgorithmIdentifierAsn Algorithm;
-
-        [BitString]
-        internal ReadOnlyMemory<byte> SubjectPublicKey;
     }
 
     // https://tools.ietf.org/html/rfc3447#appendix-C
