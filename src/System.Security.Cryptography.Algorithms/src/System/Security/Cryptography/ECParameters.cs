@@ -308,13 +308,10 @@ namespace System.Security.Cryptography
 
         public byte[] ToSubjectPublicKeyInfo()
         {
-            if (!TryWriteSubjectPublicKeyInfo(true, Span<byte>.Empty, out _, out byte[] ret))
+            using (AsnWriter writer = WriteSubjectPublicKeyInfo())
             {
-                Debug.Fail("TryWriteSubjectPublicKeyInfo failed in allocation mode");
-                throw new CryptographicException();
+                return writer.Encode();
             }
-
-            return ret;
         }
 
         public byte[] ToEncryptedPkcs8PrivateKey(
@@ -401,47 +398,48 @@ namespace System.Security.Cryptography
             }
         }
 
-        public bool TryWriteSubjectPublicKeyInfo(Span<byte> destination, out int bytesWritten) =>
-            TryWriteSubjectPublicKeyInfo(false, destination, out bytesWritten, out _);
+        public bool TryWriteSubjectPublicKeyInfo(Span<byte> destination, out int bytesWritten)
+        {
+            using (AsnWriter writer = WriteSubjectPublicKeyInfo())
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
+        }
 
-        private bool TryWriteSubjectPublicKeyInfo(
-            bool createArray,
-            Span<byte> destination,
-            out int bytesWritten,
-            out byte[] createdArray)
+        private AsnWriter WriteSubjectPublicKeyInfo()
         {
             Validate();
 
-            using (AsnWriter writer = new AsnWriter(AsnEncodingRules.DER))
-            {
-                // SubjectPublicKeyInfo
-                writer.PushSequence();
+            AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
+            
+            // SubjectPublicKeyInfo
+            writer.PushSequence();
 
-                // algorithm
-                {
-                    writer.PushSequence();
+            // algorithm
+            WriteAlgorithmIdentifier(writer);
 
-                    writer.WriteObjectIdentifier(Oids.EcPublicKey);
-                    WriteEcParameters(writer);
+            // subjectPublicKey
+            WriteUncompressedPublicKey(writer);
 
-                    writer.PopSequence();
-                }
+            writer.PopSequence();
+            return writer;
+        }
 
-                // subjectPublicKey
-                WriteUncompressedPublicKey(writer);
+        private AsnWriter WriteAlgorithmIdentifier()
+        {
+            AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
+            WriteAlgorithmIdentifier(writer);
+            return writer;
+        }
 
-                writer.PopSequence();
+        private void WriteAlgorithmIdentifier(AsnWriter writer)
+        {
+            writer.PushSequence();
 
-                if (createArray)
-                {
-                    createdArray = writer.Encode();
-                    bytesWritten = createdArray.Length;
-                    return true;
-                }
+            writer.WriteObjectIdentifier(Oids.EcPublicKey);
+            WriteEcParameters(writer);
 
-                createdArray = null;
-                return writer.TryEncode(destination, out bytesWritten);
-            }
+            writer.PopSequence();
         }
 
         private AsnWriter WritePkcs8PrivateKey()
@@ -453,43 +451,10 @@ namespace System.Security.Cryptography
                 throw new CryptographicException(SR.Cryptography_CSP_NoPrivateKey);
             }
 
-            AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
-            bool returning = false;
-
-            try
+            using (AsnWriter ecPrivateKey = WriteEcPrivateKey())
+            using (AsnWriter algorithmIdentifier = WriteAlgorithmIdentifier())
             {
-                using (AsnWriter ecPrivateKey = WriteEcPrivateKey())
-                {
-                    // PrivateKeyInfo
-                    writer.PushSequence();
-
-                    // version 0 format
-                    writer.WriteInteger(0);
-
-                    // privateKeyAlgorithm
-                    {
-                        writer.PushSequence();
-                        writer.WriteObjectIdentifier(Oids.EcPublicKey);
-                        WriteEcParameters(writer);
-                        writer.PopSequence();
-                    }
-
-                    writer.WriteOctetString(ecPrivateKey.EncodeAsSpan());
-
-                    writer.PopSequence();
-
-                    // Ensure that the stack is balanced.
-                    writer.EncodeAsSpan();
-                    returning = true;
-                    return writer;
-                }
-            }
-            finally
-            {
-                if (!returning)
-                {
-                    writer.Dispose();
-                }
+                return KeyFormatHelper.WritePkcs8(algorithmIdentifier, ecPrivateKey);
             }
         }
 

@@ -258,6 +258,61 @@ namespace System.Security.Cryptography
             }
         }
 
+        internal static AsnWriter WritePkcs8(AsnWriter algorithmIdentifierWriter, AsnWriter privateKeyWriter)
+        {
+            // Ensure both input writers are balanced.
+            ReadOnlySpan<byte> algorithmIdentifier = algorithmIdentifierWriter.EncodeAsSpan();
+            ReadOnlySpan<byte> privateKey = privateKeyWriter.EncodeAsSpan();
+
+            Debug.Assert(algorithmIdentifier.Length > 0, "algorithmIdentifier was empty");
+            Debug.Assert(algorithmIdentifier[0] == 0x30, "algorithmIdentifier is not a constructed sequence");
+            Debug.Assert(privateKey.Length > 0, "privateKey was empty");
+
+            // https://tools.ietf.org/html/rfc5208#section-5
+            //
+            // PrivateKeyInfo ::= SEQUENCE {
+            //   version                   Version,
+            //   privateKeyAlgorithm       PrivateKeyAlgorithmIdentifier,
+            //   privateKey                PrivateKey,
+            //   attributes           [0]  IMPLICIT Attributes OPTIONAL }
+            // 
+            // Version ::= INTEGER
+            // PrivateKeyAlgorithmIdentifier ::= AlgorithmIdentifier
+            // PrivateKey ::= OCTET STRING
+            AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
+
+            // PrivateKeyInfo
+            writer.PushSequence();
+
+            // https://tools.ietf.org/html/rfc5208#section-5 says the current version is 0.
+            writer.WriteInteger(0);
+
+            // PKI.Algorithm (AlgorithmIdentifier)
+            {
+                byte[] tmpAlgId = ArrayPool<byte>.Shared.Rent(algorithmIdentifier.Length);
+                Memory<byte> tmpAlgIdMemory = tmpAlgId.AsMemory(0, algorithmIdentifier.Length);
+
+                try
+                {
+                    algorithmIdentifier.CopyTo(tmpAlgIdMemory.Span);
+
+                    writer.WriteEncodedValue(tmpAlgIdMemory);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(tmpAlgIdMemory.Span);
+                    ArrayPool<byte>.Shared.Return(tmpAlgId);
+                }
+            }
+            
+            // PKI.privateKey
+            writer.WriteOctetString(privateKey);
+
+            // We don't currently accept attributes, so... done.
+            writer.PopSequence();
+            return writer;
+        }
+
         internal static unsafe AsnWriter WriteEncryptedPkcs8(
             ReadOnlySpan<char> password,
             AsnWriter pkcs8Writer,
