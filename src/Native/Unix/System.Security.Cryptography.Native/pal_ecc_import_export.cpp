@@ -436,9 +436,15 @@ extern "C" EC_KEY* CryptoNative_EcKeyCreateByExplicitParameters(
     aBn = BN_bin2bn(a, aLength, nullptr);
     bBn = BN_bin2bn(b, bLength, nullptr);
 
+    if (pBn == nullptr || aBn == nullptr || bBn == nullptr)
+    {
+        goto error;
+    }
+
 #if HAVE_OPENSSL_EC2M
     if (API_EXISTS(EC_GROUP_set_curve_GF2m) && (curveType == ECCurveType::Characteristic2))
     {
+        // This is valid when !HAVE_OPENSSL_EC2M because CurveTypeToMethod would have already failed.
         if (!EC_GROUP_set_curve_GF2m(group, pBn, aBn, bBn, nullptr)) 
             goto error;
     }
@@ -454,6 +460,11 @@ extern "C" EC_KEY* CryptoNative_EcKeyCreateByExplicitParameters(
     gxBn = BN_bin2bn(gx, gxLength, nullptr);
     gyBn = BN_bin2bn(gy, gyLength, nullptr);
 
+    if (G == nullptr || gxBn == nullptr || gyBn == nullptr)
+    {
+        goto error;
+    }
+
 #if HAVE_OPENSSL_EC2M
     if (API_EXISTS(EC_POINT_set_affine_coordinates_GF2m) && (curveType == ECCurveType::Characteristic2))
     {
@@ -467,7 +478,16 @@ extern "C" EC_KEY* CryptoNative_EcKeyCreateByExplicitParameters(
 
     orderBn = BN_bin2bn(order, orderLength, nullptr);
     cofactorBn = BN_bin2bn(cofactor, cofactorLength, nullptr);
-    EC_GROUP_set_generator(group, G, orderBn, cofactorBn);
+
+    if (orderBn == nullptr || cofactorBn == nullptr)
+    {
+        goto error;
+    }
+
+    if (!EC_GROUP_set_generator(group, G, orderBn, cofactorBn))
+    {
+        goto error;
+    }
 
     // Set seed (optional)
     if (seed && seedLength > 0)
