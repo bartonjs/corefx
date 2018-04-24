@@ -120,8 +120,14 @@ namespace Internal.Cryptography.Pal
             // 
             // Use BioSeek directly for the last seek attempt, because any failure here should instead
             // report the already created (but not yet thrown) exception.
-            Interop.Crypto.BioSeek(bio, bioPosition);
-            
+            //
+            // But if this errors out, clear the code from the queue, since we've already captured
+            // what we want.
+            if (Interop.Crypto.BioSeek(bio, bioPosition) < 0)
+            {
+                Interop.Crypto.ErrClearError();
+            }
+
             Debug.Assert(openSslException != null);
             throw openSslException;
         }
@@ -251,6 +257,8 @@ namespace Internal.Cryptography.Pal
             {
                 using (SafeBioHandle fileBio = Interop.Crypto.BioNewFile(file.FullName, "rb"))
                 {
+                    Interop.Crypto.CheckValidOpenSslHandle(fileBio);
+
                     ICertificatePal pal;
 
                     while (CertificatePal.TryReadX509Pem(fileBio, out pal) ||

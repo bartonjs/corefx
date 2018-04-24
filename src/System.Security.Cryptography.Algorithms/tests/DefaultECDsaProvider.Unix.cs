@@ -43,11 +43,14 @@ namespace System.Security.Cryptography.EcDsa.Tests
             }
 
             IntPtr key = Interop.Crypto.EcKeyCreateByOid(friendlyNameOrValue);
+
             if (key != IntPtr.Zero)
             {
                 Interop.Crypto.EcKeyDestroy(key);
                 return true;
             }
+
+            Interop.Crypto.ErrClearError();
             return false;
         }
     }
@@ -62,5 +65,8 @@ internal static partial class Interop
 
         [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_EcKeyDestroy")]
         internal static extern void EcKeyDestroy(System.IntPtr r);
+
+        [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_ErrClearError")]
+        internal static extern ulong ErrClearError();
     }
 }

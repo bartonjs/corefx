@@ -43,11 +43,14 @@ namespace System.Security.Cryptography.EcDiffieHellman.Tests
             }
 
             IntPtr key = Interop.Crypto.EcKeyCreateByOid(friendlyNameOrValue);
+
             if (key != IntPtr.Zero)
             {
                 Interop.Crypto.EcKeyDestroy(key);
                 return true;
             }
+
+            Interop.Crypto.ErrClearError();
             return false;
         }
     }

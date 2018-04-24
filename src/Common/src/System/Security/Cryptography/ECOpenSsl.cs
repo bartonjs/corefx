@@ -95,6 +95,7 @@ namespace System.Security.Cryptography
 
                 if (key == null || key.IsInvalid)
                 {
+                    Interop.Crypto.ErrClearError();
                     throw new PlatformNotSupportedException(string.Format(SR.Cryptography_CurveNotSupported, oid));
                 }
 

@@ -180,10 +180,15 @@ namespace System.Security.Cryptography
             SafeEcKeyHandle key = Interop.Crypto.EcKeyCreateByOid(oid);
 
             if (key == null || key.IsInvalid)
+            {
+                Interop.Crypto.ErrClearError();
                 throw new PlatformNotSupportedException(string.Format(SR.Cryptography_CurveNotSupported, oid));
+            }
 
             if (!Interop.Crypto.EcKeyGenerateKey(key))
+            {
                 throw Interop.Crypto.CreateOpenSslCryptographicException();
+            }
 
             return key;
         }

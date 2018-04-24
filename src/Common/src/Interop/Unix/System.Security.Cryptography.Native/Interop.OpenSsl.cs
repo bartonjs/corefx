@@ -505,7 +505,9 @@ internal static partial class Interop
 
         internal static SslException CreateSslException(string message)
         {
-            ulong errorVal = Crypto.ErrGetError();
+            // Read the last error to match Interop.Crypto.CreateOpenSslException.
+            ulong errorVal = Crypto.ErrPeekLastError();
+            Crypto.ErrClearError();
             string msg = SR.Format(message, Marshal.PtrToStringAnsi(Crypto.ErrReasonErrorString(errorVal)));
             return new SslException(msg, (int)errorVal);
         }

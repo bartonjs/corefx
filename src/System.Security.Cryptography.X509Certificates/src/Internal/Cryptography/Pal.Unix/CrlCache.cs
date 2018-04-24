@@ -52,6 +52,7 @@ namespace Internal.Cryptography.Pal
             {
                 if (bio.IsInvalid)
                 {
+                    Interop.Crypto.ErrClearError();
                     return false;
                 }
 
@@ -61,6 +62,7 @@ namespace Internal.Cryptography.Pal
                 {
                     if (crl.IsInvalid)
                     {
+                        Interop.Crypto.ErrClearError();
                         return false;
                     }
 
@@ -87,7 +89,8 @@ namespace Internal.Cryptography.Pal
 
                     if (!Interop.Crypto.X509StoreAddCrl(store, crl))
                     {
-                        // Ignore error "cert already in store", throw on anything else. In any case the error queue will be cleared.
+                        // Ignore error "cert already in store", throw on anything else.
+                        // In any case the error queue will be cleared.
                         if (X509_R_CERT_ALREADY_IN_HASH_TABLE == Interop.Crypto.ErrPeekLastError())
                         {
                             Interop.Crypto.ErrClearError();
@@ -124,7 +127,8 @@ namespace Internal.Cryptography.Pal
                 {
                     if (!Interop.Crypto.X509StoreAddCrl(store, crl))
                     {
-                        // Ignore error "cert already in store", throw on anything else. In any case the error queue will be cleared.
+                        // Ignore error "cert already in store", throw on anything else.
+                        // In any case the error queue will be cleared.
                         if (X509_R_CERT_ALREADY_IN_HASH_TABLE == Interop.Crypto.ErrPeekLastError())
                         {
                             Interop.Crypto.ErrClearError();
@@ -144,9 +148,10 @@ namespace Internal.Cryptography.Pal
 
                         using (SafeBioHandle bio = Interop.Crypto.BioNewFile(crlFile, "wb"))
                         {
-                            if (!bio.IsInvalid)
+                            if (bio.IsInvalid || Interop.Crypto.PemWriteBioX509Crl(bio, crl) == 0)
                             {
-                                Interop.Crypto.PemWriteBioX509Crl(bio, crl);
+                                // No bio, or write failed
+                                Interop.Crypto.ErrClearError();
                             }
                         }
                     }
@@ -168,6 +173,13 @@ namespace Internal.Cryptography.Pal
             // But it only sets 32 bits worth of data, so force it down to uint just... in case.
             ulong persistentHashLong = Interop.Crypto.X509IssuerNameHash(pal.SafeHandle);
             uint persistentHash = unchecked((uint)persistentHashLong);
+
+            if (persistentHash == 0)
+            {
+                // Unclear if this is "error" or legitimately zero.
+                // Either way, clear the errors and continue.
+                Interop.Crypto.ErrClearError();
+            }
 
             // OpenSSL's hashed filename algorithm is the 8-character hex version of the 32-bit value
             // of X509_issuer_name_hash (or X509_subject_name_hash, depending on the context).

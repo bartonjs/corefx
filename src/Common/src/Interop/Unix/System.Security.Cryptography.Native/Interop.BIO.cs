@@ -28,7 +28,21 @@ internal static partial class Interop
         internal static extern int BioRead(SafeBioHandle b, byte[] data, int len);
 
         [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_BioWrite")]
-        internal static extern int BioWrite(SafeBioHandle b, byte[] data, int len);
+        private static extern int CryptoNative_BioWrite(SafeBioHandle b, byte[] data, int len);
+
+        internal static int BioWrite(SafeBioHandle b, byte[] data, int len)
+        {
+            int ret = CryptoNative_BioWrite(b, data, len);
+
+            // Since we only interact with memory and (blocking) file BIOs
+            // ret should always be len.
+            if (ret != len)
+            {
+                throw CreateOpenSslCryptographicException();
+            }
+
+            return ret;
+        }
 
         [DllImport(Libraries.CryptoNative, EntryPoint = "CryptoNative_GetMemoryBioSize")]
         internal static extern int GetMemoryBioSize(SafeBioHandle bio);

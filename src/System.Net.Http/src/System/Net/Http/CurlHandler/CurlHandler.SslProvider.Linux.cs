@@ -380,8 +380,14 @@ namespace System.Net.Http
                             return true;
                         }
 
-                        // X509_verify_cert can return < 0 in the case of programmer error
-                        Debug.Assert(sslResult == 0, "Unexpected error from X509_verify_cert: " + sslResult);
+                        if (sslResult != 0)
+                        {
+                            // X509_verify_cert can return < 0 in the case of programmer error
+                            Debug.Fail("Unexpected error from X509_verify_cert: " + sslResult);
+
+                            // If this happens at runtime, clear the error and let X509Chain handle it.
+                            Interop.Crypto.ErrClearError();
+                        }
                     }
 
                     // Either OpenSSL verification failed, or there was a server validation callback
