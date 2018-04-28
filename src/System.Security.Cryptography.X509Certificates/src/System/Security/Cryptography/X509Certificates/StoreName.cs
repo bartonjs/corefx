@@ -27,9 +27,63 @@ namespace System.Security.Cryptography.X509Certificates
 
 namespace System.Security.Cryptography.Pkcs.Pkcs12
 {
+    internal enum Pkcs12IntegrityMode
+    {
+        Unknown,
+        Password,
+        PublicKey,
+    }
+
+    internal enum Pkcs12ConfidentialityMode
+    {
+        Unknown,
+        None,
+        Password,
+        PublicKey,
+    }
+
     internal sealed class Pkcs12Info
     {
+        public Pkcs12IntegrityMode IntegrityMode { get; private set; }
 
+        public bool VerifyMac(ReadOnlySpan<char> password)
+        {
+            if (IntegrityMode != Pkcs12IntegrityMode.Password)
+            {
+                throw new InvalidOperationException("VerifyMac is only valid for password integrity mode.");
+            }
+
+            throw new NotImplementedException();
+        }
+    }
+
+    internal sealed class Pkcs12Builder
+    {
+        public bool IsSealed { get; private set; }
+
+        public void AddContentsUnencrypted(SafeContents contents)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void AddContentsEncrypted(
+            SafeContents contents,
+            ReadOnlySpan<char> password,
+            HashAlgorithmName pbkdf2HashAlgorithm,
+            int pbkdf2IterationCount,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void AddContentsEnveloped(
+            SafeContents contents,
+            X509Certificate2 recipientCertificate)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void
     }
 
     internal sealed class SafeContents
@@ -175,12 +229,6 @@ namespace System.Security.Cryptography.Pkcs.Pkcs12
     {
         private ReadOnlyMemory<byte> _pkcs8Data;
 
-        /// <summary>
-        /// A value indicating if the key material is currently stored in a shrouded (encrypted) form
-        /// or the key is currently in an unshrouded form.
-        /// </summary>
-        public bool IsShrouded { get; private set; }
-
         internal ShroudedKeyBag()
             : base(Oids.Pkcs12ShroudedKeyBag)
         {
@@ -188,21 +236,11 @@ namespace System.Security.Cryptography.Pkcs.Pkcs12
 
         public override byte[] EncodeValue()
         {
-            if (!IsShrouded)
-            {
-                throw new InvalidOperationException("A ShroudedKeyBag must be shrouded before encoding.");
-            }
-
             return _pkcs8Data.ToArray();
         }
 
         public override bool TryEncodeValue(Span<byte> destination, out int bytesWritten)
         {
-            if (!IsShrouded)
-            {
-                throw new InvalidOperationException("A ShroudedKeyBag must be shrouded before encoding.");
-            }
-
             if (destination.Length < _pkcs8Data.Length)
             {
                 bytesWritten = 0;
