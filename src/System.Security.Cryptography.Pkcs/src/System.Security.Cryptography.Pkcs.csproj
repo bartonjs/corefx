@@ -9,6 +9,7 @@
     <ResourcesSourceOutputDirectory Condition="'$(IsPartialFacadeAssembly)' == 'true'">None</ResourcesSourceOutputDirectory>
     <UsePackageTargetRuntimeDefaults Condition="'$(IsPartialFacadeAssembly)' != 'true'">true</UsePackageTargetRuntimeDefaults>
     <IncludeDllSafeSearchPathAttribute>true</IncludeDllSafeSearchPathAttribute>
+    <NoWarn>CS3016</NoWarn>
   </PropertyGroup>
   <!-- Don't delete these clauses even if they look useless. They tell the VS IDE that "Windows_Debug", etc., are
        valid configuration for this project and stop it from trying to "fix up" the .sln file -->
@@ -31,12 +32,15 @@
     <Compile Include="System\Security\Cryptography\CryptographicAttributeObjectCollection.cs" />
     <Compile Include="System\Security\Cryptography\CryptographicAttributeObjectEnumerator.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\AlgorithmIdentifier.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\CertBag.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\CrlBag.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\CmsRecipient.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\CmsRecipientCollection.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\CmsRecipientEnumerator.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\ContentInfo.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\EnvelopedCms.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\KeyAgreeRecipientInfo.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\KeyBag.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\KeyTransRecipientInfo.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs9AttributeObject.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs9ContentType.cs" />
@@ -44,11 +48,18 @@
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs9DocumentName.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs9MessageDigest.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs9SigningTime.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12Builder.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12Info.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12SafeBag.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12SafeContents.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\PublicKeyInfo.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\RecipientInfo.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\RecipientInfoCollection.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\RecipientInfoEnumerator.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\RecipientInfoType.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\SafeContentsBag.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\SecretBag.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\ShroudedKeyBag.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\SubjectIdentifier.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\SubjectIdentifierOrKey.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\SubjectIdentifierOrKeyType.cs" />
@@ -251,6 +262,7 @@
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\GeneralName.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\IssuerAndSerialNumberAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\MessageImprint.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Asn1\Pkcs12.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\PssParamsAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\Rfc3161Accuracy.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\Rfc3161TimeStampReq.cs" />
