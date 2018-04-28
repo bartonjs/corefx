@@ -2,14 +2,28 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Security.Cryptography.X509Certificates;
-
 namespace System.Security.Cryptography.Pkcs
 {
-    public sealed partial class ShroudedKeyBag : Pkcs12SafeBag
+    public sealed class ShroudedKeyBag : Pkcs12SafeBag
     {
-        private ShroudedKeyBag() { }
         public ReadOnlyMemory<byte> EncryptedPkcs8PrivateKey { get; }
-        protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
+
+        internal ShroudedKeyBag(ReadOnlyMemory<byte> bagValue)
+        {
+            EncryptedPkcs8PrivateKey = bagValue;
+        }
+
+        protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten)
+        {
+            if (destination.Length < EncryptedPkcs8PrivateKey.Length)
+            {
+                bytesWritten = 0;
+                return false;
+            }
+
+            bytesWritten = EncryptedPkcs8PrivateKey.Length;
+            EncryptedPkcs8PrivateKey.Span.CopyTo(destination);
+            return true;
+        }
     }
 }

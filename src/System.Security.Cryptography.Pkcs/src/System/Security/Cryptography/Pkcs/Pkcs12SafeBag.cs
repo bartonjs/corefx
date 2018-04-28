@@ -6,7 +6,8 @@ namespace System.Security.Cryptography.Pkcs
 {
     public abstract partial class Pkcs12SafeBag
     {
-        public CryptographicAttributeObjectCollection Attributes { get; }
+        public CryptographicAttributeObjectCollection Attributes { get; internal set; }
+
         public byte[] Encode() => throw null;
         public Oid GetBagId() => throw null;
         public bool TryEncode(Span<byte> destination, out int bytesWritten) => throw null;

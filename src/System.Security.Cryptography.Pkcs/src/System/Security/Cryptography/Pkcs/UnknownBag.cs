@@ -4,25 +4,25 @@
 
 namespace System.Security.Cryptography.Pkcs
 {
-    public sealed class KeyBag : Pkcs12SafeBag
+    internal sealed class UnknownBag : Pkcs12SafeBag
     {
-        public ReadOnlyMemory<byte> Pkcs8PrivateKey { get; }
+        private readonly ReadOnlyMemory<byte> _bagValue;
 
-        internal KeyBag(ReadOnlyMemory<byte> pkcs8PrivateKey)
+        internal UnknownBag(ReadOnlyMemory<byte> bagValue)
         {
-            Pkcs8PrivateKey = pkcs8PrivateKey;
+            _bagValue = bagValue;
         }
 
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten)
         {
-            if (destination.Length < Pkcs8PrivateKey.Length)
+            if (destination.Length < _bagValue.Length)
             {
                 bytesWritten = 0;
                 return false;
             }
 
             bytesWritten = destination.Length;
-            Pkcs8PrivateKey.Span.CopyTo(destination);
+            _bagValue.Span.CopyTo(destination);
             return true;
         }
     }

@@ -637,7 +637,7 @@ namespace System.Security.Cryptography.Pkcs
             return coll;
         }
 
-        private static CryptographicAttributeObject MakeAttribute(AttributeAsn attribute)
+        internal static CryptographicAttributeObject MakeAttribute(AttributeAsn attribute)
         {
             Oid type = new Oid(attribute.AttrType);
 

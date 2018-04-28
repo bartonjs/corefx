@@ -73,5 +73,16 @@ namespace Internal.Cryptography
         // RFC3161 Timestamping
         public const string TstInfo = "1.2.840.113549.1.9.16.1.4";
         public const string TimeStampingPurpose = "1.3.6.1.5.5.7.3.8";
+
+        private const string Pkcs12Prefix = "1.2.840.113549.1.12.";
+        private const string Pkcs12BagTypesPrefix = Pkcs12Prefix + "10.1.";
+        public const string Pkcs12KeyBag = Pkcs12BagTypesPrefix + "1";
+        public const string Pkcs12ShroudedKeyBag = Pkcs12BagTypesPrefix + "2";
+        public const string Pkcs12CertBag = Pkcs12BagTypesPrefix + "3";
+        public const string Pkcs12CrlBag = Pkcs12BagTypesPrefix + "4";
+        public const string Pkcs12SecretBag = Pkcs12BagTypesPrefix + "5";
+        public const string Pkcs12SafeContentsBag = Pkcs12BagTypesPrefix + "6";
+        public const string Pkcs12X509CertBagType = "1.2.840.113549.1.9.22.1";
+        public const string Pkcs12SdsiCertBagType = "1.2.840.113549.1.9.22.1";
     }
 }

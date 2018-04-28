@@ -64,6 +64,7 @@
     <Compile Include="System\Security\Cryptography\Pkcs\SubjectIdentifierOrKey.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\SubjectIdentifierOrKeyType.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\SubjectIdentifierType.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\UnknownBag.cs" />
     <Compile Include="System\Security\Cryptography\Xml\X509IssuerSerial.cs" />
   </ItemGroup>
   <!-- Internal types (platform independent) -->
