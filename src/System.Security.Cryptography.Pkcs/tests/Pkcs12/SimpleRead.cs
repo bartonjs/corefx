@@ -23,6 +23,11 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             Assert.Equal(Pkcs12Info.IntegrityMode.Password, info.DataIntegrityMode);
 
+            Assert.True(info.VerifyMac(loader.Password), "VerifyMac (correct password)");
+            Assert.False(info.VerifyMac(ReadOnlySpan<char>.Empty), "VerifyMac (empty password)");
+            Assert.False(info.VerifyMac(loader.Password + loader.Password), "VerifyMac (doubled password)");
+            Assert.False(info.VerifyMac(new string('a', 1048)), "VerifyMac (password > 1k)");
+
             ReadOnlyCollection<Pkcs12SafeContents> authSafe = info.AuthenticatedSafe;
             Assert.Same(authSafe, info.AuthenticatedSafe);
             Assert.Equal(2, authSafe.Count);

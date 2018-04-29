@@ -48,7 +48,7 @@ namespace System.Security.Cryptography.Pkcs
         private Pkcs12Info() { }
         public ReadOnlyCollection<Pkcs12SafeContents> AuthenticatedSafe { get; }
         public IntegrityMode DataIntegrityMode { get; }
-        public bool VerifyMac(ReadOnlySpan<byte> password) => throw null;
+        public bool VerifyMac(ReadOnlySpan<char> password) => throw null;
         public bool VerifySignature(X509Certificate2 signerCertificate) => throw null;
         public static Pkcs12Info Decode(ReadOnlyMemory<byte> encodedBytes, out int bytesConsumed) => throw null;
         public enum IntegrityMode
