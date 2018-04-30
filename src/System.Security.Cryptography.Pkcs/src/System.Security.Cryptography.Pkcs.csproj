@@ -255,6 +255,9 @@
     <Compile Include="$(CommonPath)\System\Security\Cryptography\AsnWriter.cs">
       <Link>Common\System\Security\Cryptography\AsnWriter.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Pkcs12Kdf.cs">
+      <Link>Common\System\Security\Cryptography\Pkcs12Kdf.cs</Link>
+    </Compile>
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\AlgorithmIdentifierAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\AttributeAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\CertificateChoiceAsn.cs" />
