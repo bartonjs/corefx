@@ -125,6 +125,9 @@
     <Compile Include="$(CommonPath)\System\Security\Cryptography\AsnWriter.cs">
       <Link>Common\System\Security\Cryptography\AsnWriter.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Pkcs12Kdf.cs">
+      <Link>Common\System\Security\Cryptography\Pkcs12Kdf.cs</Link>
+    </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\RsaPaddingProcessor.cs">
       <Link>Common\System\Security\Cryptography\RsaPaddingProcessor.cs</Link>
     </Compile>

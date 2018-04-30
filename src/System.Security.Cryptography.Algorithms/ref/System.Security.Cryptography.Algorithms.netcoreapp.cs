@@ -131,6 +131,7 @@ namespace System.Security.Cryptography
             Aes128Cbc,
             Aes192Cbc,
             Aes256Cbc,
+            TripleDes3KeyPkcs12,
         }
     }
 }

@@ -38,7 +38,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             List<Pkcs12SafeBag> safe0Bags = new List<Pkcs12SafeBag>(authSafe[0]);
 
             Assert.Equal(1, safe0Bags.Count);
-            Assert.IsType<ShroudedKeyBag>(safe0Bags[0]);
+            ShroudedKeyBag shroudedKeyBag = Assert.IsType<ShroudedKeyBag>(safe0Bags[0]);
 
             List<Pkcs12SafeBag> safe1Bags = new List<Pkcs12SafeBag>(authSafe[1]);
 
@@ -54,6 +54,22 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             {
                 Assert.Equal(fromLoader.RawData, fromBag.RawData);
             }
+
+            RSAParameters rsaParams = RSAParameters.FromEncryptedPkcs8PrivateKey(
+                loader.Password,
+                shroudedKeyBag.EncryptedPkcs8PrivateKey.Span,
+                out int bytesRead);
+
+            Assert.Equal(shroudedKeyBag.EncryptedPkcs8PrivateKey.Length, bytesRead);
+            Assert.Equal("010001", rsaParams.Exponent.ByteArrayToHex());
+
+            const string expectedDValue =
+                "2A3F837316016A200D379F5B9ABCD5EB353F5A4D0A420758BA71AF2B91CA1C4B" +
+                "33D16DB8D8B23900D67255497CB1B1A7CB061CF5FC40DB8E184848071984EC3F" +
+                "D25A98E7BE825320473D81604AD38D4D642EB30876ABCC4775C47476560C8DCE" +
+                "0DB45094AD7F8CF141FBF5AADE38A501F58665C970E97A68E596A603F43ADB61";
+
+            Assert.Equal(expectedDValue, rsaParams.D.ByteArrayToHex());
         }
     }
 }

@@ -11,6 +11,12 @@ namespace System.Security.Cryptography.Pkcs
 {
     internal static class Pkcs12Kdf
     {
+        private const byte CipherKeyId = 1;
+        private const byte IvId = 2;
+        private const byte MacKeyId = 3;
+
+        // This is a dictionary representation of the table in
+        // https://tools.ietf.org/html/rfc7292#appendix-B.2
         private static readonly Dictionary<HashAlgorithmName, Tuple<int, int>> s_uvLookup =
             new Dictionary<HashAlgorithmName, Tuple<int, int>>
             {
@@ -20,6 +26,38 @@ namespace System.Security.Cryptography.Pkcs
                 { HashAlgorithmName.SHA384, Tuple.Create(384, 1024) },
                 { HashAlgorithmName.SHA512, Tuple.Create(512, 1024) },
             };
+
+        internal static void DeriveCipherKey(
+            ReadOnlySpan<char> password,
+            HashAlgorithmName hashAlgorithm,
+            uint iterationCount,
+            ReadOnlySpan<byte> salt,
+            Span<byte> destination)
+        {
+            Derive(
+                password,
+                hashAlgorithm,
+                iterationCount,
+                CipherKeyId,
+                salt,
+                destination);
+        }
+
+        internal static void DeriveIV(
+            ReadOnlySpan<char> password,
+            HashAlgorithmName hashAlgorithm,
+            uint iterationCount,
+            ReadOnlySpan<byte> salt,
+            Span<byte> destination)
+        {
+            Derive(
+                password,
+                hashAlgorithm,
+                iterationCount,
+                IvId,
+                salt,
+                destination);
+        }
 
         internal static void DeriveMacKey(
             ReadOnlySpan<char> password,
@@ -32,7 +70,7 @@ namespace System.Security.Cryptography.Pkcs
                 password,
                 hashAlgorithm,
                 iterationCount,
-                3,
+                MacKeyId,
                 salt,
                 destination);
         }
@@ -202,6 +240,7 @@ namespace System.Security.Cryptography.Pkcs
         {
             int fullCopyLen = password.Length * 2;
             Encoding bigEndianUnicode = System.Text.Encoding.BigEndianUnicode;
+            Debug.Assert(destination.Length % 2 == 0);
 
             while (destination.Length > 0)
             {
@@ -225,16 +264,13 @@ namespace System.Security.Cryptography.Pkcs
                     ReadOnlySpan<char> trimmed = password.Slice(0, destination.Length / 2);
 
                     int count = bigEndianUnicode.GetBytes(trimmed, destination);
-                    destination = destination.Slice(count);
 
-                    // Allow one trailing byte if the formula produced an odd length destination
-                    if (destination.Length > 1)
+                    if (count != destination.Length)
                     {
-                        Debug.Fail($"Partial copy wrote {count} bytes and left {destination.Length} bytes unassigned");
+                        Debug.Fail($"Partial copy wrote {count} bytes of {destination.Length} expected");
                         throw new CryptographicException();
                     }
 
-                    destination.Clear();
                     return;
                 }
             }

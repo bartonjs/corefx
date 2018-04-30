@@ -37,5 +37,12 @@ namespace System.Security.Cryptography
         internal const string secp256r1 = "1.2.840.10045.3.1.7";
         internal const string secp384r1 = "1.3.132.0.34";
         internal const string secp521r1 = "1.3.132.0.35";
+
+        private const string Pkcs12Prefix = "1.2.840.113549.1.12.";
+        private const string Pkcs12PbePrefix = Pkcs12Prefix + "1.";
+        internal const string Pkcs12PbeWithShaAnd3Key3Des = Pkcs12PbePrefix + "3";
+        internal const string Pkcs12PbeWithShaAnd2Key3Des= Pkcs12PbePrefix + "4";
+        internal const string Pkcs12PbeWithShaAnd128BitRC2 = Pkcs12PbePrefix + "5";
+        internal const string Pkcs12PbeWithShaAnd40BitRC2 = Pkcs12PbePrefix + "6";
     }
 }

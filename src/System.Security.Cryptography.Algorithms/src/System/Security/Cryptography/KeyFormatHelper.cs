@@ -18,6 +18,7 @@ namespace System.Security.Cryptography
             Aes128Cbc,
             Aes192Cbc,
             Aes256Cbc,
+            TripleDes3KeyPkcs12,
         }
     }
 
@@ -171,6 +172,7 @@ namespace System.Security.Cryptography
                     ReadEncryptedPkcs8(
                         validOids,
                         source,
+                        password,
                         passwordBytes,
                         keyReader,
                         out bytesRead,
@@ -196,6 +198,25 @@ namespace System.Security.Cryptography
             out int bytesRead,
             out TRet ret)
         {
+            ReadEncryptedPkcs8(
+                validOids,
+                source,
+                ReadOnlySpan<char>.Empty,
+                passwordBytes,
+                keyReader,
+                out bytesRead,
+                out ret);
+        }
+
+        private static void ReadEncryptedPkcs8<TRet, TParsed>(
+            string[] validOids,
+            ReadOnlySpan<byte> source,
+            ReadOnlySpan<char> password,
+            ReadOnlySpan<byte> passwordBytes,
+            KeyReader<TRet, TParsed> keyReader,
+            out int bytesRead,
+            out TRet ret)
+        {
             byte[] buf = ArrayPool<byte>.Shared.Rent(source.Length);
             source.CopyTo(buf);
             Memory<byte> rwTmp = buf.AsMemory(0, source.Length);
@@ -203,7 +224,14 @@ namespace System.Security.Cryptography
 
             try
             {
-                ReadEncryptedPkcs8(validOids, tmp, passwordBytes, keyReader, out bytesRead, out ret);
+                ReadEncryptedPkcs8(
+                    validOids,
+                    tmp,
+                    password,
+                    passwordBytes,
+                    keyReader,
+                    out bytesRead,
+                    out ret);
             }
             finally
             {
@@ -212,9 +240,10 @@ namespace System.Security.Cryptography
             }
         }
 
-        internal static void ReadEncryptedPkcs8<TRet, TParsed>(
+        private static void ReadEncryptedPkcs8<TRet, TParsed>(
             string[] validOids,
             ReadOnlyMemory<byte> source,
+            ReadOnlySpan<char> password,
             ReadOnlySpan<byte> passwordBytes,
             KeyReader<TRet, TParsed> keyReader,
             out int bytesRead,
@@ -232,6 +261,7 @@ namespace System.Security.Cryptography
             {
                 int decryptedBytes = PasswordBasedEncryption.Decrypt(
                     epki.EncryptionAlgorithm,
+                    password,
                     passwordBytes,
                     epki.EncryptedData.Span,
                     decrypted);

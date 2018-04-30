@@ -6,14 +6,17 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.Asn1;
+using System.Security.Cryptography.Pkcs;
 
 namespace System.Security.Cryptography
 {
     internal static class PasswordBasedEncryption
     {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA5350", Justification = "3DES used when specified by the input data")]
         internal static int Decrypt(
             in AlgorithmIdentifierAsn algorithmIdentifier,
-            ReadOnlySpan<byte> password,
+            ReadOnlySpan<char> password,
+            ReadOnlySpan<byte> passwordBytes,
             ReadOnlySpan<byte> encryptedData,
             Span<byte> destination)
         {
@@ -24,6 +27,8 @@ namespace System.Security.Cryptography
 
             HashAlgorithmName digestAlgorithmName;
             SymmetricAlgorithm cipher = null;
+
+            bool pkcs12 = false;
 
             switch (algorithmIdentifier.Algorithm)
             {
@@ -43,10 +48,33 @@ namespace System.Security.Cryptography
                     digestAlgorithmName = HashAlgorithmName.SHA1;
                     cipher = RC2.Create();
                     break;
+                case Oids.Pkcs12PbeWithShaAnd3Key3Des:
+                    digestAlgorithmName = HashAlgorithmName.SHA1;
+                    cipher = TripleDES.Create();
+                    pkcs12 = true;
+                    break;
+                case Oids.Pkcs12PbeWithShaAnd2Key3Des:
+                    digestAlgorithmName = HashAlgorithmName.SHA1;
+                    cipher = TripleDES.Create();
+                    cipher.KeySize = 128;
+                    pkcs12 = true;
+                    break;
+                case Oids.Pkcs12PbeWithShaAnd128BitRC2:
+                    digestAlgorithmName = HashAlgorithmName.SHA1;
+                    cipher = RC2.Create();
+                    cipher.KeySize = 128;
+                    pkcs12 = true;
+                    break;
+                case Oids.Pkcs12PbeWithShaAnd40BitRC2:
+                    digestAlgorithmName = HashAlgorithmName.SHA1;
+                    cipher = RC2.Create();
+                    cipher.KeySize = 40;
+                    pkcs12 = true;
+                    break;
                 case Oids.PasswordBasedEncryptionScheme2:
                     return Pbes2Decrypt(
                         algorithmIdentifier.Parameters,
-                        password,
+                        passwordBytes,
                         encryptedData,
                         destination);
                 default:
@@ -57,16 +85,31 @@ namespace System.Security.Cryptography
             Debug.Assert(digestAlgorithmName.Name != null);
             Debug.Assert(cipher != null);
 
-            using (IncrementalHash hasher = IncrementalHash.CreateHash(digestAlgorithmName))
             using (cipher)
             {
-                return Pbes1Decrypt(
-                    algorithmIdentifier.Parameters,
-                    password,
-                    hasher,
-                    cipher,
-                    encryptedData,
-                    destination);
+                if (pkcs12)
+                {
+                    return Pkcs12PbeDecrypt(
+                        algorithmIdentifier,
+                        password,
+                        passwordBytes,
+                        digestAlgorithmName,
+                        cipher,
+                        encryptedData,
+                        destination);
+                }
+
+                using (IncrementalHash hasher = IncrementalHash.CreateHash(digestAlgorithmName))
+                {
+                   
+                    return Pbes1Decrypt(
+                        algorithmIdentifier.Parameters,
+                        passwordBytes,
+                        hasher,
+                        cipher,
+                        encryptedData,
+                        destination);
+                }
             }
         }
 
@@ -603,6 +646,71 @@ namespace System.Security.Cryptography
             }
         }
 
+        private static unsafe int Pkcs12PbeDecrypt(
+            AlgorithmIdentifierAsn algorithmIdentifier,
+            ReadOnlySpan<char> password,
+            ReadOnlySpan<byte> passwordUtf8Bytes,
+            HashAlgorithmName hashAlgorithm,
+            SymmetricAlgorithm cipher,
+            ReadOnlySpan<byte> encryptedData,
+            Span<byte> destination)
+        {
+            // https://tools.ietf.org/html/rfc7292#appendix-C
+
+            if (passwordUtf8Bytes.Length > 0 && password.Length == 0)
+            {
+                throw new CryptographicException(
+                    $"The KDF for algorithm '{algorithmIdentifier.Algorithm}' requires a char-based password input.");
+            }
+
+            if (!algorithmIdentifier.Parameters.HasValue)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            // 3DES, "two-key" 3DES, RC2-128 and RC2-40 are the only ciphers that should be here.
+            // That means 64-bit block sizes and 192-bit keys (3DES-3).  So stack allocated key/IV are safe.
+            if (cipher.KeySize > 256 || cipher.BlockSize > 256)
+            {
+                Debug.Fail(
+                    $"Unexpected cipher characteristics by {cipher.GetType().FullName}, KeySize={cipher.KeySize}, BlockSize={cipher.BlockSize}");
+
+                throw new CryptographicException();
+            }
+
+            PBEParameter pbeParameters = AsnSerializer.Deserialize<PBEParameter>(
+                algorithmIdentifier.Parameters.Value,
+                AsnEncodingRules.BER);
+
+            Span<byte> iv = stackalloc byte[cipher.BlockSize / 8];
+            Span<byte> key = stackalloc byte[cipher.KeySize / 8];
+            ReadOnlySpan<byte> saltSpan = pbeParameters.Salt.Span;
+
+            try
+            {
+                Pkcs12Kdf.DeriveIV(
+                    password,
+                    hashAlgorithm,
+                    pbeParameters.IterationCount,
+                    saltSpan,
+                    iv);
+
+                Pkcs12Kdf.DeriveCipherKey(
+                    password,
+                    hashAlgorithm,
+                    pbeParameters.IterationCount,
+                    saltSpan,
+                    key);
+
+                return Decrypt(cipher, key, iv, encryptedData, destination);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(key);
+                CryptographicOperations.ZeroMemory(iv);
+            }
+        }
+
         private static unsafe int Decrypt(
             SymmetricAlgorithm cipher,
             ReadOnlySpan<byte> key,
@@ -716,6 +824,8 @@ namespace System.Security.Cryptography
     //   salt OCTET STRING (SIZE(8)),
     //   iterationCount INTEGER }
     //
+    // The version from PKCS#12 (pkcs-12PbeParams, https://tools.ietf.org/html/rfc7292#appendix-C)
+    // is the same, without limiting the size of the salt value.
     [StructLayout(LayoutKind.Sequential)]
     internal struct PBEParameter
     {
