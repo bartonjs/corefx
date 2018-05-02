@@ -76,7 +76,6 @@
     <Compile Include="System\Security\Cryptography\HMACSHA512.cs" />
     <Compile Include="System\Security\Cryptography\IncrementalHash.cs" />
     <Compile Include="System\Security\Cryptography\Oids.cs" />
-    <Compile Include="System\Security\Cryptography\PasswordBasedEncryption.cs" />
     <Compile Include="System\Security\Cryptography\PKCS1MaskGenerationMethod.cs" />
     <Compile Include="System\Security\Cryptography\RandomNumberGenerator.cs" />
     <Compile Include="System\Security\Cryptography\RC2.cs" />
@@ -124,6 +123,9 @@
     </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\AsnWriter.cs">
       <Link>Common\System\Security\Cryptography\AsnWriter.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\PasswordBasedEncryption.cs">
+      <Link>Common\System\Security\Cryptography\PasswordBasedEncryption.cs</Link>
     </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\Pkcs12Kdf.cs">
       <Link>Common\System\Security\Cryptography\Pkcs12Kdf.cs</Link>

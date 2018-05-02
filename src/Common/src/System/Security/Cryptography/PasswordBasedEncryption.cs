@@ -101,7 +101,6 @@ namespace System.Security.Cryptography
 
                 using (IncrementalHash hasher = IncrementalHash.CreateHash(digestAlgorithmName))
                 {
-                   
                     return Pbes1Decrypt(
                         algorithmIdentifier.Parameters,
                         passwordBytes,
