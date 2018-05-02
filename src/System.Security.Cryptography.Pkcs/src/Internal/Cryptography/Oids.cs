@@ -75,6 +75,11 @@ namespace Internal.Cryptography
         public const string TimeStampingPurpose = "1.3.6.1.5.5.7.3.8";
 
         private const string Pkcs12Prefix = "1.2.840.113549.1.12.";
+        private const string Pkcs12PbePrefix = Pkcs12Prefix + "1.";
+        public const string Pkcs12PbeWithShaAnd3Key3Des = Pkcs12PbePrefix + "3";
+        public const string Pkcs12PbeWithShaAnd2Key3Des = Pkcs12PbePrefix + "4";
+        public const string Pkcs12PbeWithShaAnd128BitRC2 = Pkcs12PbePrefix + "5";
+        public const string Pkcs12PbeWithShaAnd40BitRC2 = Pkcs12PbePrefix + "6";
         private const string Pkcs12BagTypesPrefix = Pkcs12Prefix + "10.1.";
         public const string Pkcs12KeyBag = Pkcs12BagTypesPrefix + "1";
         public const string Pkcs12ShroudedKeyBag = Pkcs12BagTypesPrefix + "2";
@@ -84,5 +89,20 @@ namespace Internal.Cryptography
         public const string Pkcs12SafeContentsBag = Pkcs12BagTypesPrefix + "6";
         public const string Pkcs12X509CertBagType = "1.2.840.113549.1.9.22.1";
         public const string Pkcs12SdsiCertBagType = "1.2.840.113549.1.9.22.1";
+
+        // PKCS#5
+        private const string Pkcs5Prefix = "1.2.840.113549.1.5.";
+        public const string PbeWithMD5AndDESCBC = Pkcs5Prefix + "3";
+        public const string PbeWithMD5AndRC2CBC = Pkcs5Prefix + "6";
+        public const string PbeWithSha1AndDESCBC = Pkcs5Prefix + "10";
+        public const string PbeWithSha1AndRC2CBC = Pkcs5Prefix + "11";
+        public const string Pbkdf2 = Pkcs5Prefix + "12";
+        public const string PasswordBasedEncryptionScheme2 = Pkcs5Prefix + "13";
+
+        private const string RsaDsiDigestAlgorithmPrefix = "1.2.840.113549.2.";
+        internal const string HmacWithSha1 = RsaDsiDigestAlgorithmPrefix + "7";
+        internal const string HmacWithSha256 = RsaDsiDigestAlgorithmPrefix + "9";
+        internal const string HmacWithSha384 = RsaDsiDigestAlgorithmPrefix + "10";
+        internal const string HmacWithSha512 = RsaDsiDigestAlgorithmPrefix + "11";
     }
 }

@@ -22,11 +22,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.Equal(pfxData.Length, bytesConsumed);
 
             Assert.Equal(Pkcs12Info.IntegrityMode.Password, info.DataIntegrityMode);
-
-            Assert.True(info.VerifyMac(loader.Password), "VerifyMac (correct password)");
-            Assert.False(info.VerifyMac(ReadOnlySpan<char>.Empty), "VerifyMac (empty password)");
-            Assert.False(info.VerifyMac(loader.Password + loader.Password), "VerifyMac (doubled password)");
-            Assert.False(info.VerifyMac(new string('a', 1048)), "VerifyMac (password > 1k)");
+            CheckMac(info, loader.Password);
 
             ReadOnlyCollection<Pkcs12SafeContents> authSafe = info.AuthenticatedSafe;
             Assert.Same(authSafe, info.AuthenticatedSafe);
@@ -70,6 +66,78 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 "0DB45094AD7F8CF141FBF5AADE38A501F58665C970E97A68E596A603F43ADB61";
 
             Assert.Equal(expectedDValue, rsaParams.D.ByteArrayToHex());
+        }
+
+        [Fact]
+        public static void ReadWithEncryptedContents()
+        {
+            var loader = (CertLoaderFromRawData)Certificates.RSAKeyTransfer_ExplicitSki;
+            ReadOnlyMemory<byte> pfxData = loader.PfxData;
+
+            Pkcs12Info info = Pkcs12Info.Decode(pfxData, out int bytesConsumed);
+            Assert.Equal(pfxData.Length, bytesConsumed);
+
+            Assert.Equal(Pkcs12Info.IntegrityMode.Password, info.DataIntegrityMode);
+            CheckMac(info, loader.Password);
+
+            ReadOnlyCollection<Pkcs12SafeContents> authSafe = info.AuthenticatedSafe;
+            Assert.Same(authSafe, info.AuthenticatedSafe);
+            Assert.Equal(2, authSafe.Count);
+
+            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.Password, authSafe[0].DataConfidentialityMode);
+            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.None, authSafe[1].DataConfidentialityMode);
+
+            Assert.ThrowsAny<CryptographicException>(
+                () => authSafe[0].Decrypt(loader.Password.AsSpan().Slice(1)));
+
+            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.Password, authSafe[0].DataConfidentialityMode);
+            authSafe[0].Decrypt(loader.Password);
+            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.None, authSafe[0].DataConfidentialityMode);
+
+            List<Pkcs12SafeBag> safe0Bags = new List<Pkcs12SafeBag>(authSafe[0]);
+            Assert.Equal(1, safe0Bags.Count);
+            CertBag certBag = Assert.IsType<CertBag>(safe0Bags[0]);
+
+            Assert.True(certBag.IsX509Certificate, "certBag.IsX509Certificate");
+            Assert.InRange(certBag.RawData.Length, loader.CerData.Length + 2, int.MaxValue);
+
+            List<Pkcs12SafeBag> safe1Bags = new List<Pkcs12SafeBag>(authSafe[1]);
+            Assert.Equal(1, safe0Bags.Count);
+            ShroudedKeyBag shroudedKeyBag = Assert.IsType<ShroudedKeyBag>(safe1Bags[0]);
+
+            using (X509Certificate2 fromLoader = loader.GetCertificate())
+            using (X509Certificate2 fromBag = certBag.GetCertificate())
+            {
+                Assert.Equal(fromLoader.RawData, fromBag.RawData);
+            }
+
+            RSAParameters rsaParams = RSAParameters.FromEncryptedPkcs8PrivateKey(
+                loader.Password,
+                shroudedKeyBag.EncryptedPkcs8PrivateKey.Span,
+                out int bytesRead);
+
+            Assert.Equal(shroudedKeyBag.EncryptedPkcs8PrivateKey.Length, bytesRead);
+            Assert.Equal("010001", rsaParams.Exponent.ByteArrayToHex());
+
+            const string expectedDValue =
+                "1FA3432AD7E80C5C9E344383E130839BCD524D335A42DACD7D145FB0F7BC53C6" +
+                "2E1D81A1077A8ED1A074E8757F86B3A565FA50C604610A8648F49E93740D2DA5" +
+                "13E04C75F6113C452F45600BAD62B20B70BBE17F7EE5568A146CD76CD11C7955" +
+                "B64AF47E3DDCBD10EBA672F2800093FC7C6E85674DB6DCA63CBBCF7ECE57B868" +
+                "6F148FBC3CCCD832C8C604691193E2D8365C454470EFAE3F2517FDDC39258D69" +
+                "B1803022FF993D8C9D823D476A98A01E435698DC8DE90C659E089FDC191E11BD" +
+                "D9CB2C6425D39A7E5364EEBC4E6764B99079B67FD86664F6AFDA889CEB2B405C" +
+                "504826C90AC58026E992F7AFEFAC7361AE25029F83858AB9C8B0B3BB5A09BA81";
+
+            Assert.Equal(expectedDValue, rsaParams.D.ByteArrayToHex());
+        }
+
+        private static void CheckMac(Pkcs12Info info, string password)
+        {
+            Assert.True(info.VerifyMac(password), "VerifyMac (correct password)");
+            Assert.False(info.VerifyMac(ReadOnlySpan<char>.Empty), "VerifyMac (empty password)");
+            Assert.False(info.VerifyMac(password + password), "VerifyMac (doubled password)");
+            Assert.False(info.VerifyMac(new string('a', 1048)), "VerifyMac (password > 1k)");
         }
     }
 }

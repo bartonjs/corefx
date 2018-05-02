@@ -197,7 +197,6 @@
     <Compile Include="Internal\Cryptography\Pal\AnyOS\ManagedPal.KeyAgree.cs" />
     <Compile Include="Internal\Cryptography\Pal\AnyOS\ManagedPal.KeyTrans.cs" />
     <Compile Include="Internal\Cryptography\Pal\AnyOS\PkcsPal.AnyOS.cs" />
-    <Compile Include="System\Security\Cryptography\Pkcs\Asn1\EncryptedContentInfoAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\EnvelopedDataAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\KeyAgreeRecipientIdentifierAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\KeyAgreeRecipientInfoAsn.cs" />
@@ -255,6 +254,9 @@
     <Compile Include="$(CommonPath)\System\Security\Cryptography\AsnWriter.cs">
       <Link>Common\System\Security\Cryptography\AsnWriter.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\PasswordBasedEncryption.cs">
+      <Link>Common\System\Security\Cryptography\PasswordBasedEncryption.cs</Link>
+    </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\Pkcs12Kdf.cs">
       <Link>Common\System\Security\Cryptography\Pkcs12Kdf.cs</Link>
     </Compile>
@@ -263,6 +265,8 @@
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\CertificateChoiceAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\ContentInfoAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\EncapsulatedContentInfoAsn.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Asn1\EncryptedContentInfoAsn.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Asn1\EncryptedDataAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\GeneralName.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\IssuerAndSerialNumberAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\MessageImprint.cs" />

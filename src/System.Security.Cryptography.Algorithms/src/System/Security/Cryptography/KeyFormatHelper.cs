@@ -60,7 +60,7 @@ namespace System.Security.Cryptography
             SubjectPublicKeyInfo spki =
                 AsnSerializer.Deserialize<SubjectPublicKeyInfo>(source, AsnEncodingRules.DER, out int read);
 
-            if (Array.IndexOf(validOids, spki.Algorithm.Algorithm) < 0)
+            if (Array.IndexOf(validOids, spki.Algorithm.Algorithm.Value) < 0)
             {
                 // TODO: Better message?
                 throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
@@ -117,7 +117,7 @@ namespace System.Security.Cryptography
             PrivateKeyInfo privateKeyInfo =
                 AsnSerializer.Deserialize<PrivateKeyInfo>(source, AsnEncodingRules.BER, out int read);
 
-            if (Array.IndexOf(validOids, privateKeyInfo.PrivateKeyAlgorithm.Algorithm) < 0)
+            if (Array.IndexOf(validOids, privateKeyInfo.PrivateKeyAlgorithm.Algorithm.Value) < 0)
             {
                 // TODO: Better message?
                 throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
@@ -513,8 +513,8 @@ namespace System.Security.Cryptography
     [StructLayout(LayoutKind.Sequential)]
     internal struct AlgorithmIdentifierAsn
     {
-        [ObjectIdentifier]
-        internal string Algorithm;
+        [ObjectIdentifier(PopulateFriendlyName = true)]
+        public Oid Algorithm;
 
         [AnyValue]
         [OptionalValue]

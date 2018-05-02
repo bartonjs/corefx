@@ -5,7 +5,7 @@
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.Asn1;
 
-namespace System.Security.Cryptography.Pkcs.Asn1
+namespace System.Security.Cryptography.Pkcs
 {
     [StructLayout(LayoutKind.Sequential)]
     // https://tools.ietf.org/html/rfc3280#section-4.1.1.2
@@ -44,6 +44,11 @@ namespace System.Security.Cryptography.Pkcs.Asn1
             }
 
             return Parameters.Value.Span.SequenceEqual(other.Parameters.Value.Span);
+        }
+
+        internal bool HasNullEquivalentParameters()
+        {
+            return RepresentsNull(Parameters);
         }
 
         private static bool RepresentsNull(ReadOnlyMemory<byte>? parameters)

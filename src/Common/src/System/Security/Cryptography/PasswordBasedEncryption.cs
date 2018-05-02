@@ -7,12 +7,14 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.Asn1;
 using System.Security.Cryptography.Pkcs;
+using Internal.Cryptography;
 
 namespace System.Security.Cryptography
 {
     internal static class PasswordBasedEncryption
     {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA5350", Justification = "3DES used when specified by the input data")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA5351", Justification = "DES used when specified by the input data")]
         internal static int Decrypt(
             in AlgorithmIdentifierAsn algorithmIdentifier,
             ReadOnlySpan<char> password,
@@ -30,7 +32,7 @@ namespace System.Security.Cryptography
 
             bool pkcs12 = false;
 
-            switch (algorithmIdentifier.Algorithm)
+            switch (algorithmIdentifier.Algorithm.Value)
             {
                 case Oids.PbeWithMD5AndDESCBC:
                     digestAlgorithmName = HashAlgorithmName.MD5;
@@ -79,7 +81,9 @@ namespace System.Security.Cryptography
                         destination);
                 default:
                     throw new CryptographicException(
-                        SR.Cryptography_UnknownAlgorithmIdentifier, algorithmIdentifier.Algorithm);
+                        SR.Format(
+                            SR.Cryptography_UnknownAlgorithmIdentifier,
+                            algorithmIdentifier.Algorithm.Value));
             }
 
             Debug.Assert(digestAlgorithmName.Name != null);
@@ -328,11 +332,12 @@ namespace System.Security.Cryptography
             PBES2Params pbes2Params =
                 AsnSerializer.Deserialize<PBES2Params>(algorithmParameters.Value, AsnEncodingRules.BER);
 
-            if (pbes2Params.KeyDerivationFunc.Algorithm != Oids.Pbkdf2)
+            if (pbes2Params.KeyDerivationFunc.Algorithm.Value != Oids.Pbkdf2)
             {
                 throw new CryptographicException(
-                    SR.Cryptography_UnknownAlgorithmIdentifier,
-                    pbes2Params.EncryptionScheme.Algorithm);
+                    SR.Format(
+                        SR.Cryptography_UnknownAlgorithmIdentifier,
+                        pbes2Params.EncryptionScheme.Algorithm.Value));
             }
 
             Rfc2898DeriveBytes pbkdf2 =
@@ -364,12 +369,13 @@ namespace System.Security.Cryptography
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA5351", Justification = "DES used when specified by the input data")]
         private static SymmetricAlgorithm OpenCipher(
             AlgorithmIdentifierAsn encryptionScheme,
             byte? requestedKeyLength,
             ref Span<byte> iv)
         {
-            string algId = encryptionScheme.Algorithm;
+            string algId = encryptionScheme.Algorithm.Value;
 
             if (algId == Oids.Aes128Cbc ||
                 algId == Oids.Aes192Cbc ||
@@ -520,8 +526,9 @@ namespace System.Security.Cryptography
             if (pbkdf2Params.Salt.OtherSource != null)
             {
                 throw new CryptographicException(
-                    SR.Cryptography_UnknownAlgorithmIdentifier,
-                    pbkdf2Params.Salt.OtherSource.Value.Algorithm);
+                    SR.Format(
+                        SR.Cryptography_UnknownAlgorithmIdentifier,
+                        pbkdf2Params.Salt.OtherSource.Value.Algorithm));
             }
 
             if (pbkdf2Params.Salt.Specified == null)
@@ -532,7 +539,7 @@ namespace System.Security.Cryptography
 
             HashAlgorithmName prf;
 
-            switch (pbkdf2Params.Prf.Algorithm)
+            switch (pbkdf2Params.Prf.Algorithm.Value)
             {
                 case Oids.HmacWithSha1:
                     prf = HashAlgorithmName.SHA1;
@@ -548,8 +555,9 @@ namespace System.Security.Cryptography
                     break;
                 default:
                     throw new CryptographicException(
-                        SR.Cryptography_UnknownAlgorithmIdentifier,
-                        pbkdf2Params.Prf.Algorithm);
+                        SR.Format(
+                            SR.Cryptography_UnknownAlgorithmIdentifier,
+                            pbkdf2Params.Prf.Algorithm));
             }
 
             // All of the PRFs that we know about have NULL parameters, so check that now that we know
