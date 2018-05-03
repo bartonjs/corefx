@@ -2,13 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Security.Cryptography.X509Certificates;
+using Internal.Cryptography;
 
 namespace System.Security.Cryptography.Pkcs
 {
-    public sealed partial class SecretBag : Pkcs12SafeBag
+    public sealed class SecretBag : Pkcs12SafeBag
     {
-        private SecretBag() { }
+        private SecretBag()
+            : base(Oids.Pkcs12SecretBag)
+        {
+        }
+
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
     }
 }

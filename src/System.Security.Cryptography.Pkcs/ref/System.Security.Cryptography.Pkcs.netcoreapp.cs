@@ -14,7 +14,7 @@ namespace System.Security.Cryptography.Pkcs
 {
     public sealed partial class CertBag : Pkcs12SafeBag
     {
-        private CertBag() { }
+        private CertBag() : base(null) { }
         public bool IsX509Certificate { get; }
         public ReadOnlyMemory<byte> RawData { get; }
         public Oid GetCertificateType() => throw null;
@@ -23,25 +23,25 @@ namespace System.Security.Cryptography.Pkcs
     }
     public sealed partial class CrlBag : Pkcs12SafeBag
     {
-        private CrlBag() { }
+        private CrlBag() : base(null) { }
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
     }
     public sealed partial class KeyBag : Pkcs12SafeBag
     {
+        private KeyBag() : base(null) { }
         public ReadOnlyMemory<byte> Pkcs8PrivateKey { get; }
-        private KeyBag() { }
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
     }
     public sealed partial class Pkcs12Builder
     {
         public bool IsSealed { get; }
-        public SafeContentsBag AddSafeContentsEncrypted(Pkcs12SafeContents safeContents, ReadOnlySpan<char> password, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, HashAlgorithmName hashAlgorithm, int iterationCount) => throw null;
-        public SafeContentsBag AddSafeContentsEnveloped(Pkcs12SafeContents safeContents, CmsRecipient recipient) => throw null;
-        public SafeContentsBag AddSafeContentsUnencrypted(Pkcs12SafeContents safeContents) => throw null;
+        public void AddSafeContentsEncrypted(Pkcs12SafeContents safeContents, ReadOnlySpan<char> password, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, HashAlgorithmName hashAlgorithm, int iterationCount) => throw null;
+        public void AddSafeContentsEnveloped(Pkcs12SafeContents safeContents, CmsRecipient recipient) => throw null;
+        public void AddSafeContentsUnencrypted(Pkcs12SafeContents safeContents) => throw null;
         public byte[] Encode() => throw null;
         public void SealAndMac(ReadOnlySpan<char> password, HashAlgorithmName hashAlgorithm, int iterationCount) => throw null;
         public void SealAndSign(CmsSigner signer) => throw null;
-        public bool TryEncode(ReadOnlySpan<byte> destination, out int bytesWritten) => throw null;
+        public bool TryEncode(Span<byte> destination, out int bytesWritten) => throw null;
     }
     public sealed partial class Pkcs12Info
     {
@@ -60,6 +60,7 @@ namespace System.Security.Cryptography.Pkcs
     }
     public abstract partial class Pkcs12SafeBag
     {
+        protected Pkcs12SafeBag(string bagIdValue) { }
         public CryptographicAttributeObjectCollection Attributes { get; }
         public byte[] Encode() => throw null;
         public Oid GetBagId() => throw null;
@@ -148,17 +149,17 @@ namespace System.Security.Cryptography.Pkcs
     }
     public sealed partial class SafeContentsBag : Pkcs12SafeBag
     {
-        private SafeContentsBag() { }
+        private SafeContentsBag() : base(null) { }
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
     }
     public sealed partial class SecretBag : Pkcs12SafeBag
     {
-        private SecretBag() { }
+        private SecretBag() : base(null) { }
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
     }
     public sealed partial class ShroudedKeyBag : Pkcs12SafeBag
     {
-        private ShroudedKeyBag() { }
+        private ShroudedKeyBag() : base(null) { }
         public ReadOnlyMemory<byte> EncryptedPkcs8PrivateKey { get; }
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
     }

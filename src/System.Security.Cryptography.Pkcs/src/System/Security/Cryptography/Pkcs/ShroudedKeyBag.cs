@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Internal.Cryptography;
+
 namespace System.Security.Cryptography.Pkcs
 {
     public sealed class ShroudedKeyBag : Pkcs12SafeBag
@@ -9,6 +11,7 @@ namespace System.Security.Cryptography.Pkcs
         public ReadOnlyMemory<byte> EncryptedPkcs8PrivateKey { get; }
 
         internal ShroudedKeyBag(ReadOnlyMemory<byte> bagValue)
+            : base(Oids.Pkcs12ShroudedKeyBag)
         {
             EncryptedPkcs8PrivateKey = bagValue;
         }

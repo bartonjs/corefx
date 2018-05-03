@@ -2,9 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Security.Cryptography.Asn1;
 using System.Security.Cryptography.Pkcs.Asn1;
 using System.Security.Cryptography.X509Certificates;
@@ -22,6 +24,7 @@ namespace System.Security.Cryptography.Pkcs
 
         public Pkcs12SafeContents()
         {
+            DataConfidentialityMode = ConfidentialityMode.None;
         }
 
         internal Pkcs12SafeContents(ContentInfoAsn contentInfoAsn)
@@ -47,8 +50,26 @@ namespace System.Security.Cryptography.Pkcs
             }
         }
 
-        public void AddSafeBag(Pkcs12SafeBag safeBag) => throw null;
-        public CertBag AddCertificate(X509Certificate2 certificate) => throw null;
+        public void AddSafeBag(Pkcs12SafeBag safeBag)
+        {
+            if (safeBag == null)
+                throw new ArgumentNullException(nameof(safeBag));
+
+            if (_bags == null)
+            {
+                _bags = new List<Pkcs12SafeBag>();
+            }
+
+            _bags.Add(safeBag);
+        }
+
+        public CertBag AddCertificate(X509Certificate2 certificate)
+        {
+            CertBag bag = new CertBag(certificate);
+            AddSafeBag(bag);
+            return bag;
+        }
+
         public KeyBag AddKeyUnencrypted(ReadOnlyMemory<byte> pkcs8PrivateKey) => throw null;
         public SafeContentsBag AddNestedSafeContentsEncrypted(Pkcs12SafeContents safeContents, ReadOnlySpan<char> password, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, HashAlgorithmName hashAlgorithm, int iterationCount) => throw null;
         public SafeContentsBag AddNestedSafeContentsEnveloped(Pkcs12SafeContents safeContents, CmsRecipient recipient) => throw null;
@@ -89,11 +110,15 @@ namespace System.Security.Cryptography.Pkcs
 
         public IEnumerator<Pkcs12SafeBag> GetEnumerator()
         {
-            if (DataConfidentialityMode != ConfidentialityMode.None &&
-                DataConfidentialityMode != ConfidentialityMode.Unknown)
+            if (DataConfidentialityMode != ConfidentialityMode.None)
             {
                 throw new InvalidOperationException(
                     "Cannot enumerate the contents of an encrypted or enveloped SafeContents.");
+            }
+
+            if (_bags == null)
+            {
+                return Enumerable.Empty<Pkcs12SafeBag>().GetEnumerator();
             }
 
             return _bags.GetEnumerator();
@@ -232,7 +257,7 @@ namespace System.Security.Cryptography.Pkcs
 
                 if (bag == null)
                 {
-                    bag = new UnknownBag(bagValue);
+                    bag = new UnknownBag(serializedBags[i].BagId, bagValue);
                 }
 
                 bag.Attributes = SignerInfo.MakeAttributeCollection(serializedBags[i].BagAttributes);
@@ -240,6 +265,66 @@ namespace System.Security.Cryptography.Pkcs
             }
 
             return bags;
+        }
+
+        internal AsnWriter Encode()
+        {
+            AsnWriter writer;
+
+            if (DataConfidentialityMode == ConfidentialityMode.Password ||
+                DataConfidentialityMode == ConfidentialityMode.PublicKey)
+            {
+                writer = new AsnWriter(AsnEncodingRules.BER);
+                writer.WriteEncodedValue(_encrypted);
+                return writer;
+            }
+
+            Debug.Assert(DataConfidentialityMode == ConfidentialityMode.None);
+
+            // A shrouded key bag for RSA-1024 comes in at just under 1000 bytes.
+            // Most certificates are in the 1000-2300 byte range.
+            // Ideally we don't need to re-rent with 4kb.
+            byte[] rentedBuf = ArrayPool<byte>.Shared.Rent(4096);
+            writer = new AsnWriter(AsnEncodingRules.BER);
+            int maxBytesWritten = 0;
+
+            try
+            {
+                writer.PushSequence();
+
+                if (_bags != null)
+                {
+                    foreach (Pkcs12SafeBag safeBag in _bags)
+                    {
+                        int bytesWritten;
+
+                        while (!safeBag.TryEncode(rentedBuf, out bytesWritten))
+                        {
+                            CryptographicOperations.ZeroMemory(rentedBuf.AsSpan(0, maxBytesWritten));
+                            byte[] newRent = ArrayPool<byte>.Shared.Rent(rentedBuf.Length * 2);
+                            ArrayPool<byte>.Shared.Return(rentedBuf);
+                            rentedBuf = newRent;
+                            maxBytesWritten = 0;
+                        }
+
+                        maxBytesWritten = Math.Max(maxBytesWritten, bytesWritten);
+                        writer.WriteEncodedValue(rentedBuf.AsMemory(0, bytesWritten));
+                    }
+                }
+
+                writer.PopSequence();
+                return writer;
+            }
+            catch
+            {
+                writer.Dispose();
+                throw;
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(rentedBuf.AsSpan(0, maxBytesWritten));
+                ArrayPool<byte>.Shared.Return(rentedBuf);
+            }
         }
 
         public enum ConfidentialityMode

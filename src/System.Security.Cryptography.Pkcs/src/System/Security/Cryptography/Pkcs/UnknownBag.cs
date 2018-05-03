@@ -8,7 +8,8 @@ namespace System.Security.Cryptography.Pkcs
     {
         private readonly ReadOnlyMemory<byte> _bagValue;
 
-        internal UnknownBag(ReadOnlyMemory<byte> bagValue)
+        internal UnknownBag(string oidValue, ReadOnlyMemory<byte> bagValue)
+            : base(oidValue)
         {
             _bagValue = bagValue;
         }

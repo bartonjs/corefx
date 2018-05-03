@@ -17,20 +17,22 @@ namespace System.Security.Cryptography.Pkcs
         public bool IsX509Certificate { get; }
 
         private CertBag(CertBagAsn decoded)
+            : base(Oids.Pkcs12CertBag)
         {
             _decoded = decoded;
 
             IsX509Certificate = _decoded.CertId == Oids.Pkcs12X509CertBagType;
         }
 
-        private CertBag(X509Certificate2 cert)
+        internal CertBag(X509Certificate2 cert)
+            : base(Oids.Pkcs12CertBag)
         {
             byte[] certData = cert.RawData;
 
             _decoded = new CertBagAsn
             {
                 CertId = Oids.Pkcs12X509CertBagType,
-                CertValue = certData,
+                CertValue = PkcsPal.Instance.EncodeOctetString(certData),
             };
 
             IsX509Certificate = true;

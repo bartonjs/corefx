@@ -33,9 +33,9 @@
     <Compile Include="EnvelopedCms\KeyTransRecipientInfoTests.cs" />
     <Compile Include="EnvelopedCms\StateTests.cs" />
     <Compile Include="EnvelopedCms\UnprotectedAttributeTests.cs" />
+    <Compile Include="ImportedCollection.cs" />
     <Compile Include="Oids.cs" />
     <Compile Include="Pkcs9AttributeTests.cs" />
-    <Compile Include="Pkcs12\SimpleRead.cs" />
     <Compile Include="RecipientInfoCollectionTests.cs" />
     <Compile Include="SignedCms\CounterSigningDerOrder.cs" />
     <Compile Include="SignedCms\SignedCmsTests.cs" />
@@ -48,6 +48,8 @@
     <Compile Include="Rfc3161\TimestampTokenInfoTests.cs" />
     <Compile Include="Rfc3161\TimestampTokenTestData.cs" />
     <Compile Include="Rfc3161\TimestampTokenTests.cs" />
+    <Compile Include="Pkcs12\SimpleRead.cs" />
+    <Compile Include="Pkcs12\WriteToWindows.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetsWindows)' == 'true' AND '$(TargetGroup)'=='netcoreapp'">
     <Compile Include="EnvelopedCms\DecryptTests.KeyPersistence.cs" />
