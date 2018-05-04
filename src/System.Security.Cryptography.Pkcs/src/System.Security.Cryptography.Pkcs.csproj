@@ -73,7 +73,6 @@
     <Compile Include="Internal\Cryptography\KeyAgreeRecipientInfoPal.cs" />
     <Compile Include="Internal\Cryptography\KeyLengths.cs" />
     <Compile Include="Internal\Cryptography\KeyTransRecipientInfoPal.cs" />
-    <Compile Include="Internal\Cryptography\Oids.cs" />
     <Compile Include="Internal\Cryptography\Helpers.cs" />
     <Compile Include="Internal\Cryptography\PkcsPal.cs" />
     <Compile Include="Internal\Cryptography\RecipientInfoPal.cs" />
@@ -253,6 +252,9 @@
     </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\AsnWriter.cs">
       <Link>Common\System\Security\Cryptography\AsnWriter.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Oids.cs">
+      <Link>Common\System\Security\Cryptography\Oids.cs</Link>
     </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\PasswordBasedEncryption.cs">
       <Link>Common\System\Security\Cryptography\PasswordBasedEncryption.cs</Link>
