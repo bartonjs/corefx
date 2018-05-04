@@ -18,7 +18,7 @@ namespace System.Security.Cryptography.Pkcs
 
         public bool IsSealed => !_sealedData.IsEmpty;
 
-        public void AddSafeContentsEncrypted(
+        public unsafe void AddSafeContentsEncrypted(
             Pkcs12SafeContents safeContents,
             ReadOnlySpan<char> password,
             Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
@@ -35,6 +35,50 @@ namespace System.Security.Cryptography.Pkcs
             if (_contents == null)
             {
                 _contents = new List<ContentInfoAsn>();
+            }
+
+            using (AsnWriter contentsWriter = safeContents.Encode())
+            {
+                ReadOnlySpan<byte> contentsSpan = contentsWriter.EncodeAsSpan();
+                
+                PasswordBasedEncryption.InitiateEncryption(
+                    encryptionAlgorithm,
+                    hashAlgorithm,
+                    out SymmetricAlgorithm cipher,
+                    out string hmacOid,
+                    out string encryptionAlgorithmOid,
+                    out bool isPkcs12);
+
+                // We need at least one block size beyond the input data size.
+                byte[] encryptedRent = ArrayPool<byte>.Shared.Rent(
+                    checked(pkcs8Span.Length + (cipher.BlockSize / 8)));
+
+                Span<byte> encryptedSpan = default;
+                AsnWriter writer = null;
+
+                try
+                {
+                    Span<byte> iv = stackalloc byte[cipher.BlockSize / 8];
+                    Span<byte> salt = stackalloc byte[16];
+
+                    RandomNumberGenerator.Fill(salt);
+
+                    int written = PasswordBasedEncryption.Encrypt(
+                        password,
+                        passwordBytes,
+                        cipher,
+                        isPkcs12,
+                        pkcs8Span,
+                        pbkdf2Prf,
+                        pbkdf2IterationCount,
+                        salt,
+                        encryptedRent,
+                        iv);
+
+                    encryptedSpan = encryptedRent.AsSpan(0, written);
+
+                    writer = new AsnWriter(AsnEncodingRules.DER);
+                }
             }
 
             throw new NotImplementedException();

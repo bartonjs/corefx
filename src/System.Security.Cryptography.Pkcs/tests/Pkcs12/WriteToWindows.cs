@@ -59,6 +59,42 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             builder.SealAndMac(password, HashAlgorithmName.SHA1, 1024);
             byte[] pfx = builder.Encode();
 
+            ImportedCollection coll =
+                ImportedCollection.Import(pfx, password, X509KeyStorageFlags.EphemeralKeySet);
+
+            using (coll)
+            {
+                Assert.Equal(1, coll.Collection.Count);
+                Assert.Equal(rawData, coll.Collection[0].RawData);
+                Assert.False(coll.Collection[0].HasPrivateKey, "coll.Collection[0].HasPrivateKey");
+            }
+        }
+
+        [Fact]
+        public static void WriteOneCertNoKeys_Encrypted()
+        {
+            Pkcs12SafeContents contents = new Pkcs12SafeContents();
+            byte[] rawData;
+
+            using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.GetCertificate())
+            {
+                contents.AddCertificate(cert);
+                rawData = cert.RawData;
+            }
+
+            const string password = nameof(WriteOneCertNoKeys_NoEncryption);
+
+            Pkcs12Builder builder = new Pkcs12Builder();
+            builder.AddSafeContentsEncrypted(
+                contents,
+                password,
+                Pkcs8.EncryptionAlgorithm.TripleDes3KeyPkcs12,
+                HashAlgorithmName.SHA1,
+                2050);
+
+            builder.SealAndMac(password, HashAlgorithmName.SHA1, 1024);
+            byte[] pfx = builder.Encode();
+
             Console.WriteLine(pfx.ByteArrayToHex());
 
             ImportedCollection coll =
@@ -95,8 +131,6 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             const string password = nameof(WriteOneCertNoKeys_NoEncryption);
             builder.SealAndMac(password, HashAlgorithmName.SHA1, 1024);
             byte[] pfx = builder.Encode();
-
-            Console.WriteLine(pfx.ByteArrayToHex());
 
             ImportedCollection coll =
                 ImportedCollection.Import(pfx, password, X509KeyStorageFlags.EphemeralKeySet);
