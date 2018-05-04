@@ -140,54 +140,14 @@ namespace System.Security.Cryptography
             out int bytesRead,
             out TRet ret)
         {
-            System.Text.Encoding encoding = System.Text.Encoding.UTF8;
-            int requiredBytes = encoding.GetByteCount(password);
-            Span<byte> passwordBytes = stackalloc byte[0];
-            byte[] rentedPasswordBytes = Array.Empty<byte>();
-
-            if (requiredBytes > 128)
-            {
-                rentedPasswordBytes = ArrayPool<byte>.Shared.Rent(requiredBytes);
-                passwordBytes = rentedPasswordBytes;
-            }
-            else
-            {
-                passwordBytes = stackalloc byte[requiredBytes];
-            }
-
-            try
-            {
-                fixed (byte* bytePtr = rentedPasswordBytes)
-                {
-                    int written = encoding.GetBytes(password, passwordBytes);
-
-                    if (written != requiredBytes)
-                    {
-                        Debug.Fail("UTF8 encoding length changed between size and convert");
-                        throw new CryptographicException();
-                    }
-
-                    passwordBytes = passwordBytes.Slice(0, written);
-
-                    ReadEncryptedPkcs8(
-                        validOids,
-                        source,
-                        password,
-                        passwordBytes,
-                        keyReader,
-                        out bytesRead,
-                        out ret);
-                }
-            }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(passwordBytes);
-
-                if (rentedPasswordBytes.Length > 0)
-                {
-                    ArrayPool<byte>.Shared.Return(rentedPasswordBytes);
-                }
-            }
+            ReadEncryptedPkcs8(
+                validOids,
+                source,
+                password,
+                ReadOnlySpan<byte>.Empty,
+                keyReader,
+                out bytesRead,
+                out ret);
         }
 
         internal static void ReadEncryptedPkcs8<TRet, TParsed>(
@@ -393,6 +353,7 @@ namespace System.Security.Cryptography
                     passwordBytes = passwordBytes.Slice(0, written);
 
                     return WriteEncryptedPkcs8(
+                        password,
                         passwordBytes,
                         pkcs8Writer,
                         encryptionAlgorithm,
@@ -418,12 +379,155 @@ namespace System.Security.Cryptography
             HashAlgorithmName pbkdf2Prf,
             int pbkdf2IterationCount)
         {
-            return PasswordBasedEncryption.WriteEncryptedPkcs8(
+            return WriteEncryptedPkcs8(
+                ReadOnlySpan<char>.Empty,
                 passwordBytes,
                 pkcs8Writer,
                 encryptionAlgorithm,
                 pbkdf2Prf,
                 pbkdf2IterationCount);
+        }
+
+        private static unsafe AsnWriter WriteEncryptedPkcs8(
+            ReadOnlySpan<char> password,
+            ReadOnlySpan<byte> passwordBytes,
+            AsnWriter pkcs8Writer,
+            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
+            HashAlgorithmName pbkdf2Prf,
+            int pbkdf2IterationCount)
+        {
+            ReadOnlySpan<byte> pkcs8Span = pkcs8Writer.EncodeAsSpan();
+
+            PasswordBasedEncryption.InitiateEncryption(
+                encryptionAlgorithm,
+                pbkdf2Prf,
+                out SymmetricAlgorithm cipher,
+                out string hmacOid,
+                out string encryptionAlgorithmOid,
+                out bool isPkcs12);
+
+            // We need at least one block size beyond the input data size.
+            byte[] encryptedRent = ArrayPool<byte>.Shared.Rent(
+                checked(pkcs8Span.Length + (cipher.BlockSize / 8)));
+
+            Span<byte> encryptedSpan = default;
+            AsnWriter writer = null;
+
+            try
+            {
+                Span<byte> iv = stackalloc byte[cipher.BlockSize / 8];
+                Span<byte> salt = stackalloc byte[16];
+
+                RandomNumberGenerator.Fill(salt);
+
+                int written = PasswordBasedEncryption.Encrypt(
+                    password,
+                    passwordBytes,
+                    cipher,
+                    isPkcs12,
+                    pkcs8Span,
+                    pbkdf2Prf,
+                    pbkdf2IterationCount,
+                    salt,
+                    encryptedRent,
+                    iv);
+
+                encryptedSpan = encryptedRent.AsSpan(0, written);
+
+                writer = new AsnWriter(AsnEncodingRules.DER);
+
+                // PKCS8 EncryptedPrivateKeyInfo
+                writer.PushSequence();
+
+                // EncryptedPrivateKeyInfo.encryptionAlgorithm
+                {
+                    writer.PushSequence();
+
+                    if (isPkcs12)
+                    {
+                        writer.WriteObjectIdentifier(encryptionAlgorithmOid);
+
+                        // pkcs-12PbeParams
+                        {
+                            writer.PushSequence();
+                            writer.WriteOctetString(salt);
+                            writer.WriteInteger(pbkdf2IterationCount);
+                            writer.PopSequence();
+                        }
+                    }
+                    else
+                    {
+                        writer.WriteObjectIdentifier(Oids.PasswordBasedEncryptionScheme2);
+
+                        // PBES2-params
+                        {
+                            writer.PushSequence();
+
+                            // keyDerivationFunc
+                            {
+                                writer.PushSequence();
+                                writer.WriteObjectIdentifier(Oids.Pbkdf2);
+
+                                // PBKDF2-params
+                                {
+                                    writer.PushSequence();
+
+                                    writer.WriteOctetString(salt);
+                                    writer.WriteInteger(pbkdf2IterationCount);
+
+                                    // RC2 needs to write the keyLength.
+                                    // No other algorithms have that requirement.
+                                    Debug.Assert(
+                                        !(cipher is RC2),
+                                        "RC2 keys require special handling here");
+
+                                    // prf
+                                    if (hmacOid != Oids.HmacWithSha1)
+                                    {
+                                        writer.PushSequence();
+                                        writer.WriteObjectIdentifier(hmacOid);
+                                        writer.WriteNull();
+                                        writer.PopSequence();
+                                    }
+
+                                    writer.PopSequence();
+                                }
+
+                                writer.PopSequence();
+                            }
+
+                            // encryptionScheme
+                            {
+                                writer.PushSequence();
+                                writer.WriteObjectIdentifier(encryptionAlgorithmOid);
+                                writer.WriteOctetString(iv);
+                                writer.PopSequence();
+                            }
+
+                            writer.PopSequence();
+                        }
+                    }
+
+                    writer.PopSequence();
+                }
+
+                // encryptedData
+                writer.WriteOctetString(encryptedSpan);
+                writer.PopSequence();
+
+                AsnWriter ret = writer;
+                // Don't dispose writer on the way out.
+                writer = null;
+                return ret;
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(encryptedSpan);
+                ArrayPool<byte>.Shared.Return(encryptedRent);
+
+                writer?.Dispose();
+                cipher.Dispose();
+            }
         }
 
         private static void WriteEncodedSpan(AsnWriter writer, ReadOnlySpan<byte> encodedValue)
