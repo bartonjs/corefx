@@ -48,7 +48,7 @@ namespace System.Security.Cryptography.Pkcs
                     out string hmacOid,
                     out string encryptionAlgorithmOid,
                     out bool isPkcs12);
-
+#if LATER
                 // We need at least one block size beyond the input data size.
                 byte[] encryptedRent = ArrayPool<byte>.Shared.Rent(
                     checked(pkcs8Span.Length + (cipher.BlockSize / 8)));
@@ -79,6 +79,7 @@ namespace System.Security.Cryptography.Pkcs
 
                     writer = new AsnWriter(AsnEncodingRules.DER);
                 }
+#endif
             }
 
             throw new NotImplementedException();

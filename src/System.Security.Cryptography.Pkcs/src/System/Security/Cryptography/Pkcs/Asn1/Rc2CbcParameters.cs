@@ -26,7 +26,7 @@ namespace System.Security.Cryptography.Pkcs.Asn1
     // just an IV which means that an effective key size of 32-bits has been chosen.  Since 40-bit is the
     // smallest supported by .NET that's not really a problem.
     [StructLayout(LayoutKind.Sequential)]
-    internal struct Rc2CbcParameters
+    internal struct Rc2CbcParametersTempRemoval
     {
         private static readonly byte[] s_rc2EkbEncoding =
         {
@@ -53,7 +53,7 @@ namespace System.Security.Cryptography.Pkcs.Asn1
         [OctetString]
         internal ReadOnlyMemory<byte> Iv;
 
-        internal Rc2CbcParameters(ReadOnlyMemory<byte> iv, int keySize)
+        internal Rc2CbcParametersTempRemoval(ReadOnlyMemory<byte> iv, int keySize)
         {
             if (keySize > byte.MaxValue)
             {

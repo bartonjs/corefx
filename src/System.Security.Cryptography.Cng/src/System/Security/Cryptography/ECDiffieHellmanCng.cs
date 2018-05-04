@@ -146,9 +146,9 @@ namespace System.Security.Cryptography
             _core.DisposeKey();
         }
 
-        internal string GetCurveName()
+        internal string GetCurveName(out string oidValue)
         {
-            return Key.GetCurveName();
+            return Key.GetCurveName(out oidValue);
         }
 
         private void ImportFullKeyBlob(byte[] ecfullKeyBlob, bool includePrivateParameters)

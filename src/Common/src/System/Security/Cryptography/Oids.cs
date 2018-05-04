@@ -104,5 +104,10 @@ namespace System.Security.Cryptography
         internal const string HmacWithSha256 = RsaDsiDigestAlgorithmPrefix + "9";
         internal const string HmacWithSha384 = RsaDsiDigestAlgorithmPrefix + "10";
         internal const string HmacWithSha512 = RsaDsiDigestAlgorithmPrefix + "11";
+
+        // Elliptic Curve curve identifiers
+        internal const string secp256r1 = "1.2.840.10045.3.1.7";
+        internal const string secp384r1 = "1.3.132.0.34";
+        internal const string secp521r1 = "1.3.132.0.35";
     }
 }
