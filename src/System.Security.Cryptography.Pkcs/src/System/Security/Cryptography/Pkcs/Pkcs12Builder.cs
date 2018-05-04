@@ -37,6 +37,8 @@ namespace System.Security.Cryptography.Pkcs
                 _contents = new List<ContentInfoAsn>();
             }
 
+            AsnWriter writer = null;
+
             using (AsnWriter contentsWriter = safeContents.Encode())
             {
                 ReadOnlySpan<byte> contentsSpan = contentsWriter.EncodeAsSpan();
@@ -48,29 +50,24 @@ namespace System.Security.Cryptography.Pkcs
                     out string hmacOid,
                     out string encryptionAlgorithmOid,
                     out bool isPkcs12);
-#if LATER
-                // We need at least one block size beyond the input data size.
-                byte[] encryptedRent = ArrayPool<byte>.Shared.Rent(
-                    checked(pkcs8Span.Length + (cipher.BlockSize / 8)));
 
-                Span<byte> encryptedSpan = default;
-                AsnWriter writer = null;
+                int cipherBlockBytes = cipher.BlockSize / 8;
+                byte[] encryptedRent = ArrayPool<byte>.Shared.Rent(contentsSpan.Length + cipherBlockBytes);
+                Span<byte> encryptedSpan = Span<byte>.Empty;
+                Span<byte> iv = stackalloc byte[cipherBlockBytes];
+                Span<byte> salt = stackalloc byte[16];
+                RandomNumberGenerator.Fill(salt);
 
                 try
                 {
-                    Span<byte> iv = stackalloc byte[cipher.BlockSize / 8];
-                    Span<byte> salt = stackalloc byte[16];
-
-                    RandomNumberGenerator.Fill(salt);
-
                     int written = PasswordBasedEncryption.Encrypt(
                         password,
-                        passwordBytes,
+                        ReadOnlySpan<byte>.Empty,
                         cipher,
                         isPkcs12,
-                        pkcs8Span,
-                        pbkdf2Prf,
-                        pbkdf2IterationCount,
+                        contentsSpan,
+                        hashAlgorithm,
+                        iterationCount,
                         salt,
                         encryptedRent,
                         iv);
@@ -78,11 +75,51 @@ namespace System.Security.Cryptography.Pkcs
                     encryptedSpan = encryptedRent.AsSpan(0, written);
 
                     writer = new AsnWriter(AsnEncodingRules.DER);
-                }
-#endif
-            }
 
-            throw new NotImplementedException();
+                    // EncryptedData
+                    writer.PushSequence();
+
+                    // version
+                    // Since we're not writing unprotected attributes, version=0
+                    writer.WriteInteger(0);
+
+                    // encryptedContentInfo
+                    {
+                        writer.PushSequence();
+                        writer.WriteObjectIdentifier(Oids.Pkcs7Data);
+
+                        PasswordBasedEncryption.WritePbeAlgorithmIdentifier(
+                            writer,
+                            isPkcs12,
+                            encryptionAlgorithmOid,
+                            salt,
+                            iterationCount,
+                            hmacOid,
+                            iv);
+
+                        writer.WriteOctetString(
+                            new Asn1Tag(TagClass.ContextSpecific, 0),
+                            encryptedSpan);
+
+                        writer.PopSequence();
+                    }
+
+                    writer.PopSequence();
+
+                    _contents.Add(
+                        new ContentInfoAsn
+                        {
+                            ContentType = Oids.Pkcs7Encrypted,
+                            Content = writer.Encode(),
+                        });
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(encryptedSpan);
+                    ArrayPool<byte>.Shared.Return(encryptedRent);
+                    writer?.Dispose();
+                }
+            }
         }
 
         public void AddSafeContentsEnveloped(

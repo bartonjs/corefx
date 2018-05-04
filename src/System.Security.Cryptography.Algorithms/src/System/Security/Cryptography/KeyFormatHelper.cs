@@ -440,76 +440,14 @@ namespace System.Security.Cryptography
                 writer.PushSequence();
 
                 // EncryptedPrivateKeyInfo.encryptionAlgorithm
-                {
-                    writer.PushSequence();
-
-                    if (isPkcs12)
-                    {
-                        writer.WriteObjectIdentifier(encryptionAlgorithmOid);
-
-                        // pkcs-12PbeParams
-                        {
-                            writer.PushSequence();
-                            writer.WriteOctetString(salt);
-                            writer.WriteInteger(pbkdf2IterationCount);
-                            writer.PopSequence();
-                        }
-                    }
-                    else
-                    {
-                        writer.WriteObjectIdentifier(Oids.PasswordBasedEncryptionScheme2);
-
-                        // PBES2-params
-                        {
-                            writer.PushSequence();
-
-                            // keyDerivationFunc
-                            {
-                                writer.PushSequence();
-                                writer.WriteObjectIdentifier(Oids.Pbkdf2);
-
-                                // PBKDF2-params
-                                {
-                                    writer.PushSequence();
-
-                                    writer.WriteOctetString(salt);
-                                    writer.WriteInteger(pbkdf2IterationCount);
-
-                                    // RC2 needs to write the keyLength.
-                                    // No other algorithms have that requirement.
-                                    Debug.Assert(
-                                        !(cipher is RC2),
-                                        "RC2 keys require special handling here");
-
-                                    // prf
-                                    if (hmacOid != Oids.HmacWithSha1)
-                                    {
-                                        writer.PushSequence();
-                                        writer.WriteObjectIdentifier(hmacOid);
-                                        writer.WriteNull();
-                                        writer.PopSequence();
-                                    }
-
-                                    writer.PopSequence();
-                                }
-
-                                writer.PopSequence();
-                            }
-
-                            // encryptionScheme
-                            {
-                                writer.PushSequence();
-                                writer.WriteObjectIdentifier(encryptionAlgorithmOid);
-                                writer.WriteOctetString(iv);
-                                writer.PopSequence();
-                            }
-
-                            writer.PopSequence();
-                        }
-                    }
-
-                    writer.PopSequence();
-                }
+                PasswordBasedEncryption.WritePbeAlgorithmIdentifier(
+                    writer,
+                    isPkcs12,
+                    encryptionAlgorithmOid,
+                    salt,
+                    pbkdf2IterationCount,
+                    hmacOid,
+                    iv);
 
                 // encryptedData
                 writer.WriteOctetString(encryptedSpan);

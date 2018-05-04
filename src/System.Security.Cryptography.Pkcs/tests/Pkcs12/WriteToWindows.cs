@@ -95,8 +95,6 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             builder.SealAndMac(password, HashAlgorithmName.SHA1, 1024);
             byte[] pfx = builder.Encode();
 
-            Console.WriteLine(pfx.ByteArrayToHex());
-
             ImportedCollection coll =
                 ImportedCollection.Import(pfx, password, X509KeyStorageFlags.EphemeralKeySet);
 

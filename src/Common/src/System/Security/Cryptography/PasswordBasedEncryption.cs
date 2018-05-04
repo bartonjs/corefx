@@ -4,6 +4,7 @@
 
 using System.Buffers;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.Asn1;
 using System.Security.Cryptography.Pkcs;
@@ -15,8 +16,8 @@ namespace System.Security.Cryptography
     {
         private static ArrayPool<byte> ArrayPool => ArrayPool<byte>.Shared;
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA5350", Justification = "3DES used when specified by the input data")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA5351", Justification = "DES used when specified by the input data")]
+        [SuppressMessage("Microsoft.Security", "CA5350", Justification = "3DES used when specified by the input data")]
+        [SuppressMessage("Microsoft.Security", "CA5351", Justification = "DES used when specified by the input data")]
         internal static unsafe int Decrypt(
             in AlgorithmIdentifierAsn algorithmIdentifier,
             ReadOnlySpan<char> password,
@@ -444,7 +445,7 @@ namespace System.Security.Cryptography
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA5351", Justification = "DES used when specified by the input data")]
+        [SuppressMessage("Microsoft.Security", "CA5351", Justification = "DES used when specified by the input data")]
         private static SymmetricAlgorithm OpenCipher(
             AlgorithmIdentifierAsn encryptionScheme,
             byte? requestedKeyLength,
@@ -890,6 +891,79 @@ namespace System.Security.Cryptography
             // DK = T_c<0..dkLen-1>
             t.Slice(0, dk.Length).CopyTo(dk);
             CryptographicOperations.ZeroMemory(t);
+        }
+
+        internal static void WritePbeAlgorithmIdentifier(
+            AsnWriter writer,
+            bool isPkcs12,
+            string encryptionAlgorithmOid,
+            Span<byte> salt,
+            int iterationCount,
+            string hmacOid,
+            Span<byte> iv)
+        {
+            writer.PushSequence();
+
+            if (isPkcs12)
+            {
+                writer.WriteObjectIdentifier(encryptionAlgorithmOid);
+
+                // pkcs-12PbeParams
+                {
+                    writer.PushSequence();
+                    writer.WriteOctetString(salt);
+                    writer.WriteInteger(iterationCount);
+                    writer.PopSequence();
+                }
+            }
+            else
+            {
+                writer.WriteObjectIdentifier(Oids.PasswordBasedEncryptionScheme2);
+
+                // PBES2-params
+                {
+                    writer.PushSequence();
+
+                    // keyDerivationFunc
+                    {
+                        writer.PushSequence();
+                        writer.WriteObjectIdentifier(Oids.Pbkdf2);
+
+                        // PBKDF2-params
+                        {
+                            writer.PushSequence();
+
+                            writer.WriteOctetString(salt);
+                            writer.WriteInteger(iterationCount);
+
+                            // prf
+                            if (hmacOid != Oids.HmacWithSha1)
+                            {
+                                writer.PushSequence();
+                                writer.WriteObjectIdentifier(hmacOid);
+                                writer.WriteNull();
+                                writer.PopSequence();
+                            }
+
+                            writer.PopSequence();
+                        }
+
+                        writer.PopSequence();
+                    }
+
+                    // encryptionScheme
+                    {
+                        writer.PushSequence();
+                        writer.WriteObjectIdentifier(encryptionAlgorithmOid);
+                        writer.WriteOctetString(iv);
+                        writer.PopSequence();
+                    }
+
+                    writer.PopSequence();
+                }
+            }
+
+            writer.PopSequence();
         }
     }
 
