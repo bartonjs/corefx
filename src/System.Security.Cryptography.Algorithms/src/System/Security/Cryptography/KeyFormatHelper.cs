@@ -20,6 +20,74 @@ namespace System.Security.Cryptography
             Aes256Cbc,
             TripleDes3KeyPkcs12,
         }
+
+        public static bool TryDecrypt(
+            ReadOnlySpan<char> password,
+            ReadOnlySpan<byte> encryptedPkcs8,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            return TryDecrypt(
+                password,
+                ReadOnlySpan<byte>.Empty,
+                encryptedPkcs8,
+                destination,
+                out bytesWritten);
+        }
+
+        public static bool TryDecrypt(
+            ReadOnlySpan<byte> passwordBytes,
+            ReadOnlySpan<byte> encryptedPkcs8,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            return TryDecrypt(
+                ReadOnlySpan<char>.Empty,
+                passwordBytes,
+                encryptedPkcs8,
+                destination,
+                out bytesWritten);
+        }
+
+        private static bool TryDecrypt(
+            ReadOnlySpan<char> password,
+            ReadOnlySpan<byte> passwordBytes,
+            ReadOnlySpan<byte> encryptedPkcs8,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            if (destination.Length < encryptedPkcs8.Length)
+            {
+                bytesWritten = 0;
+                return false;
+            }
+
+            byte[] rented = ArrayPool<byte>.Shared.Rent(encryptedPkcs8.Length);
+
+            try
+            {
+                encryptedPkcs8.CopyTo(rented);
+
+                EncryptedPrivateKeyInfo encryptedPrivateKeyInfo =
+                    AsnSerializer.Deserialize<EncryptedPrivateKeyInfo>(
+                        rented.AsMemory(0, encryptedPkcs8.Length),
+                        AsnEncodingRules.BER);
+
+                bytesWritten = PasswordBasedEncryption.Decrypt(
+                    encryptedPrivateKeyInfo.EncryptionAlgorithm,
+                    password,
+                    passwordBytes,
+                    encryptedPrivateKeyInfo.EncryptedData.Span,
+                    destination);
+
+                return true;
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(rented.AsSpan(0, encryptedPkcs8.Length));
+                ArrayPool<byte>.Shared.Return(rented);
+            }
+        }
     }
 
     internal static class KeyFormatHelper

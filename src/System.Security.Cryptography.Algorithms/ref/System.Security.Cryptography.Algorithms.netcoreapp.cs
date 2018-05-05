@@ -133,5 +133,7 @@ namespace System.Security.Cryptography
             Aes256Cbc,
             TripleDes3KeyPkcs12,
         }
+        public static bool TryDecrypt(ReadOnlySpan<char> password, ReadOnlySpan<byte> encryptedPkcs8, Span<byte> destination, out int bytesWritten) => throw null;
+        public static bool TryDecrypt(ReadOnlySpan<byte> passwordBytes, ReadOnlySpan<byte> encryptedPkcs8, Span<byte> destination, out int bytesWritten) => throw null;
     }
 }
