@@ -154,16 +154,44 @@ namespace System.Security.Cryptography.Pkcs
             }
 
             using (AsnWriter contentsWriter = safeContents.Encode())
-            using (AsnWriter valueWriter = new AsnWriter(AsnEncodingRules.DER))
             {
-                valueWriter.WriteOctetString(contentsWriter.EncodeAsSpan());
-
-                _contents.Add(
-                    new ContentInfoAsn
+                if (safeContents.DataConfidentialityMode == Pkcs12SafeContents.ConfidentialityMode.None)
+                {
+                    using (AsnWriter valueWriter = new AsnWriter(AsnEncodingRules.DER))
                     {
-                        ContentType = Oids.Pkcs7Data,
-                        Content = valueWriter.Encode(),
-                    });
+                        valueWriter.WriteOctetString(contentsWriter.EncodeAsSpan());
+
+                        _contents.Add(
+                            new ContentInfoAsn
+                            {
+                                ContentType = Oids.Pkcs7Data,
+                                Content = valueWriter.Encode(),
+                            });
+                    }
+                }
+                else if (safeContents.DataConfidentialityMode == Pkcs12SafeContents.ConfidentialityMode.Password)
+                {
+                    _contents.Add(
+                        new ContentInfoAsn
+                        {
+                            ContentType = Oids.Pkcs7Encrypted,
+                            Content = contentsWriter.Encode(),
+                        });
+                }
+                else if (safeContents.DataConfidentialityMode == Pkcs12SafeContents.ConfidentialityMode.PublicKey)
+                {
+                    _contents.Add(
+                        new ContentInfoAsn
+                        {
+                            ContentType = Oids.Pkcs7Enveloped,
+                            Content = contentsWriter.Encode(),
+                        });
+                }
+                else
+                {
+                    Debug.Fail($"No handler for {safeContents.DataConfidentialityMode}");
+                    throw new CryptographicException();
+                }
             }
         }
 

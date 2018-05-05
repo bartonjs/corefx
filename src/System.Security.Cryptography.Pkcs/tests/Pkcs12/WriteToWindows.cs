@@ -107,6 +107,53 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         }
 
         [Fact]
+        public static void WriteOneCertWithKey_Encrypted_SameSafe()
+        {
+            Pkcs12SafeContents contents = new Pkcs12SafeContents();
+            byte[] rawData;
+
+            AsnEncodedData localKeyId = new AsnEncodedData(
+                "1.2.840.113549.1.9.21",
+                "040101".HexToByteArray());
+
+            using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.TryGetCertificateWithPrivateKey())
+            {
+                CertBag certBag = contents.AddCertificate(cert);
+                certBag.Attributes.Add(localKeyId);
+
+                rawData = cert.RawData;
+
+                KeyBag keyBag = contents.AddKeyUnencrypted(
+                    cert.GetRSAPrivateKey().ExportParameters(true).ToPkcs8PrivateKey());
+
+                keyBag.Attributes.Add(localKeyId);
+            }
+
+            const string password = nameof(WriteOneCertWithKey_Encrypted_SameSafe);
+
+            Pkcs12Builder builder = new Pkcs12Builder();
+            builder.AddSafeContentsEncrypted(
+                contents,
+                password,
+                Pkcs8.EncryptionAlgorithm.TripleDes3KeyPkcs12,
+                HashAlgorithmName.SHA1,
+                2050);
+
+            builder.SealAndMac(password, HashAlgorithmName.SHA1, 1024);
+            byte[] pfx = builder.Encode();
+
+            ImportedCollection coll =
+                ImportedCollection.Import(pfx, password, X509KeyStorageFlags.EphemeralKeySet);
+
+            using (coll)
+            {
+                Assert.Equal(1, coll.Collection.Count);
+                Assert.Equal(rawData, coll.Collection[0].RawData);
+                Assert.True(coll.Collection[0].HasPrivateKey, "coll.Collection[0].HasPrivateKey");
+            }
+        }
+
+        [Fact]
         public static void WriteTwoCertsNoKeys_NoEncryption()
         {
             Pkcs12SafeContents contents = new Pkcs12SafeContents();

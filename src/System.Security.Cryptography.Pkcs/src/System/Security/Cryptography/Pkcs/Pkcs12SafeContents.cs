@@ -70,7 +70,13 @@ namespace System.Security.Cryptography.Pkcs
             return bag;
         }
 
-        public KeyBag AddKeyUnencrypted(ReadOnlyMemory<byte> pkcs8PrivateKey) => throw null;
+        public KeyBag AddKeyUnencrypted(ReadOnlyMemory<byte> pkcs8PrivateKey)
+        {
+            KeyBag bag = new KeyBag(pkcs8PrivateKey);
+            AddSafeBag(bag);
+            return bag;
+        }
+
         public SafeContentsBag AddNestedSafeContentsEncrypted(Pkcs12SafeContents safeContents, ReadOnlySpan<char> password, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, HashAlgorithmName hashAlgorithm, int iterationCount) => throw null;
         public SafeContentsBag AddNestedSafeContentsEnveloped(Pkcs12SafeContents safeContents, CmsRecipient recipient) => throw null;
         public SafeContentsBag AddNestedSafeContentsUnencrypted(Pkcs12SafeContents safeContents) => throw null;

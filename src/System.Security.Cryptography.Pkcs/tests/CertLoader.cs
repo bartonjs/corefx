@@ -26,17 +26,17 @@ namespace Test.Cryptography
 
                 if (Environment.OSVersion.Version >= win8)
                 {
-                    return X509KeyStorageFlags.EphemeralKeySet;
+                    return X509KeyStorageFlags.EphemeralKeySet | X509KeyStorageFlags.Exportable;
                 }
             }
             else if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 // OSX doesn't allow ephemeral, but every other Unix does.
-                return X509KeyStorageFlags.EphemeralKeySet;
+                return X509KeyStorageFlags.EphemeralKeySet | X509KeyStorageFlags.Exportable;
             }
 #endif
 
-            return X509KeyStorageFlags.DefaultKeySet;
+            return X509KeyStorageFlags.DefaultKeySet | X509KeyStorageFlags.Exportable;
         }
 
         protected X509KeyStorageFlags KeyStorageFlags = s_defaultKeyStorageFlags;

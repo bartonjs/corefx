@@ -24,7 +24,7 @@ namespace System.Security.Cryptography.Pkcs
                 return false;
             }
 
-            bytesWritten = destination.Length;
+            bytesWritten = Pkcs8PrivateKey.Length;
             Pkcs8PrivateKey.Span.CopyTo(destination);
             return true;
         }

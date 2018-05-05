@@ -116,6 +116,14 @@ namespace System.Security.Cryptography
         public override RSAParameters ExportParameters(bool includePrivateParameters)
         {
             byte[] rsaBlob = ExportKeyBlob(includePrivateParameters);
+
+            if (includePrivateParameters && rsaBlob == null)
+            {
+                string password = Guid.NewGuid().ToString("N");
+                byte[] pkcs8 = ExportKeyBlob(password);
+                return RSAParameters.FromEncryptedPkcs8PrivateKey(password, pkcs8, out _);
+            }
+
             RSAParameters rsaParams = new RSAParameters();
             ExportParameters(ref rsaParams, rsaBlob, includePrivateParameters);
             return rsaParams;

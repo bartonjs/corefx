@@ -108,6 +108,11 @@ namespace System.Security.Cryptography
             return buffer;
         }
 
+        internal static byte[] ExportPkcs8KeyBlob(SafeNCryptKeyHandle keyHandle, string password)
+        {
+            throw ErrorCode.NTE_NOT_SUPPORTED.ToCryptographicException();
+        }
+
         internal static SafeNCryptKeyHandle GenerateNewExportableKey(string algorithm, int keySize)
         {
             // Despite the function being create "persisted" key, since we pass a null name it's

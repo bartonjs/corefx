@@ -55,6 +55,14 @@ namespace System.Security.Cryptography
                 }
             }
 
+            private byte[] ExportKeyBlob(string pkcs8Password)
+            {
+                using (SafeNCryptKeyHandle keyHandle = GetDuplicatedKeyHandle())
+                {
+                    return CngKeyLite.ExportPkcs8KeyBlob(keyHandle, pkcs8Password);
+                }
+            }
+
             private void ImportKeyBlob(byte[] rsaBlob, bool includePrivate)
             {
                 string blobType = includePrivate ?

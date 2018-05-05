@@ -18,7 +18,20 @@ namespace System.Security.Cryptography
 
         private byte[] ExportKeyBlob(bool includePrivateParameters)
         {
+            CngExportPolicies policy = Key.ExportPolicy;
+            const CngExportPolicies mask = CngExportPolicies.AllowPlaintextExport | CngExportPolicies.AllowExport;
+
+            if (CngExportPolicies.AllowExport == (policy & mask))
+            {
+                return null;
+            }
+
             return Key.Export(includePrivateParameters ? s_rsaFullPrivateBlob : s_rsaPublicBlob);
+        }
+
+        private byte[] ExportKeyBlob(string password)
+        {
+            return Key.ExportPkcs8(password);
         }
 
         // CngKeyBlob formats for RSA key blobs

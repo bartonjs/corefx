@@ -22,6 +22,9 @@ internal static partial class Interop
         internal static extern ErrorCode NCryptExportKey(SafeNCryptKeyHandle hKey, IntPtr hExportKey, string pszBlobType, IntPtr pParameterList, [Out] byte[] pbOutput, int cbOutput, [Out] out int pcbResult, int dwFlags);
 
         [DllImport(Interop.Libraries.NCrypt, CharSet = CharSet.Unicode)]
+        internal static extern ErrorCode NCryptExportKey(SafeNCryptKeyHandle hKey, IntPtr hExportKey, string pszBlobType, ref NCryptBufferDesc pParameterList, [Out] byte[] pbOutput, int cbOutput, [Out] out int pcbResult, int dwFlags);
+
+        [DllImport(Interop.Libraries.NCrypt, CharSet = CharSet.Unicode)]
         internal static extern ErrorCode NCryptDeleteKey(SafeNCryptKeyHandle hKey, int dwFlags);
 
         [DllImport(Interop.Libraries.NCrypt, CharSet = CharSet.Unicode)]
@@ -29,5 +32,21 @@ internal static partial class Interop
 
         [DllImport(Interop.Libraries.NCrypt, CharSet = CharSet.Unicode)]
         internal static extern ErrorCode NCryptFinalizeKey(SafeNCryptKeyHandle hKey, int dwFlags);
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct CRYPT_PKCS12_PBE_PARAMS
+        {
+            internal int iIterations;        /* iteration count              */
+            internal int cbSalt;             /* byte size of the salt        */
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal unsafe struct PBE_PARAMS
+        {
+            internal const int RgbSaltSize = 8;
+
+            internal CRYPT_PKCS12_PBE_PARAMS Params;
+            internal fixed byte rgbSalt[RgbSaltSize];
+        }
     }
 }
