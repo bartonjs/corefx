@@ -154,6 +154,60 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         }
 
         [Fact]
+        public static void WriteOneCertWithKey_LikeWindows()
+        {
+            Pkcs12SafeContents safe1 = new Pkcs12SafeContents();
+            Pkcs12SafeContents safe2 = new Pkcs12SafeContents();
+            byte[] rawData;
+
+            AsnEncodedData localKeyId = new AsnEncodedData(
+                "1.2.840.113549.1.9.21",
+                "040101".HexToByteArray());
+
+            const string password = nameof(WriteOneCertWithKey_LikeWindows);
+
+            using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.TryGetCertificateWithPrivateKey())
+            {
+                CertBag certBag = safe1.AddCertificate(cert);
+                certBag.Attributes.Add(localKeyId);
+
+                rawData = cert.RawData;
+
+                ShroudedKeyBag keyBag = safe2.AddShroudedKey(
+                    cert.GetRSAPrivateKey().ExportParameters(true).ToEncryptedPkcs8PrivateKey(
+                        password,
+                        HashAlgorithmName.SHA1,
+                        2068,
+                        Pkcs8.EncryptionAlgorithm.TripleDes3KeyPkcs12));
+
+                keyBag.Attributes.Add(localKeyId);
+            }
+
+            Pkcs12Builder builder = new Pkcs12Builder();
+            builder.AddSafeContentsEncrypted(
+                safe1,
+                password,
+                Pkcs8.EncryptionAlgorithm.TripleDes3KeyPkcs12,
+                HashAlgorithmName.SHA1,
+                2068);
+
+            builder.AddSafeContentsUnencrypted(safe2);
+
+            builder.SealAndMac(password, HashAlgorithmName.SHA1, 2068);
+            byte[] pfx = builder.Encode();
+
+            ImportedCollection coll =
+                ImportedCollection.Import(pfx, password, X509KeyStorageFlags.EphemeralKeySet);
+
+            using (coll)
+            {
+                Assert.Equal(1, coll.Collection.Count);
+                Assert.Equal(rawData, coll.Collection[0].RawData);
+                Assert.True(coll.Collection[0].HasPrivateKey, "coll.Collection[0].HasPrivateKey");
+            }
+        }
+
+        [Fact]
         public static void WriteTwoCertsNoKeys_NoEncryption()
         {
             Pkcs12SafeContents contents = new Pkcs12SafeContents();
