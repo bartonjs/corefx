@@ -13,6 +13,9 @@ namespace System.Security.Cryptography.Pkcs
         {
         }
 
+        public Oid GetSecretType() => throw null;
+        public ReadOnlyMemory<byte> RawData { get; }
+
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
     }
 }

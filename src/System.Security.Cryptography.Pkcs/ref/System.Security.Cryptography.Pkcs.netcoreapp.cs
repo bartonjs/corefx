@@ -24,6 +24,7 @@ namespace System.Security.Cryptography.Pkcs
     public sealed partial class CrlBag : Pkcs12SafeBag
     {
         private CrlBag() : base(null) { }
+        public ReadOnlyMemory<byte> RawData { get; }
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
     }
     public sealed partial class KeyBag : Pkcs12SafeBag
@@ -67,7 +68,7 @@ namespace System.Security.Cryptography.Pkcs
         public bool TryEncode(Span<byte> destination, out int bytesWritten) => throw null;
         protected abstract bool TryEncodeValue(Span<byte> destination, out int bytesWritten);
     }
-    public sealed partial class Pkcs12SafeContents : IEnumerable<Pkcs12SafeBag>
+    public sealed partial class Pkcs12SafeContents
     {
         public ConfidentialityMode DataConfidentialityMode { get; }
         public bool IsReadOnly { get; }
@@ -85,8 +86,7 @@ namespace System.Security.Cryptography.Pkcs
         public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue) => throw null;
         public void Decrypt(ReadOnlySpan<char> password) => throw null;
         public void DecryptEnveloped(System.Security.Cryptography.X509Certificates.X509Certificate2Collection extraStore=null) => throw null;
-        public IEnumerator<Pkcs12SafeBag> GetEnumerator() => throw null;
-        IEnumerator IEnumerable.GetEnumerator() => throw null;
+        public IEnumerable<Pkcs12SafeBag> GetBags() => throw null;
         public bool TryDecryptInto(ReadOnlySpan<char> password, Memory<byte> destination, out int bytesWritten) => throw null;
         public bool TryDecryptEnvelopedInto(Memory<byte> destination, out int bytesWritten, System.Security.Cryptography.X509Certificates.X509Certificate2Collection extraStore=null) => throw null;
         public enum ConfidentialityMode
@@ -151,10 +151,13 @@ namespace System.Security.Cryptography.Pkcs
     {
         private SafeContentsBag() : base(null) { }
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
+        public IEnumerable<Pkcs12SafeBag> Bags { get; }
     }
     public sealed partial class SecretBag : Pkcs12SafeBag
     {
         private SecretBag() : base(null) { }
+        public Oid GetSecretType() => throw null;
+        public ReadOnlyMemory<byte> RawData { get; }
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
     }
     public sealed partial class ShroudedKeyBag : Pkcs12SafeBag

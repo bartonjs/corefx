@@ -31,12 +31,12 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.None, authSafe[0].DataConfidentialityMode);
             Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.None, authSafe[1].DataConfidentialityMode);
 
-            List<Pkcs12SafeBag> safe0Bags = new List<Pkcs12SafeBag>(authSafe[0]);
+            List<Pkcs12SafeBag> safe0Bags = new List<Pkcs12SafeBag>(authSafe[0].GetBags());
 
             Assert.Equal(1, safe0Bags.Count);
             ShroudedKeyBag shroudedKeyBag = Assert.IsType<ShroudedKeyBag>(safe0Bags[0]);
 
-            List<Pkcs12SafeBag> safe1Bags = new List<Pkcs12SafeBag>(authSafe[1]);
+            List<Pkcs12SafeBag> safe1Bags = new List<Pkcs12SafeBag>(authSafe[1].GetBags());
 
             Assert.Equal(1, safe0Bags.Count);
             Assert.IsType<CertBag>(safe1Bags[0]);
@@ -94,14 +94,14 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             authSafe[0].Decrypt(loader.Password);
             Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.None, authSafe[0].DataConfidentialityMode);
 
-            List<Pkcs12SafeBag> safe0Bags = new List<Pkcs12SafeBag>(authSafe[0]);
+            List<Pkcs12SafeBag> safe0Bags = new List<Pkcs12SafeBag>(authSafe[0].GetBags());
             Assert.Equal(1, safe0Bags.Count);
             CertBag certBag = Assert.IsType<CertBag>(safe0Bags[0]);
 
             Assert.True(certBag.IsX509Certificate, "certBag.IsX509Certificate");
             Assert.InRange(certBag.RawData.Length, loader.CerData.Length + 2, int.MaxValue);
 
-            List<Pkcs12SafeBag> safe1Bags = new List<Pkcs12SafeBag>(authSafe[1]);
+            List<Pkcs12SafeBag> safe1Bags = new List<Pkcs12SafeBag>(authSafe[1].GetBags());
             Assert.Equal(1, safe0Bags.Count);
             ShroudedKeyBag shroudedKeyBag = Assert.IsType<ShroudedKeyBag>(safe1Bags[0]);
 

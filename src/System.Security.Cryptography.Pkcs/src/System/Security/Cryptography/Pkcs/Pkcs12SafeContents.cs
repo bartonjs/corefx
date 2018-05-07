@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Buffers;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -14,7 +13,7 @@ using Internal.Cryptography;
 
 namespace System.Security.Cryptography.Pkcs
 {
-    public sealed class Pkcs12SafeContents : IEnumerable<Pkcs12SafeBag>
+    public sealed class Pkcs12SafeContents
     {
         private ReadOnlyMemory<byte> _encrypted;
         private List<Pkcs12SafeBag> _bags;
@@ -114,7 +113,7 @@ namespace System.Security.Cryptography.Pkcs
             DataConfidentialityMode = ConfidentialityMode.None;
         }
 
-        public IEnumerator<Pkcs12SafeBag> GetEnumerator()
+        public IEnumerable<Pkcs12SafeBag> GetBags()
         {
             if (DataConfidentialityMode != ConfidentialityMode.None)
             {
@@ -124,13 +123,11 @@ namespace System.Security.Cryptography.Pkcs
 
             if (_bags == null)
             {
-                return Enumerable.Empty<Pkcs12SafeBag>().GetEnumerator();
+                return Enumerable.Empty<Pkcs12SafeBag>();
             }
 
-            return _bags.GetEnumerator();
+            return _bags.AsReadOnly();
         }
-
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         public bool TryDecryptInto(
             ReadOnlySpan<char> password,
