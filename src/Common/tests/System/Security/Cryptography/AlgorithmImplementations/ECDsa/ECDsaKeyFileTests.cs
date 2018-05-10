@@ -2,14 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Security.Cryptography.EcDsa.Tests;
 using System.Security.Cryptography.Tests;
 using Test.Cryptography;
 using Xunit;
 
-namespace System.Security.Cryptography.Algorithms.Tests
+namespace System.Security.Cryptography.EcDsa.Tests
 {
-    public static class ECParametersTests
+    public static class ECDsaKeyFileTests
     {
         private static readonly ECParameters NistP521Key1 = new ECParameters
         {
