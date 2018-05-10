@@ -4,11 +4,19 @@
 
 using System.Buffers;
 using System.IO;
+using System.Numerics;
+using System.Security.Cryptography.Asn1;
 
 namespace System.Security.Cryptography
 {
     public abstract partial class RSA : AsymmetricAlgorithm
     {
+        private static readonly string[] s_validOids =
+        {
+            Oids.RsaEncryption,
+            // RSA-PSS, also?
+        };
+
         public static new RSA Create(string algName)
         {
             return (RSA)CryptoConfig.CreateFromName(algName);
@@ -283,88 +291,378 @@ namespace System.Security.Cryptography
             }
         }
 
-        public virtual void ImportEncryptedkcs8PrivateKey(
+        public virtual byte[] ExportRSAPrivateKey()
+        {
+            using (AsnWriter pkcs1PrivateKey = WritePkcs1PrivateKey())
+            {
+                return pkcs1PrivateKey.Encode();
+            }
+        }
+
+        public virtual bool TryExportRSAPrivateKey(Span<byte> destination, out int bytesWritten)
+        {
+            using (AsnWriter pkcs1PrivateKey = WritePkcs1PrivateKey())
+            {
+                return pkcs1PrivateKey.TryEncode(destination, out bytesWritten);
+            }
+        }
+
+        public virtual byte[] ExportRSAPublicKey()
+        {
+            using (AsnWriter pkcs1PublicKey = WritePkcs1PublicKey())
+            {
+                return pkcs1PublicKey.Encode();
+            }
+        }
+
+        public virtual bool TryExportRSAPublicKey(Span<byte> destination, out int bytesWritten)
+        {
+            using (AsnWriter pkcs1PublicKey = WritePkcs1PublicKey())
+            {
+                return pkcs1PublicKey.TryEncode(destination, out bytesWritten);
+            }
+        }
+
+        public override unsafe bool TryExportSubjectPublicKeyInfo(Span<byte> destination, out int bytesWritten)
+        {
+            // The PKCS1 RSAPublicKey format is just the modulus (KeySize bits) and Exponent (usually 3 bytes),
+            // with each field having up to 7 bytes of overhead and then up to 6 extra bytes of overhead for the
+            // SEQUENCE tag.
+            //
+            // So KeySize / 4 is ideally enough to start.
+            int rentSize = KeySize / 4;
+
+            while (true)
+            {
+                byte[] rented = ArrayPool<byte>.Shared.Rent(rentSize);
+                rentSize = rented.Length;
+                int pkcs1Size = 0;
+
+                fixed (byte* rentPtr = rented)
+                {
+                    try
+                    {
+                        if (!TryExportRSAPublicKey(rented, out pkcs1Size))
+                        {
+                            rentSize = checked(rentSize * 2);
+                            continue;
+                        }
+
+                        using (AsnWriter writer = new AsnWriter(AsnEncodingRules.DER))
+                        {
+                            writer.PushSequence();
+                            WriteAlgorithmIdentifier(writer);
+                            writer.WriteBitString(rented.AsSpan(0, pkcs1Size));
+                            writer.PopSequence();
+
+                            return writer.TryEncode(destination, out bytesWritten);
+                        }
+                    }
+                    finally
+                    {
+                        CryptographicOperations.ZeroMemory(rented.AsSpan(0, pkcs1Size));
+                        ArrayPool<byte>.Shared.Return(rented);
+                    }
+                }
+            }
+        }
+
+        public override bool TryExportPkcs8PrivateKey(Span<byte> destination, out int bytesWritten)
+        {
+            using (AsnWriter writer = WritePkcs8PrivateKey())
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
+        }
+
+        private unsafe AsnWriter WritePkcs8PrivateKey()
+        {
+            // A PKCS1 RSAPrivateKey is the Modulus (KeySize bits), D (~KeySize bits)
+            // P, Q, DP, DQ, InverseQ (all ~KeySize/2 bits)
+            // Each field can have up to 7 bytes of overhead, and then another 9 bytes
+            // of fixed overhead.
+            // So it should fit in 5 * KeySizeInBytes, but Exponent is a wildcard.
+
+            int rentSize = checked(5 * KeySize / 8);
+
+            while (true)
+            {
+                byte[] rented = ArrayPool<byte>.Shared.Rent(rentSize);
+                rentSize = rented.Length;
+                int pkcs1Size = 0;
+
+                fixed (byte* rentPtr = rented)
+                {
+                    try
+                    {
+                        if (!TryExportRSAPrivateKey(rented, out pkcs1Size))
+                        {
+                            rentSize = checked(rentSize * 2);
+                            continue;
+                        }
+
+                        AsnWriter writer = new AsnWriter(AsnEncodingRules.BER);
+
+                        try
+                        {
+                            writer.PushSequence();
+                            // Version 0 format (no attributes)
+                            writer.WriteInteger(0);
+                            WriteAlgorithmIdentifier(writer);
+                            writer.WriteOctetString(rented.AsSpan(0, pkcs1Size));
+                            writer.PopSequence();
+
+                            return writer;
+                        }
+                        catch
+                        {
+                            writer.Dispose();
+                            throw;
+                        }
+                    }
+                    finally
+                    {
+                        CryptographicOperations.ZeroMemory(rented.AsSpan(0, pkcs1Size));
+                        ArrayPool<byte>.Shared.Return(rented);
+                    }
+                }
+            }
+        }
+
+        public override bool TryExportEncryptedPkcs8PrivateKey(
             ReadOnlySpan<char> password,
-            ReadOnlySpan<byte> source,
-            out int bytesRead)
-        {
-            ImportParameters(RSAParameters.FromEncryptedPkcs8PrivateKey(password, source, out bytesRead));
-        }
-
-        public virtual void ImportEncryptedkcs8PrivateKey(
-            ReadOnlySpan<byte> passwordBytes,
-            ReadOnlySpan<byte> source,
-            out int bytesRead)
-        {
-            ImportParameters(RSAParameters.FromEncryptedPkcs8PrivateKey(passwordBytes, source, out bytesRead));
-        }
-
-        public virtual byte[] ExportEncryptedPkcs8PrivateKey(
-            ReadOnlySpan<char> password,
-            HashAlgorithmName pbkdf2HashAlgorithm,
-            int pbkdf2IterationCount,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm)
-        {
-            RSAParameters privateParameters = ExportParameters(includePrivateParameters: true);
-
-            return privateParameters.ToEncryptedPkcs8PrivateKey(
-                password,
-                pbkdf2HashAlgorithm,
-                pbkdf2IterationCount,
-                encryptionAlgorithm);
-        }
-
-        public virtual byte[] ExportEncryptedPkcs8PrivateKey(
-            ReadOnlySpan<byte> passwordBytes,
-            HashAlgorithmName pbkdf2HashAlgorithm,
-            int pbkdf2IterationCount,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm)
-        {
-            RSAParameters privateParameters = ExportParameters(includePrivateParameters: true);
-
-            return privateParameters.ToEncryptedPkcs8PrivateKey(
-                passwordBytes,
-                pbkdf2HashAlgorithm,
-                pbkdf2IterationCount,
-                encryptionAlgorithm);
-        }
-
-        public virtual bool TryExportEncryptedPkcs8PrivateKey(
-            ReadOnlySpan<char> password,
-            HashAlgorithmName pbkdf2HashAlgorithm,
-            int pbkdf2IterationCount,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
+            PbeParameters pbeParameters,
             Span<byte> destination,
             out int bytesWritten)
         {
-            RSAParameters privateParameters = ExportParameters(includePrivateParameters: true);
-
-            return privateParameters.TryWriteEncryptedPkcs8PrivateKey(
+            using (AsnWriter pkcs8PrivateKey = WritePkcs8PrivateKey())
+            using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(
                 password,
-                pbkdf2HashAlgorithm,
-                pbkdf2IterationCount,
-                encryptionAlgorithm,
-                destination,
-                out bytesWritten);
+                pkcs8PrivateKey,
+                (Pkcs8.EncryptionAlgorithm)pbeParameters.EncryptionAlgorithm,
+                pbeParameters.HashAlgorithm,
+                pbeParameters.KdfIterationCount))
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
         }
 
-        public virtual bool TryExportEncryptedPkcs8PrivateKey(
+        public override bool TryExportEncryptedPkcs8PrivateKey(
             ReadOnlySpan<byte> passwordBytes,
-            HashAlgorithmName pbkdf2HashAlgorithm,
-            int pbkdf2IterationCount,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
+            PbeParameters pbeParameters,
             Span<byte> destination,
             out int bytesWritten)
         {
-            RSAParameters privateParameters = ExportParameters(includePrivateParameters: true);
-
-            return privateParameters.TryWriteEncryptedPkcs8PrivateKey(
+            using (AsnWriter pkcs8PrivateKey = WritePkcs8PrivateKey())
+            using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(
                 passwordBytes,
-                pbkdf2HashAlgorithm,
-                pbkdf2IterationCount,
-                encryptionAlgorithm,
-                destination,
-                out bytesWritten);
+                pkcs8PrivateKey,
+                (Pkcs8.EncryptionAlgorithm)pbeParameters.EncryptionAlgorithm,
+                pbeParameters.HashAlgorithm,
+                pbeParameters.KdfIterationCount))
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
+        }
+       
+        private static void WriteAlgorithmIdentifier(AsnWriter writer)
+        {
+            writer.PushSequence();
+
+            // https://tools.ietf.org/html/rfc3447#appendix-C
+            //
+            // --
+            // -- When rsaEncryption is used in an AlgorithmIdentifier the
+            // -- parameters MUST be present and MUST be NULL.
+            // --
+            writer.WriteObjectIdentifier(Oids.RsaEncryption);
+            writer.WriteNull();
+
+            writer.PopSequence();
+        }
+
+        private AsnWriter WritePkcs1PublicKey()
+        {
+            RSAParameters rsaParameters = ExportParameters(false);
+
+            if (rsaParameters.Modulus == null || rsaParameters.Exponent == null)
+            {
+                throw new InvalidOperationException(SR.Cryptography_InvalidRsaParameters);
+            }
+
+            BigInteger n = new BigInteger(rsaParameters.Modulus, isUnsigned: true, isBigEndian: true);
+            BigInteger e = new BigInteger(rsaParameters.Exponent, isUnsigned: true, isBigEndian: true);
+
+            AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
+            writer.PushSequence();
+            writer.WriteInteger(n);
+            writer.WriteInteger(e);
+            writer.PopSequence();
+
+            return writer;
+        }
+
+        private AsnWriter WritePkcs1PrivateKey()
+        {
+            RSAParameters rsaParameters = ExportParameters(true);
+
+            if (rsaParameters.Modulus == null || rsaParameters.Exponent == null)
+            {
+                throw new InvalidOperationException(SR.Cryptography_InvalidRsaParameters);
+            }
+
+            if (rsaParameters.D == null ||
+                rsaParameters.P == null ||
+                rsaParameters.Q == null ||
+                rsaParameters.DP == null ||
+                rsaParameters.DQ == null ||
+                rsaParameters.InverseQ == null)
+            {
+                throw new InvalidOperationException(SR.Cryptography_NotValidPrivateKey);
+            }
+
+            BigInteger n = new BigInteger(rsaParameters.Modulus, isUnsigned: true, isBigEndian: true);
+            BigInteger e = new BigInteger(rsaParameters.Exponent, isUnsigned: true, isBigEndian: true);
+            BigInteger d = new BigInteger(rsaParameters.D, isUnsigned: true, isBigEndian: true);
+            BigInteger p = new BigInteger(rsaParameters.P, isUnsigned: true, isBigEndian: true);
+            BigInteger q = new BigInteger(rsaParameters.Q, isUnsigned: true, isBigEndian: true);
+            BigInteger dp = new BigInteger(rsaParameters.DP, isUnsigned: true, isBigEndian: true);
+            BigInteger dq = new BigInteger(rsaParameters.DQ, isUnsigned: true, isBigEndian: true);
+            BigInteger qInv = new BigInteger(rsaParameters.InverseQ, isUnsigned: true, isBigEndian: true);
+
+            AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
+
+            writer.PushSequence();
+
+            // Format version 0
+            writer.WriteInteger(0);
+            writer.WriteInteger(n);
+            writer.WriteInteger(e);
+            writer.WriteInteger(d);
+            writer.WriteInteger(p);
+            writer.WriteInteger(q);
+            writer.WriteInteger(dp);
+            writer.WriteInteger(dq);
+            writer.WriteInteger(qInv);
+
+            writer.PopSequence();
+            return writer;
+        }
+
+        public override void ImportSubjectPublicKeyInfo(ReadOnlyMemory<byte> source, out int bytesRead)
+        {
+            ReadOnlyMemory<byte> pkcs1 = KeyFormatHelper.ReadSubjectPublicKeyInfo(
+                s_validOids,
+                source,
+                out int localRead);
+
+            ImportRSAPublicKey(pkcs1, out _);
+            bytesRead = localRead;
+        }
+
+        public virtual void ImportRSAPublicKey(ReadOnlyMemory<byte> source, out int bytesRead)
+        {
+            RSAPublicKey key =
+                AsnSerializer.Deserialize<RSAPublicKey>(source, AsnEncodingRules.BER, out int localRead);
+
+            RSAParameters rsaParameters = new RSAParameters
+            {
+                Modulus = key.Modulus.ToByteArray(isUnsigned: true, isBigEndian: true),
+                Exponent = key.PublicExponent.ToByteArray(isUnsigned: true, isBigEndian: true),
+            };
+
+            ImportParameters(rsaParameters);
+            bytesRead = localRead;
+        }
+
+        public virtual void ImportRSAPrivateKey(ReadOnlyMemory<byte> source, out int bytesRead)
+        {
+            RSAPrivateKey key =
+                AsnSerializer.Deserialize<RSAPrivateKey>(source, AsnEncodingRules.BER, out int localRead);
+
+            AlgorithmIdentifierAsn ignored = default;
+            FromPkcs1PrivateKey(key, ignored, out RSAParameters rsaParameters);
+            ImportParameters(rsaParameters);
+            bytesRead = localRead;
+        }
+
+        public override void ImportPkcs8PrivateKey(ReadOnlyMemory<byte> source, out int bytesRead)
+        {
+            ReadOnlyMemory<byte> pkcs1 = KeyFormatHelper.ReadPkcs8(
+                s_validOids,
+                source,
+                out int localRead);
+
+            ImportRSAPrivateKey(pkcs1, out _);
+            bytesRead = localRead;
+        }
+
+        public override void ImportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            KeyFormatHelper.ReadEncryptedPkcs8<RSAParameters, RSAPrivateKey>(
+                s_validOids,
+                source,
+                password,
+                FromPkcs1PrivateKey,
+                out int localRead,
+                out RSAParameters ret);
+
+            ImportParameters(ret);
+            bytesRead = localRead;
+        }
+
+        private static void FromPkcs1PrivateKey(
+            in RSAPrivateKey key,
+            in AlgorithmIdentifierAsn algId,
+            out RSAParameters ret)
+        {
+            if (!algId.HasNullEquivalentParameters())
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            if (key.Version != 0)
+            {
+                throw new CryptographicException(
+                    SR.Format(SR.Cryptography_RSAPrivateKey_V0Only, key.Version));
+            }
+
+            // The modulus size determines the encoded output size of the CRT parameters.
+            byte[] n = key.Modulus.ToByteArray(isUnsigned: true, isBigEndian: true);
+            int halfModulusLength = (n.Length + 1) / 2;
+
+            ret = new RSAParameters
+            {
+                Modulus = n,
+                Exponent = key.PublicExponent.ToByteArray(isUnsigned: true, isBigEndian: true),
+                D = ExportMinimumSize(key.PrivateExponent, n.Length),
+                P = ExportMinimumSize(key.Prime1, halfModulusLength),
+                Q = ExportMinimumSize(key.Prime2, halfModulusLength),
+                DP = ExportMinimumSize(key.Exponent1, halfModulusLength),
+                DQ = ExportMinimumSize(key.Exponent2, halfModulusLength),
+                InverseQ = ExportMinimumSize(key.Coefficient, halfModulusLength),
+            };
+        }
+
+        private static byte[] ExportMinimumSize(BigInteger value, int minimumLength)
+        {
+            byte[] target = new byte[minimumLength];
+
+            if (value.TryWriteBytes(target, out int bytesWritten, isUnsigned: true, isBigEndian: true))
+            {
+                if (bytesWritten < minimumLength)
+                {
+                    Buffer.BlockCopy(target, 0, target, minimumLength - bytesWritten, bytesWritten);
+                    target.AsSpan(0, minimumLength - bytesWritten).Clear();
+                }
+
+                return target;
+            }
+
+            throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
         }
 
         public override string KeyExchangeAlgorithm => "RSA";

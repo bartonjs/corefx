@@ -121,7 +121,8 @@ namespace System.Security.Cryptography
             {
                 string password = Guid.NewGuid().ToString("N");
                 byte[] pkcs8 = ExportKeyBlob(password);
-                return RSAParameters.FromEncryptedPkcs8PrivateKey(password, pkcs8, out _);
+                throw new NotImplementedException("" + pkcs8.Length);
+                //return RSAParameters.FromEncryptedPkcs8PrivateKey(password, pkcs8, out _);
             }
 
             RSAParameters rsaParams = new RSAParameters();

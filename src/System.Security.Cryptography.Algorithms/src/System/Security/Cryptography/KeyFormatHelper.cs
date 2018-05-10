@@ -10,7 +10,7 @@ using System.Security.Cryptography.Asn1;
 
 namespace System.Security.Cryptography
 {
-    public static partial class Pkcs8
+    internal static partial class Pkcs8
     {
         public enum EncryptionAlgorithm
         {
@@ -19,74 +19,6 @@ namespace System.Security.Cryptography
             Aes192Cbc,
             Aes256Cbc,
             TripleDes3KeyPkcs12,
-        }
-
-        public static bool TryDecrypt(
-            ReadOnlySpan<char> password,
-            ReadOnlySpan<byte> encryptedPkcs8,
-            Span<byte> destination,
-            out int bytesWritten)
-        {
-            return TryDecrypt(
-                password,
-                ReadOnlySpan<byte>.Empty,
-                encryptedPkcs8,
-                destination,
-                out bytesWritten);
-        }
-
-        public static bool TryDecrypt(
-            ReadOnlySpan<byte> passwordBytes,
-            ReadOnlySpan<byte> encryptedPkcs8,
-            Span<byte> destination,
-            out int bytesWritten)
-        {
-            return TryDecrypt(
-                ReadOnlySpan<char>.Empty,
-                passwordBytes,
-                encryptedPkcs8,
-                destination,
-                out bytesWritten);
-        }
-
-        private static bool TryDecrypt(
-            ReadOnlySpan<char> password,
-            ReadOnlySpan<byte> passwordBytes,
-            ReadOnlySpan<byte> encryptedPkcs8,
-            Span<byte> destination,
-            out int bytesWritten)
-        {
-            if (destination.Length < encryptedPkcs8.Length)
-            {
-                bytesWritten = 0;
-                return false;
-            }
-
-            byte[] rented = ArrayPool<byte>.Shared.Rent(encryptedPkcs8.Length);
-
-            try
-            {
-                encryptedPkcs8.CopyTo(rented);
-
-                EncryptedPrivateKeyInfo encryptedPrivateKeyInfo =
-                    AsnSerializer.Deserialize<EncryptedPrivateKeyInfo>(
-                        rented.AsMemory(0, encryptedPkcs8.Length),
-                        AsnEncodingRules.BER);
-
-                bytesWritten = PasswordBasedEncryption.Decrypt(
-                    encryptedPrivateKeyInfo.EncryptionAlgorithm,
-                    password,
-                    passwordBytes,
-                    encryptedPrivateKeyInfo.EncryptedData.Span,
-                    destination);
-
-                return true;
-            }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(rented.AsSpan(0, encryptedPkcs8.Length));
-                ArrayPool<byte>.Shared.Return(rented);
-            }
         }
     }
 
@@ -115,6 +47,25 @@ namespace System.Security.Cryptography
                 CryptographicOperations.ZeroMemory(rwTmp.Span);
                 ArrayPool<byte>.Shared.Return(buf);
             }
+        }
+
+        internal static ReadOnlyMemory<byte> ReadSubjectPublicKeyInfo(
+            string[] validOids,
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            // X.509 SubjectPublicKeyInfo is described as DER.
+            SubjectPublicKeyInfo spki =
+                AsnSerializer.Deserialize<SubjectPublicKeyInfo>(source, AsnEncodingRules.DER, out int read);
+
+            if (Array.IndexOf(validOids, spki.Algorithm.Algorithm.Value) < 0)
+            {
+                // TODO: Better message?
+                throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
+            }
+
+            bytesRead = read;
+            return spki.SubjectPublicKey;
         }
 
         internal static void ReadSubjectPublicKeyInfo<TRet, TParsed>(
@@ -175,6 +126,24 @@ namespace System.Security.Cryptography
             }
         }
 
+        internal static ReadOnlyMemory<byte> ReadPkcs8(
+            string[] validOids,
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            PrivateKeyInfo privateKeyInfo =
+                AsnSerializer.Deserialize<PrivateKeyInfo>(source, AsnEncodingRules.BER, out int read);
+
+            if (Array.IndexOf(validOids, privateKeyInfo.PrivateKeyAlgorithm.Algorithm.Value) < 0)
+            {
+                // TODO: Better message?
+                throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
+            }
+
+            bytesRead = read;
+            return privateKeyInfo.PrivateKey;
+        }
+
         internal static void ReadPkcs8<TRet, TParsed>(
             string[] validOids,
             ReadOnlyMemory<byte> source,
@@ -202,7 +171,7 @@ namespace System.Security.Cryptography
 
         internal static unsafe void ReadEncryptedPkcs8<TRet, TParsed>(
             string[] validOids,
-            ReadOnlySpan<byte> source,
+            ReadOnlyMemory<byte> source,
             ReadOnlySpan<char> password,
             KeyReader<TRet, TParsed> keyReader,
             out int bytesRead,
@@ -210,7 +179,7 @@ namespace System.Security.Cryptography
         {
             ReadEncryptedPkcs8(
                 validOids,
-                source,
+                source.Span,
                 password,
                 ReadOnlySpan<byte>.Empty,
                 keyReader,
@@ -315,33 +284,6 @@ namespace System.Security.Cryptography
             {
                 throw new CryptographicException(SR.Cryptography_Pkcs8_EncryptedReadFailed, e);
             }
-        }
-
-        internal static AsnWriter WriteSubjectPublicKeyInfo(
-            AsnWriter algorithmIdentifierWriter,
-            AsnWriter publicKeyWriter)
-        {
-            // Ensure both input writers are balanced.
-            ReadOnlySpan<byte> algorithmIdentifier = algorithmIdentifierWriter.EncodeAsSpan();
-            ReadOnlySpan<byte> publicKey = publicKeyWriter.EncodeAsSpan();
-
-            Debug.Assert(algorithmIdentifier.Length > 0, "algorithmIdentifier was empty");
-            Debug.Assert(algorithmIdentifier[0] == 0x30, "algorithmIdentifier is not a constructed sequence");
-            Debug.Assert(publicKey.Length > 0, "publicKey was empty");
-
-            AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
-
-            // SubjectPublicKeyInfo
-            writer.PushSequence();
-
-            // SPKI.Algorithm (AlgorithmIdentifier)
-            WriteEncodedSpan(writer, algorithmIdentifier);
-
-            // SPKI.subjectPublicKey
-            writer.WriteBitString(publicKey);
-
-            writer.PopSequence();
-            return writer;
         }
 
         internal static AsnWriter WritePkcs8(AsnWriter algorithmIdentifierWriter, AsnWriter privateKeyWriter)

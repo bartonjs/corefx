@@ -357,13 +357,14 @@ tirn7aQDNItvjDcSTWsgFNBx37TQAet0Xp2Lebc9tgWUyFimBca3PinZbWrr8e99
 hw/nLtm9qs5I9nFM+RHdeqyhQ17FuH8hLEMXlre/3hkC2yGHEcgDQPWjTH+mSG2B
 YMSYHxE=";
 
-            byte[] derBytes = Convert.FromBase64String(base64);
-
-            RSAParameters rsaParameters =
-                RSAParameters.FromEncryptedPkcs8PrivateKey("asdf", derBytes, out int bytesRead);
-
-            Assert.Equal(derBytes.Length, bytesRead);
-            ImportExport.AssertKeyEquals(TestData.DiminishedDPParameters, rsaParameters);
+            ReadBase64EncryptedPkcs8(
+                base64,
+                "asdf",
+                new PbeParameters(
+                    PbeEncryptionAlgorithm.Aes192Cbc,
+                    HashAlgorithmName.SHA256,
+                    3072), 
+                TestData.DiminishedDPParameters);
         }
 
         [Fact]
@@ -388,18 +389,14 @@ spgL5k2ltwkIUc3+lmccmAbzTTwIyHuLflDDr8riC49NjPckoewehtqQtdKabbNG
 T/fDiOpNfqEJV4QBWUd5k1Qd/qIDNmC7NsYerwJfwxZlOvGywAgO6gQEgwAsqY7a
 rBZc";
 
-            byte[] derBytes = Convert.FromBase64String(base64);
-            int correctLen = derBytes.Length;
-            Array.Resize(ref derBytes, correctLen + 24);
-
-            RSAParameters rsaParameters =
-                RSAParameters.FromEncryptedPkcs8PrivateKey("easy", derBytes, out int bytesRead);
-
-            Assert.Equal(correctLen, bytesRead);
-            ImportExport.AssertKeyEquals(TestData.RSA1032Parameters, rsaParameters);
-
-            Assert.ThrowsAny<CryptographicException>(
-                () => RSAParameters.FromEncryptedPkcs8PrivateKey("wrong", derBytes, out bytesRead));
+            ReadBase64EncryptedPkcs8(
+                base64,
+                "easy",
+                new PbeParameters(
+                    PbeEncryptionAlgorithm.Aes256Cbc,
+                    HashAlgorithmName.SHA384,
+                    107583),
+                TestData.RSA1032Parameters);
         }
 
         [Fact]
@@ -603,13 +600,14 @@ zON6JbXRN/0dHOParq4RPO4Bk7yZfPBkGpRQEY6IjzxCbaf5c0nKHj/N3jN3ISwy
 i//agsIrcfPzxK4Qdg/G2DSQ1g6pdTSY79o8w/9MA9jB2MfdTD+Oh+9OWAUzllOF
 pgCJTk846cb+AizgZMeOsYpTOgu2UL6cQiLtsYNz7WpDK3iS7Agj9EoL2ao7QxA=";
 
-            byte[] derBytes = Convert.FromBase64String(base64);
-
-            RSAParameters rsaParameters =
-                RSAParameters.FromEncryptedPkcs8PrivateKey("qwerty", derBytes, out int bytesRead);
-
-            Assert.Equal(derBytes.Length, bytesRead);
-            ImportExport.AssertKeyEquals(TestData.RSA16384Params, rsaParameters);
+            ReadBase64EncryptedPkcs8(
+                base64,
+                "qwerty",
+                new PbeParameters(
+                    PbeEncryptionAlgorithm.Aes128Cbc,
+                    HashAlgorithmName.SHA512,
+                    short.MaxValue),
+                TestData.RSA16384Params);
         }
 
         [Fact]
@@ -628,13 +626,14 @@ L8jQJiKJgTAZa9e9YJ9YXEhTldvMY7WoCcaRbRvl3D+WvV1ibfnG5fl0BwFyTO6x
 RdMKfFP3he4C+CFyGGslffbxCaJhKebeuOil5xxlvP8aBPVNDtQfSS1HXHd1/Ikq
 1eo=";
 
-            byte[] derBytes = Convert.FromBase64String(base64);
-
-            RSAParameters rsaParameters =
-                RSAParameters.FromEncryptedPkcs8PrivateKey("rc2", derBytes, out int bytesRead);
-
-            Assert.Equal(derBytes.Length, bytesRead);
-            ImportExport.AssertKeyEquals(TestData.DiminishedDPParameters, rsaParameters);
+            ReadBase64EncryptedPkcs8(
+                base64,
+                "rc2",
+                new PbeParameters(
+                    PbeEncryptionAlgorithm.Aes192Cbc,
+                    HashAlgorithmName.SHA256,
+                    3),
+                TestData.DiminishedDPParameters);
         }
 
         [Fact]
@@ -650,29 +649,31 @@ hVbGcdL1z/MmM2dw3kIafjpwg3RcrL2qL803aKKl/Ypq6oxR8aCISTqThB46YByD
 Ac4+NzbL4Z4jfBWzxzXcua6ujp0jS+/5GxC57q1w+vtgaiJPmrtdierkJWyS9O5e
 pWre7nAO4O6sP1JzXvVmwrS5C/hw";
 
-            byte[] derBytes = Convert.FromBase64String(base64);
-
-            RSAParameters rsaParameters =
-                RSAParameters.FromEncryptedPkcs8PrivateKey("pbes1rc2", derBytes, out int bytesRead);
-
-            Assert.Equal(derBytes.Length, bytesRead);
-            ImportExport.AssertKeyEquals(TestData.RSA384Parameters, rsaParameters);
+            ReadBase64EncryptedPkcs8(
+                base64,
+                "pbes1rc2",
+                new PbeParameters(
+                    PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
+                    HashAlgorithmName.SHA1,
+                    2050),
+                TestData.RSA384Parameters);
         }
 
-        [Fact]
-        public static void ExportImportRsa384Encrypted()
+        private static void ReadBase64EncryptedPkcs8(
+            string base64EncPkcs8,
+            string password,
+            PbeParameters pbeParameters,
+            in RSAParameters expected)
         {
-            byte[] encryptedBytes = TestData.RSA384Parameters.ToEncryptedPkcs8PrivateKey(
-                "asdf",
-                HashAlgorithmName.SHA256,
-                125000,
-                Pkcs8.EncryptionAlgorithm.Aes256Cbc);
-
-            int originalSize = encryptedBytes.Length;
-            Array.Resize(ref encryptedBytes, originalSize + 31);
-            RSAParameters readBack = RSAParameters.FromEncryptedPkcs8PrivateKey("asdf", encryptedBytes, out int written);
-            Assert.Equal(originalSize, written);
-            ImportExport.AssertKeyEquals(TestData.RSA384Parameters, readBack);
+            ReadWriteKey(
+                base64EncPkcs8,
+                expected,
+                (RSA rsa, ReadOnlyMemory<byte> source, out int read) =>
+                    rsa.ImportEncryptedPkcs8PrivateKey(password, source, out read),
+                rsa => rsa.ExportEncryptedPkcs8PrivateKey(password, pbeParameters),
+                (RSA rsa, Span<byte> destination, out int written) =>
+                    rsa.TryExportEncryptedPkcs8PrivateKey(password, pbeParameters, destination, out written),
+                isEncrypted: true);
         }
 
         private static void ReadWriteBase64PublicPkcs1(
@@ -688,10 +689,11 @@ pWre7nAO4O6sP1JzXvVmwrS5C/hw";
             ReadWriteKey(
                 base64PublicPkcs1,
                 expectedPublic,
-                RSAParameters.FromPkcs1PublicKey,
-                p => p.ToPkcs1PublicKey(),
-                (RSAParameters p, Span<byte> destination, out int bytesWritten) =>
-                    p.TryWritePkcs1PublicKey(destination, out bytesWritten));
+                (RSA rsa, ReadOnlyMemory<byte> source, out int read) =>
+                    rsa.ImportRSAPublicKey(source, out read),
+                rsa => rsa.ExportRSAPublicKey(),
+                (RSA rsa, Span<byte> destination, out int written) =>
+                    rsa.TryExportRSAPublicKey(destination, out written));
         }
 
         private static void ReadWriteBase64SubjectPublicKeyInfo(
@@ -707,10 +709,11 @@ pWre7nAO4O6sP1JzXvVmwrS5C/hw";
             ReadWriteKey(
                 base64SubjectPublicKeyInfo,
                 expectedPublic,
-                RSAParameters.FromSubjectPublicKeyInfo,
-                p => p.ToSubjectPublicKeyInfo(),
-                (RSAParameters p, Span<byte> destination, out int bytesWritten) =>
-                    p.TryWriteSubjectPublicKeyInfo(destination, out bytesWritten));
+                (RSA rsa, ReadOnlyMemory<byte> source, out int read) =>
+                    rsa.ImportSubjectPublicKeyInfo(source, out read),
+                rsa => rsa.ExportSubjectPublicKeyInfo(),
+                (RSA rsa, Span<byte> destination, out int written) =>
+                    rsa.TryExportSubjectPublicKeyInfo(destination, out written));
         }
 
         private static void ReadWriteBase64PrivatePkcs1(
@@ -720,10 +723,11 @@ pWre7nAO4O6sP1JzXvVmwrS5C/hw";
             ReadWriteKey(
                 base64PrivatePkcs1,
                 expected,
-                RSAParameters.FromPkcs1PrivateKey,
-                p => p.ToPkcs1PrivateKey(),
-                (RSAParameters p, Span<byte> destination, out int bytesWritten) =>
-                    p.TryWritePkcs1PrivateKey(destination, out bytesWritten));
+                (RSA rsa, ReadOnlyMemory<byte> source, out int read) =>
+                    rsa.ImportRSAPrivateKey(source, out read),
+                rsa => rsa.ExportRSAPrivateKey(),
+                (RSA rsa, Span<byte> destination, out int written) =>
+                    rsa.TryExportRSAPrivateKey(destination, out written));
         }
 
         private static void ReadWriteBase64Pkcs8(string base64Pkcs8, in RSAParameters expected)
@@ -731,60 +735,131 @@ pWre7nAO4O6sP1JzXvVmwrS5C/hw";
             ReadWriteKey(
                 base64Pkcs8,
                 expected,
-                RSAParameters.FromPkcs8PrivateKey,
-                p => p.ToPkcs8PrivateKey(),
-                (RSAParameters p, Span<byte> destination, out int bytesWritten) =>
-                    p.TryWritePkcs8PrivateKey(destination, out bytesWritten));
+                (RSA rsa, ReadOnlyMemory<byte> source, out int read) =>
+                    rsa.ImportPkcs8PrivateKey(source, out read),
+                rsa => rsa.ExportPkcs8PrivateKey(),
+                (RSA rsa, Span<byte> destination, out int written) =>
+                    rsa.TryExportPkcs8PrivateKey(destination, out written));
         }
 
         private static void ReadWriteKey(
-            string base64PrivatePkcs1,
+            string base64,
             in RSAParameters expected,
-            ReadKeyFunc readFunc,
-            WriteKeyToArrayFunc writeArrayFunc,
-            WriteKeyToSpanFunc writeSpanFunc)
+            ReadKeyAction readAction,
+            Func<RSA, byte[]> writeArrayFunc,
+            WriteKeyToSpanFunc writeSpanFunc,
+            bool isEncrypted = false)
         {
-            byte[] derBytes = Convert.FromBase64String(base64PrivatePkcs1);
+            bool isPrivateKey = expected.D != null;
 
-            RSAParameters actual = readFunc(derBytes, out int bytesRead);
-            Assert.Equal(derBytes.Length, bytesRead);
+            byte[] derBytes = Convert.FromBase64String(base64);
+            byte[] arrayExport;
+            byte[] tooBig;
+            const int OverAllocate = 30;
+            const int WriteShift = 6;
 
-            ImportExport.AssertKeyEquals(expected, actual);
+            using (RSA rsa = RSAFactory.Create())
+            {
+                readAction(rsa, derBytes, out int bytesRead);
+                Assert.Equal(derBytes.Length, bytesRead);
 
-            byte[] output = writeArrayFunc(expected);
-            Assert.Equal(derBytes, output);
+                arrayExport = writeArrayFunc(rsa);
 
-            byte[] output2 = new byte[output.Length + 12];
-            output2.AsSpan().Fill(0xC3);
-            int bytesWritten = 3;
+                RSAParameters rsaParameters = rsa.ExportParameters(isPrivateKey);
+                ImportExport.AssertKeyEquals(expected, rsaParameters);
+            }
 
-            Assert.False(writeSpanFunc(actual, output2.AsSpan(0, output.Length - 1), out bytesWritten));
-            Assert.Equal(0, bytesWritten);
-            Assert.Equal(0xC3, output2[0]);
+            // Public key formats are stable.
+            // Private key formats are not, since CNG recomputes the D value
+            // and then all of the CRT parameters.
+            if (!isPrivateKey)
+            {
+                Assert.Equal(derBytes.Length, arrayExport.Length);
+                Assert.Equal(derBytes.ByteArrayToHex(), arrayExport.ByteArrayToHex());
+            }
 
-            string hexOutput = derBytes.ByteArrayToHex();
+            using (RSA rsa = RSAFactory.Create())
+            {
+                Assert.ThrowsAny<CryptographicException>(
+                    () => readAction(rsa, arrayExport.AsMemory(1), out _));
 
-            Assert.True(writeSpanFunc(actual, output2, out bytesWritten));
-            Assert.Equal(bytesRead, bytesWritten);
-            Assert.Equal(hexOutput, output2.AsSpan(0, bytesWritten).ByteArrayToHex());
-            Assert.Equal(0xC3, output2[bytesWritten]);
-            bytesWritten = 5;
+                Assert.ThrowsAny<CryptographicException>(
+                    () => readAction(rsa, arrayExport.AsMemory(0, arrayExport.Length - 1), out _));
 
-            output2.AsSpan().Fill(0xC4);
-            Assert.True(writeSpanFunc(actual, output2.AsSpan(1, bytesRead), out bytesWritten));
-            Assert.Equal(bytesRead, bytesWritten);
-            Assert.Equal(hexOutput, output2.AsSpan(1, bytesWritten).ByteArrayToHex());
-            Assert.Equal(0xC4, output2[0]);
-            Assert.Equal(0xC4, output2[bytesWritten + 1]);
+                readAction(rsa, arrayExport, out int bytesRead);
+                Assert.Equal(arrayExport.Length, bytesRead);
+
+                RSAParameters rsaParameters = rsa.ExportParameters(isPrivateKey);
+                ImportExport.AssertKeyEquals(expected, rsaParameters);
+
+                Assert.False(
+                    writeSpanFunc(rsa, Span<byte>.Empty, out int bytesWritten),
+                    "Write to empty span");
+
+                Assert.Equal(0, bytesWritten);
+
+                Assert.False(
+                    writeSpanFunc(
+                        rsa,
+                        derBytes.AsSpan(0, Math.Min(derBytes.Length, arrayExport.Length) - 1),
+                        out bytesWritten),
+                    "Write to too-small span");
+
+                Assert.Equal(0, bytesWritten);
+
+                tooBig = new byte[arrayExport.Length + OverAllocate];
+                tooBig.AsSpan().Fill(0xC4);
+
+                Assert.True(writeSpanFunc(rsa, tooBig.AsSpan(WriteShift), out bytesWritten));
+                Assert.Equal(arrayExport.Length, bytesWritten);
+
+                Assert.Equal(0xC4, tooBig[WriteShift - 1]);
+                Assert.Equal(0xC4, tooBig[WriteShift + bytesWritten + 1]);
+
+                // If encrypted, the data should have had a random salt applied, so unstable.
+                // Otherwise, we've normalized the data (even for private keys) so the output
+                // should match what it output previously.
+                if (isEncrypted)
+                {
+                    Assert.NotEqual(
+                        arrayExport.ByteArrayToHex(),
+                        tooBig.AsSpan(WriteShift, bytesWritten).ByteArrayToHex());
+                }
+                else
+                {
+                    Assert.Equal(
+                        arrayExport.ByteArrayToHex(),
+                        tooBig.AsSpan(WriteShift, bytesWritten).ByteArrayToHex());
+                }
+            }
+
+            using (RSA rsa = RSAFactory.Create())
+            {
+                readAction(rsa, tooBig.AsMemory(WriteShift), out int bytesRead);
+                Assert.Equal(arrayExport.Length, bytesRead);
+
+                arrayExport.AsSpan().Fill(0xCA);
+
+                Assert.True(
+                    writeSpanFunc(rsa, arrayExport, out int bytesWritten),
+                    "Write to precisely allocated Span");
+
+                if (isEncrypted)
+                {
+                    Assert.NotEqual(
+                        tooBig.AsSpan(WriteShift, bytesWritten).ByteArrayToHex(),
+                        arrayExport.ByteArrayToHex());
+                }
+                else
+                {
+                    Assert.Equal(
+                        tooBig.AsSpan(WriteShift, bytesWritten).ByteArrayToHex(),
+                        arrayExport.ByteArrayToHex());
+                }
+            }
         }
 
-        private delegate RSAParameters ReadKeyFunc(ReadOnlySpan<byte> source, out int bytesRead);
-
-        private delegate byte[] WriteKeyToArrayFunc(RSAParameters rsaParameters);
-
-        private delegate bool WriteKeyToSpanFunc(
-            RSAParameters rsaParameters,
-            Span<byte> destination,
-            out int bytesWritten);
+        private delegate void ReadKeyAction(RSA rsa, ReadOnlyMemory<byte> source, out int bytesRead);
+        private delegate bool WriteKeyToSpanFunc(RSA rsa, Span<byte> destination, out int bytesWritten);
     }
 }
