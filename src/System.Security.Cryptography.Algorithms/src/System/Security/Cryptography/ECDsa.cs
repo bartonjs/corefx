@@ -4,11 +4,18 @@
 
 using System.Buffers;
 using System.IO;
+using System.Security.Cryptography.Asn1;
 
 namespace System.Security.Cryptography
 {
     public abstract partial class ECDsa : AsymmetricAlgorithm
     {
+        private static readonly string[] s_validOids =
+        {
+            Oids.EcPublicKey,
+            // ECDH and ECMQV are not valid in this context.
+        };
+
         protected ECDsa() { }
 
         public static new ECDsa Create(string algorithm)
@@ -236,88 +243,166 @@ namespace System.Security.Cryptography
         public virtual bool VerifyHash(ReadOnlySpan<byte> hash, ReadOnlySpan<byte> signature) =>
             VerifyHash(hash.ToArray(), signature.ToArray());
 
-        public virtual void ImportEncryptedkcs8PrivateKey(
-            ReadOnlySpan<char> password,
-            ReadOnlySpan<byte> source,
-            out int bytesRead)
-        {
-            ImportParameters(ECParameters.FromEncryptedPkcs8PrivateKey(password, source, out bytesRead));
-        }
-
-        public virtual void ImportEncryptedkcs8PrivateKey(
+        public override unsafe bool TryExportEncryptedPkcs8PrivateKey(
             ReadOnlySpan<byte> passwordBytes,
-            ReadOnlySpan<byte> source,
-            out int bytesRead)
-        {
-            ImportParameters(ECParameters.FromEncryptedPkcs8PrivateKey(passwordBytes, source, out bytesRead));
-        }
-
-        public virtual byte[] ExportEncryptedPkcs8PrivateKey(
-            ReadOnlySpan<char> password,
-            HashAlgorithmName pbkdf2HashAlgorithm,
-            int pbkdf2IterationCount,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm)
-        {
-            ECParameters privateParameters = ExportParameters(includePrivateParameters: true);
-
-            return privateParameters.ToEncryptedPkcs8PrivateKey(
-                password,
-                pbkdf2HashAlgorithm,
-                pbkdf2IterationCount,
-                encryptionAlgorithm);
-        }
-
-        public virtual byte[] ExportEncryptedPkcs8PrivateKey(
-            ReadOnlySpan<byte> passwordBytes,
-            HashAlgorithmName pbkdf2HashAlgorithm,
-            int pbkdf2IterationCount,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm)
-        {
-            ECParameters privateParameters = ExportParameters(includePrivateParameters: true);
-
-            return privateParameters.ToEncryptedPkcs8PrivateKey(
-                passwordBytes,
-                pbkdf2HashAlgorithm,
-                pbkdf2IterationCount,
-                encryptionAlgorithm);
-        }
-
-        public virtual bool TryExportEncryptedPkcs8PrivateKey(
-            ReadOnlySpan<char> password,
-            HashAlgorithmName pbkdf2HashAlgorithm,
-            int pbkdf2IterationCount,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
+            PbeParameters pbeParameters,
             Span<byte> destination,
             out int bytesWritten)
         {
-            ECParameters privateParameters = ExportParameters(includePrivateParameters: true);
+            // TODO: Make (Try)ExportECPrivateKey, defer to that.
+            ECParameters ecParameters = ExportParameters(true);
 
-            return privateParameters.TryWriteEncryptedPkcs8PrivateKey(
-                password,
-                pbkdf2HashAlgorithm,
-                pbkdf2IterationCount,
-                encryptionAlgorithm,
-                destination,
-                out bytesWritten);
+            fixed (byte* privPtr = ecParameters.D)
+            {
+                try
+                {
+                    using (AsnWriter pkcs8PrivateKey = ecParameters.WritePkcs8PrivateKey())
+                    using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(
+                        passwordBytes,
+                        pkcs8PrivateKey,
+                        (Pkcs8.EncryptionAlgorithm)pbeParameters.EncryptionAlgorithm,
+                        pbeParameters.HashAlgorithm,
+                        pbeParameters.KdfIterationCount))
+                    {
+                        return writer.TryEncode(destination, out bytesWritten);
+                    }
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(ecParameters.D);
+                }
+            }
         }
 
-        public virtual bool TryExportEncryptedPkcs8PrivateKey(
-            ReadOnlySpan<byte> passwordBytes,
-            HashAlgorithmName pbkdf2HashAlgorithm,
-            int pbkdf2IterationCount,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
+        public override unsafe bool TryExportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            PbeParameters pbeParameters,
             Span<byte> destination,
             out int bytesWritten)
         {
-            ECParameters privateParameters = ExportParameters(includePrivateParameters: true);
+            // TODO: Make (Try)ExportECPrivateKey, defer to that.
+            ECParameters ecParameters = ExportParameters(true);
 
-            return privateParameters.TryWriteEncryptedPkcs8PrivateKey(
+            fixed (byte* privPtr = ecParameters.D)
+            {
+                try
+                {
+                    using (AsnWriter pkcs8PrivateKey = ecParameters.WritePkcs8PrivateKey())
+                    using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(
+                        password,
+                        pkcs8PrivateKey,
+                        (Pkcs8.EncryptionAlgorithm)pbeParameters.EncryptionAlgorithm,
+                        pbeParameters.HashAlgorithm,
+                        pbeParameters.KdfIterationCount))
+                    {
+                        return writer.TryEncode(destination, out bytesWritten);
+                    }
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(ecParameters.D);
+                }
+            }
+        }
+
+        public override unsafe bool TryExportPkcs8PrivateKey(
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            // TODO: Make (Try)ExportECPrivateKey, defer to that.
+            ECParameters ecParameters = ExportParameters(true);
+
+            fixed (byte* privPtr = ecParameters.D)
+            {
+                try
+                {
+                    using (AsnWriter writer = ecParameters.WritePkcs8PrivateKey())
+                    {
+                        return writer.TryEncode(destination, out bytesWritten);
+                    }
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(ecParameters.D);
+                }
+            }
+        }
+
+        public override bool TryExportSubjectPublicKeyInfo(
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            // TODO: Make (Try)ExportECPublicKey, defer to that.
+            ECParameters ecParameters = ExportParameters(false);
+
+            using (AsnWriter writer = ecParameters.WriteSubjectPublicKeyInfo())
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
+        }
+
+        public override void ImportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<byte> passwordBytes,
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            KeyFormatHelper.ReadEncryptedPkcs8<ECParameters, ECPrivateKey>(
+                s_validOids,
+                source,
                 passwordBytes,
-                pbkdf2HashAlgorithm,
-                pbkdf2IterationCount,
-                encryptionAlgorithm,
-                destination,
-                out bytesWritten);
+                ECParameters.FromECPrivateKey,
+                out int localRead,
+                out ECParameters ret);
+
+            ImportParameters(ret);
+            bytesRead = localRead;
+        }
+
+        public override void ImportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            KeyFormatHelper.ReadEncryptedPkcs8<ECParameters, ECPrivateKey>(
+                s_validOids,
+                source,
+                password,
+                ECParameters.FromECPrivateKey,
+                out int localRead,
+                out ECParameters ret);
+
+            ImportParameters(ret);
+            bytesRead = localRead;
+        }
+
+        public override void ImportPkcs8PrivateKey(
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            KeyFormatHelper.ReadPkcs8<ECParameters, ECPrivateKey>(
+                s_validOids,
+                source,
+                ECParameters.FromECPrivateKey,
+                out int localRead,
+                out ECParameters key);
+
+            ImportParameters(key);
+            bytesRead = localRead;
+        }
+
+        public override void ImportSubjectPublicKeyInfo(
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            KeyFormatHelper.ReadSubjectPublicKeyInfo<ECParameters, ReadOnlyMemory<byte>>(
+                s_validOids,
+                source,
+                ECParameters.FromECPublicKey,
+                out int localRead,
+                out ECParameters key);
+
+            ImportParameters(key);
+            bytesRead = localRead;
         }
     }
 }

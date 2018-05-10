@@ -81,7 +81,19 @@ namespace System.Security.Cryptography
         //    throw new NotImplementedException();
         //}
 
-        private static void FromECPrivateKey(
+        internal static ECParameters FromECPrivateKey(
+            in AlgorithmIdentifierAsn algId,
+            ReadOnlyMemory<byte> key)
+        {
+            ECPrivateKey parsedKey =
+                AsnSerializer.Deserialize<ECPrivateKey>(key, AsnEncodingRules.BER);
+
+            ECParameters ret;
+            FromECPrivateKey(parsedKey, algId, out ret);
+            return ret;
+        }
+
+        internal static void FromECPrivateKey(
             in ECPrivateKey key,
             in AlgorithmIdentifierAsn algId,
             out ECParameters ret)
@@ -144,7 +156,7 @@ namespace System.Security.Cryptography
             ret.Validate();
         }
 
-        private static void FromECPublicKey(
+        internal static void FromECPublicKey(
             in ReadOnlyMemory<byte> key,
             in AlgorithmIdentifierAsn algId,
             out ECParameters ret)
@@ -245,171 +257,7 @@ namespace System.Security.Cryptography
             return ECCurve.CreateFromOid(curveOid);
         }
 
-        public static ECParameters FromPkcs8PrivateKey(ReadOnlySpan<byte> source, out int bytesRead)
-        {
-            KeyFormatHelper.ReadPkcs8<ECParameters, ECPrivateKey>(
-                s_validOids,
-                source,
-                FromECPrivateKey,
-                out bytesRead,
-                out ECParameters ret);
-
-            return ret;
-        }
-
-        public static ECParameters FromEncryptedPkcs8PrivateKey(
-            ReadOnlySpan<char> password,
-            ReadOnlySpan<byte> source,
-            out int bytesRead)
-        {
-            KeyFormatHelper.ReadEncryptedPkcs8<ECParameters, ECPrivateKey>(
-                s_validOids,
-                source,
-                password,
-                FromECPrivateKey,
-                out bytesRead,
-                out ECParameters ret);
-
-            return ret;
-        }
-
-        public static ECParameters FromEncryptedPkcs8PrivateKey(
-            ReadOnlySpan<byte> passwordBytes,
-            ReadOnlySpan<byte> source,
-            out int bytesRead)
-        {
-            KeyFormatHelper.ReadEncryptedPkcs8<ECParameters, ECPrivateKey>(
-                s_validOids,
-                source,
-                passwordBytes,
-                FromECPrivateKey,
-                out bytesRead,
-                out ECParameters ret);
-
-            return ret;
-        }
-
-        public static ECParameters FromSubjectPublicKeyInfo(ReadOnlySpan<byte> source, out int bytesRead)
-        {
-            KeyFormatHelper.ReadSubjectPublicKeyInfo<ECParameters, ReadOnlyMemory<byte>>(
-                s_validOids,
-                source,
-                FromECPublicKey,
-                out bytesRead,
-                out ECParameters ret);
-
-            return ret;
-        }
-
-        public byte[] ToPkcs8PrivateKey()
-        {
-            using (AsnWriter writer = WritePkcs8PrivateKey())
-            {
-                return writer.Encode();
-            }
-        }
-
-        public byte[] ToSubjectPublicKeyInfo()
-        {
-            using (AsnWriter writer = WriteSubjectPublicKeyInfo())
-            {
-                return writer.Encode();
-            }
-        }
-
-        public byte[] ToEncryptedPkcs8PrivateKey(
-            ReadOnlySpan<char> password,
-            HashAlgorithmName pbkdf2HashAlgorithm,
-            int pbkdf2IterationCount,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm)
-        {
-            using (AsnWriter pkcs8Writer = WritePkcs8PrivateKey())
-            using (AsnWriter encryptedWriter = KeyFormatHelper.WriteEncryptedPkcs8(
-                password,
-                pkcs8Writer,
-                encryptionAlgorithm,
-                pbkdf2HashAlgorithm,
-                pbkdf2IterationCount))
-            {
-                return encryptedWriter.Encode();
-            }
-        }
-
-        public byte[] ToEncryptedPkcs8PrivateKey(
-            ReadOnlySpan<byte> passwordBytes,
-            HashAlgorithmName pbkdf2HashAlgorithm,
-            int pbkdf2IterationCount,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm)
-        {
-            using (AsnWriter pkcs8Writer = WritePkcs8PrivateKey())
-            using (AsnWriter encryptedWriter = KeyFormatHelper.WriteEncryptedPkcs8(
-                passwordBytes,
-                pkcs8Writer,
-                encryptionAlgorithm,
-                pbkdf2HashAlgorithm,
-                pbkdf2IterationCount))
-            {
-                return encryptedWriter.Encode();
-            }
-        }
-
-        public bool TryWritePkcs8PrivateKey(Span<byte> destination, out int bytesWritten)
-        {
-            using (AsnWriter writer = WritePkcs8PrivateKey())
-            {
-                return writer.TryEncode(destination, out bytesWritten);
-            }
-        }
-
-        public bool TryWriteEncryptedPkcs8PrivateKey(
-            ReadOnlySpan<char> password,
-            HashAlgorithmName pbkdf2HashAlgorithm,
-            int pbkdf2IterationCount,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
-            Span<byte> destination,
-            out int bytesWritten)
-        {
-            using (AsnWriter pkcs8Writer = WritePkcs8PrivateKey())
-            using (AsnWriter encryptedWriter = KeyFormatHelper.WriteEncryptedPkcs8(
-                password,
-                pkcs8Writer,
-                encryptionAlgorithm,
-                pbkdf2HashAlgorithm,
-                pbkdf2IterationCount))
-            {
-                return encryptedWriter.TryEncode(destination, out bytesWritten);
-            }
-        }
-
-        public bool TryWriteEncryptedPkcs8PrivateKey(
-            ReadOnlySpan<byte> passwordBytes,
-            HashAlgorithmName pbkdf2HashAlgorithm,
-            int pbkdf2IterationCount,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
-            Span<byte> destination,
-            out int bytesWritten)
-        {
-            using (AsnWriter pkcs8Writer = WritePkcs8PrivateKey())
-            using (AsnWriter encryptedWriter = KeyFormatHelper.WriteEncryptedPkcs8(
-                passwordBytes,
-                pkcs8Writer,
-                encryptionAlgorithm,
-                pbkdf2HashAlgorithm,
-                pbkdf2IterationCount))
-            {
-                return encryptedWriter.TryEncode(destination, out bytesWritten);
-            }
-        }
-
-        public bool TryWriteSubjectPublicKeyInfo(Span<byte> destination, out int bytesWritten)
-        {
-            using (AsnWriter writer = WriteSubjectPublicKeyInfo())
-            {
-                return writer.TryEncode(destination, out bytesWritten);
-            }
-        }
-
-        private AsnWriter WriteSubjectPublicKeyInfo()
+        internal AsnWriter WriteSubjectPublicKeyInfo()
         {
             Validate();
 
@@ -454,7 +302,7 @@ namespace System.Security.Cryptography
             writer.PopSequence();
         }
 
-        private AsnWriter WritePkcs8PrivateKey()
+        internal AsnWriter WritePkcs8PrivateKey()
         {
             Validate();
 
@@ -469,7 +317,8 @@ namespace System.Security.Cryptography
                 throw new CryptographicException(SR.Cryptography_ECC_NamedCurvesOnly);
             }
 
-            using (AsnWriter ecPrivateKey = WriteEcPrivateKey())
+            // Don't need the domain parameters because they're contained in the algId.
+            using (AsnWriter ecPrivateKey = WriteEcPrivateKey(includeDomainParameters: false))
             using (AsnWriter algorithmIdentifier = WriteAlgorithmIdentifier())
             {
                 return KeyFormatHelper.WritePkcs8(algorithmIdentifier, ecPrivateKey);
@@ -530,7 +379,7 @@ namespace System.Security.Cryptography
             }
         }
 
-        private AsnWriter WriteEcPrivateKey()
+        private AsnWriter WriteEcPrivateKey(bool includeDomainParameters)
         {
             bool returning = false;
             AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
@@ -547,6 +396,7 @@ namespace System.Security.Cryptography
                 writer.WriteOctetString(D);
 
                 // domainParameters
+                if (includeDomainParameters)
                 {
                     Asn1Tag explicit0 = new Asn1Tag(TagClass.ContextSpecific, 0, isConstructed: true);
                     writer.PushSequence(explicit0);

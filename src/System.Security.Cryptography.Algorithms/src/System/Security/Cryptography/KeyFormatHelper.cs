@@ -49,6 +49,26 @@ namespace System.Security.Cryptography
             }
         }
 
+        internal static void ReadSubjectPublicKeyInfo(
+            string[] validOids,
+            ReadOnlyMemory<byte> source,
+            Action<AlgorithmIdentifierAsn, ReadOnlyMemory<byte>> reader,
+            out int bytesRead)
+        {
+            // X.509 SubjectPublicKeyInfo is described as DER.
+            SubjectPublicKeyInfo spki =
+                AsnSerializer.Deserialize<SubjectPublicKeyInfo>(source, AsnEncodingRules.DER, out int read);
+
+            if (Array.IndexOf(validOids, spki.Algorithm.Algorithm.Value) < 0)
+            {
+                // TODO: Better message?
+                throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
+            }
+
+            reader(spki.Algorithm, spki.SubjectPublicKey);
+            bytesRead = read;
+        }
+
         internal static ReadOnlyMemory<byte> ReadSubjectPublicKeyInfo(
             string[] validOids,
             ReadOnlyMemory<byte> source,
@@ -126,6 +146,25 @@ namespace System.Security.Cryptography
             }
         }
 
+        internal static void ReadPkcs8(
+            string[] validOids,
+            ReadOnlyMemory<byte> source,
+            Action<AlgorithmIdentifierAsn, ReadOnlyMemory<byte>> reader,
+            out int bytesRead)
+        {
+            PrivateKeyInfo privateKeyInfo =
+                AsnSerializer.Deserialize<PrivateKeyInfo>(source, AsnEncodingRules.BER, out int read);
+
+            if (Array.IndexOf(validOids, privateKeyInfo.PrivateKeyAlgorithm.Algorithm.Value) < 0)
+            {
+                // TODO: Better message?
+                throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
+            }
+
+            reader(privateKeyInfo.PrivateKeyAlgorithm, privateKeyInfo.PrivateKey);
+            bytesRead = read;
+        }
+
         internal static ReadOnlyMemory<byte> ReadPkcs8(
             string[] validOids,
             ReadOnlyMemory<byte> source,
@@ -189,7 +228,7 @@ namespace System.Security.Cryptography
 
         internal static void ReadEncryptedPkcs8<TRet, TParsed>(
             string[] validOids,
-            ReadOnlySpan<byte> source,
+            ReadOnlyMemory<byte> source,
             ReadOnlySpan<byte> passwordBytes,
             KeyReader<TRet, TParsed> keyReader,
             out int bytesRead,

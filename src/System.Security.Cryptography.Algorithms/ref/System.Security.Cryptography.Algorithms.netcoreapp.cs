@@ -53,27 +53,6 @@ namespace System.Security.Cryptography
         public virtual bool TrySignHash(ReadOnlySpan<byte> hash, Span<byte> destination, out int bytesWritten) { throw null; }
         public virtual bool VerifyData(ReadOnlySpan<byte> data, ReadOnlySpan<byte> signature, HashAlgorithmName hashAlgorithm) { throw null; }
         public virtual bool VerifyHash(ReadOnlySpan<byte> hash, ReadOnlySpan<byte> signature) { throw null; }
-        public virtual void ImportEncryptedkcs8PrivateKey(System.ReadOnlySpan<char> password, System.ReadOnlySpan<byte> source, out int bytesRead) => throw null;
-        public virtual void ImportEncryptedkcs8PrivateKey(System.ReadOnlySpan<byte> passwordBytes, System.ReadOnlySpan<byte> source, out int bytesRead) => throw null;
-        public virtual byte[] ExportEncryptedPkcs8PrivateKey(System.ReadOnlySpan<char> password, HashAlgorithmName pbkdf2HashAlgorithm, int pbkdf2IterationCount, Pkcs8.EncryptionAlgorithm encryptionAlgorithm) => throw null;
-        public virtual byte[] ExportEncryptedPkcs8PrivateKey(System.ReadOnlySpan<byte> passwordBytes, HashAlgorithmName pbkdf2HashAlgorithm, int pbkdf2IterationCount, Pkcs8.EncryptionAlgorithm encryptionAlgorithm) => throw null;
-        public virtual bool TryExportEncryptedPkcs8PrivateKey(System.ReadOnlySpan<char> password, HashAlgorithmName pbkdf2HashAlgorithm, int pbkdf2IterationCount, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, System.Span<byte> destination, out int bytesWritten) => throw null;
-        public virtual bool TryExportEncryptedPkcs8PrivateKey(System.ReadOnlySpan<byte> passwordBytes, HashAlgorithmName pbkdf2HashAlgorithm, int pbkdf2IterationCount, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, System.Span<byte> destination, out int bytesWritten) => throw null;
-    }
-    public partial struct ECParameters
-    {
-        public static ECParameters FromPkcs8PrivateKey(System.ReadOnlySpan<byte> source, out int bytesRead) => throw null;
-        public static ECParameters FromEncryptedPkcs8PrivateKey(System.ReadOnlySpan<char> password, System.ReadOnlySpan<byte> source, out int bytesRead) => throw null;
-        public static ECParameters FromEncryptedPkcs8PrivateKey(System.ReadOnlySpan<byte> passwordBytes, System.ReadOnlySpan<byte> source, out int bytesRead) => throw null;
-        public static ECParameters FromSubjectPublicKeyInfo(System.ReadOnlySpan<byte> source, out int bytesRead) => throw null;
-        public byte[] ToPkcs8PrivateKey() => throw null;
-        public byte[] ToEncryptedPkcs8PrivateKey(System.ReadOnlySpan<char> password, HashAlgorithmName pbkdf2HashAlgorithm, int pbkdf2IterationCount, Pkcs8.EncryptionAlgorithm encryptionAlgorithm) => throw null;
-        public byte[] ToEncryptedPkcs8PrivateKey(System.ReadOnlySpan<byte> passwordBytes, HashAlgorithmName pbkdf2HashAlgorithm, int pbkdf2IterationCount, Pkcs8.EncryptionAlgorithm encryptionAlgorithm) => throw null;
-        public byte[] ToSubjectPublicKeyInfo() => throw null;
-        public bool TryWritePkcs8PrivateKey(System.Span<byte> destination, out int bytesWritten) => throw null;
-        public bool TryWriteEncryptedPkcs8PrivateKey(System.ReadOnlySpan<char> password, HashAlgorithmName pbkdf2HashAlgorithm, int pbkdf2IterationCount, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, System.Span<byte> destination, out int bytesWritten) => throw null;
-        public bool TryWriteEncryptedPkcs8PrivateKey(System.ReadOnlySpan<byte> passwordBytes, HashAlgorithmName pbkdf2HashAlgorithm, int pbkdf2IterationCount, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, System.Span<byte> destination, out int bytesWritten) => throw null;
-        public bool TryWriteSubjectPublicKeyInfo(System.Span<byte> destination, out int bytesWritten) => throw null;
     }
     public sealed partial class IncrementalHash : System.IDisposable
     {

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Security.Cryptography.EcDsa.Tests;
 using System.Security.Cryptography.Tests;
 using Test.Cryptography;
 using Xunit;
@@ -32,16 +33,6 @@ namespace System.Security.Cryptography.Algorithms.Tests
                 "43545166CA6553CD38FF713D1289C698BD7D086B55E01B5BD5ED27E3630376B1" +
                 "1666").HexToByteArray(),
         };
-
-        [Fact]
-        public static void WritePkcs8ForNamedCurveRaw()
-        {
-            ECParameters expected = NistP521Key1;
-
-            byte[] pkcs8 = expected.ToPkcs8PrivateKey();
-            ECParameters readBack = ECParameters.FromPkcs8PrivateKey(pkcs8, out _);
-            EccTestBase.AssertEqual(expected, readBack);
-        }
 
         [Fact]
         public static void ReadWriteNistP521Pkcs8()
@@ -83,41 +74,31 @@ F71o65UNB+verEgN49rQK7FAFtoVI2oRjHLO1cGjxZkbWe2KLtgJWsgmexRq3/a+
 Pfuapj3LAHALZtDNMZ+QCFN2ZXUSFNWiBSwnwCAtfFCn/EchPo3MFR3K0q/qXTua
 qtlbnispri1a/EghiaPQ0po=";
 
-            byte[] derBytes = Convert.FromBase64String(base64);
-
-            ECParameters ecParameters =
-                ECParameters.FromEncryptedPkcs8PrivateKey("qwerty", derBytes, out int bytesRead);
-
-            Assert.Equal(derBytes.Length, bytesRead);
-            EccTestBase.AssertEqual(NistP521Key1, ecParameters);
+            ReadWriteBase64EncryptedPkcs8(
+                base64,
+                "qwerty",
+                new PbeParameters(
+                    PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
+                    HashAlgorithmName.SHA1,
+                    123321),
+                NistP521Key1);
         }
 
-        [Fact]
-        public static void WriteEncryptedPkcs8()
+        private static void ReadWriteBase64EncryptedPkcs8(
+            string base64EncryptedPkcs8,
+            string password,
+            PbeParameters pbe,
+            in ECParameters expected)
         {
-            ECParameters generated;
-
-            using (ECDsa ecdsa = ECDsa.Create())
-            {
-                generated = ecdsa.ExportParameters(true);
-            }
-
-            byte[] encryptedKey = generated.ToEncryptedPkcs8PrivateKey(
-                nameof(WriteEncryptedPkcs8),
-                HashAlgorithmName.SHA512,
-                1048576,
-                Pkcs8.EncryptionAlgorithm.Aes128Cbc);
-
-            Assert.ThrowsAny<CryptographicException>(
-                () => ECParameters.FromEncryptedPkcs8PrivateKey("wrong answer", encryptedKey, out _));
-
-            ECParameters readBack = ECParameters.FromEncryptedPkcs8PrivateKey(
-                System.Text.Encoding.UTF8.GetBytes(nameof(WriteEncryptedPkcs8)),
-                encryptedKey,
-                out int bytesRead);
-
-            Assert.Equal(encryptedKey.Length, bytesRead);
-            EccTestBase.AssertEqual(generated, readBack);
+            ReadWriteKey(
+                base64EncryptedPkcs8,
+                expected,
+                (ECDsa ecdsa, ReadOnlyMemory<byte> source, out int read) =>
+                    ecdsa.ImportEncryptedPkcs8PrivateKey(password, source, out read),
+                ecdsa => ecdsa.ExportEncryptedPkcs8PrivateKey(password, pbe),
+                (ECDsa ecdsa, Span<byte> destination, out int bytesWritten) =>
+                    ecdsa.TryExportEncryptedPkcs8PrivateKey(password, pbe, destination, out bytesWritten),
+                isEncrypted: true);
         }
 
         private static void ReadWriteBase64Pkcs8(string base64Pkcs8, in ECParameters expected)
@@ -125,10 +106,11 @@ qtlbnispri1a/EghiaPQ0po=";
             ReadWriteKey(
                 base64Pkcs8,
                 expected,
-                ECParameters.FromPkcs8PrivateKey,
-                p => p.ToPkcs8PrivateKey(),
-                (ECParameters p, Span<byte> destination, out int bytesWritten) =>
-                    p.TryWritePkcs8PrivateKey(destination, out bytesWritten));
+                (ECDsa ecdsa, ReadOnlyMemory<byte> source, out int read) =>
+                    ecdsa.ImportPkcs8PrivateKey(source, out read),
+                ecdsa => ecdsa.ExportPkcs8PrivateKey(),
+                (ECDsa ecdsa, Span<byte> destination, out int bytesWritten) =>
+                    ecdsa.TryExportPkcs8PrivateKey(destination, out bytesWritten));
         }
 
         private static void ReadWriteBase64SubjectPublicKeyInfo(
@@ -141,67 +123,131 @@ qtlbnispri1a/EghiaPQ0po=";
             ReadWriteKey(
                 base64SubjectPublicKeyInfo,
                 expectedPublic,
-                ECParameters.FromSubjectPublicKeyInfo,
-                p => p.ToSubjectPublicKeyInfo(),
-                (ECParameters p, Span<byte> destination, out int bytesWritten) =>
-                    p.TryWriteSubjectPublicKeyInfo(destination, out bytesWritten));
+                (ECDsa ecdsa, ReadOnlyMemory<byte> source, out int read) => 
+                    ecdsa.ImportSubjectPublicKeyInfo(source, out read),
+                ecdsa => ecdsa.ExportSubjectPublicKeyInfo(),
+                (ECDsa ecdsa, Span<byte> destination, out int written) =>
+                    ecdsa.TryExportSubjectPublicKeyInfo(destination, out written));
         }
 
         private static void ReadWriteKey(
-            string base64PrivatePkcs1,
+            string base64,
             in ECParameters expected,
-            ReadKeyFunc readFunc,
-            WriteKeyToArrayFunc writeArrayFunc,
-            WriteKeyToSpanFunc writeSpanFunc)
+            ReadKeyAction readAction,
+            Func<ECDsa, byte[]> writeArrayFunc,
+            WriteKeyToSpanFunc writeSpanFunc,
+            bool isEncrypted = false)
         {
-            byte[] derBytes = Convert.FromBase64String(base64PrivatePkcs1);
+            bool isPrivateKey = expected.D != null;
 
-            ECParameters actual = readFunc(derBytes, out int bytesRead);
-            Assert.Equal(derBytes.Length, bytesRead);
+            byte[] derBytes = Convert.FromBase64String(base64);
+            byte[] arrayExport;
+            byte[] tooBig;
+            const int OverAllocate = 30;
+            const int WriteShift = 6;
 
-            EccTestBase.AssertEqual(expected, actual);
+            using (ECDsa ecdsa = ECDsaFactory.Create())
+            {
+                readAction(ecdsa, derBytes, out int bytesRead);
+                Assert.Equal(derBytes.Length, bytesRead);
 
-            byte[] output = writeArrayFunc(expected);
+                arrayExport = writeArrayFunc(ecdsa);
 
-            // Don't just assume that the input bytes will match, because there are
-            // optional values that might not be written in one or the other.
-            // But our writes should be deterministic.
-            ECParameters secondActual = readFunc(output, out bytesRead);
-            Assert.Equal(output.Length, bytesRead);
+                ECParameters ecParameters = ecdsa.ExportParameters(isPrivateKey);
+                EccTestBase.AssertEqual(expected, ecParameters);
+            }
 
-            EccTestBase.AssertEqual(expected, secondActual);
+            // It's not reasonable to assume that arrayExport and derBytes have the same
+            // contents, because the SubjectPublicKeyInfo and PrivateKeyInfo formats both
+            // have the curve identifier in the AlgorithmIdentifier.Parameters field, and
+            // either the input or the output may have chosen to then not emit it in the
+            // optional domainParameters field of the ECPrivateKey blob.
+            //
+            // Once we have exported the data to normalize it, though, we should see
+            // consistency in the answer format.
 
-            byte[] output2 = new byte[output.Length + 12];
-            output2.AsSpan().Fill(0xC3);
-            int bytesWritten = 3;
+            using (ECDsa ecdsa = ECDsaFactory.Create())
+            {
+                Assert.ThrowsAny<CryptographicException>(
+                    () => readAction(ecdsa, arrayExport.AsMemory(1), out _));
 
-            Assert.False(writeSpanFunc(actual, output2.AsSpan(0, output.Length - 1), out bytesWritten));
-            Assert.Equal(0, bytesWritten);
-            Assert.Equal(0xC3, output2[0]);
+                Assert.ThrowsAny<CryptographicException>(
+                    () => readAction(ecdsa, arrayExport.AsMemory(0, arrayExport.Length - 1), out _));
 
-            string hexOutput = output.ByteArrayToHex();
+                readAction(ecdsa, arrayExport, out int bytesRead);
+                Assert.Equal(arrayExport.Length, bytesRead);
 
-            Assert.True(writeSpanFunc(actual, output2, out bytesWritten));
-            Assert.Equal(bytesRead, bytesWritten);
-            Assert.Equal(hexOutput, output2.AsSpan(0, bytesWritten).ByteArrayToHex());
-            Assert.Equal(0xC3, output2[bytesWritten]);
-            bytesWritten = 5;
+                ECParameters ecParameters = ecdsa.ExportParameters(isPrivateKey);
+                EccTestBase.AssertEqual(expected, ecParameters);
 
-            output2.AsSpan().Fill(0xC4);
-            Assert.True(writeSpanFunc(actual, output2.AsSpan(1, bytesRead), out bytesWritten));
-            Assert.Equal(bytesRead, bytesWritten);
-            Assert.Equal(hexOutput, output2.AsSpan(1, bytesWritten).ByteArrayToHex());
-            Assert.Equal(0xC4, output2[0]);
-            Assert.Equal(0xC4, output2[bytesWritten + 1]);
+                Assert.False(
+                    writeSpanFunc(ecdsa, Span<byte>.Empty, out int bytesWritten),
+                    "Write to empty span");
+
+                Assert.Equal(0, bytesWritten);
+
+                Assert.False(
+                    writeSpanFunc(
+                        ecdsa,
+                        derBytes.AsSpan(0, Math.Min(derBytes.Length, arrayExport.Length) - 1),
+                        out bytesWritten),
+                    "Write to too-small span");
+
+                Assert.Equal(0, bytesWritten);
+
+                tooBig = new byte[arrayExport.Length + OverAllocate];
+                tooBig.AsSpan().Fill(0xC4);
+
+                Assert.True(writeSpanFunc(ecdsa, tooBig.AsSpan(WriteShift), out bytesWritten));
+                Assert.Equal(arrayExport.Length, bytesWritten);
+
+                Assert.Equal(0xC4, tooBig[WriteShift - 1]);
+                Assert.Equal(0xC4, tooBig[WriteShift + bytesWritten + 1]);
+
+                // If encrypted, the data should have had a random salt applied, so unstable.
+                // Otherwise, we've normalized the data (even for private keys) so the output
+                // should match what it output previously.
+                if (isEncrypted)
+                {
+                    Assert.NotEqual(
+                        arrayExport.ByteArrayToHex(),
+                        tooBig.AsSpan(WriteShift, bytesWritten).ByteArrayToHex());
+                }
+                else
+                {
+                    Assert.Equal(
+                        arrayExport.ByteArrayToHex(),
+                        tooBig.AsSpan(WriteShift, bytesWritten).ByteArrayToHex());
+                }
+            }
+
+            using (ECDsa ecdsa = ECDsaFactory.Create())
+            {
+                readAction(ecdsa, tooBig.AsMemory(WriteShift), out int bytesRead);
+                Assert.Equal(arrayExport.Length, bytesRead);
+
+                arrayExport.AsSpan().Fill(0xCA);
+
+                Assert.True(
+                    writeSpanFunc(ecdsa, arrayExport, out int bytesWritten),
+                    "Write to precisely allocated Span");
+
+                if (isEncrypted)
+                {
+                    Assert.NotEqual(
+                        tooBig.AsSpan(WriteShift, bytesWritten).ByteArrayToHex(),
+                        arrayExport.ByteArrayToHex());
+                }
+                else
+                {
+                    Assert.Equal(
+                        tooBig.AsSpan(WriteShift, bytesWritten).ByteArrayToHex(),
+                        arrayExport.ByteArrayToHex());
+                }
+            }
         }
 
-        private delegate ECParameters ReadKeyFunc(ReadOnlySpan<byte> source, out int bytesRead);
-
-        private delegate byte[] WriteKeyToArrayFunc(ECParameters rsaParameters);
-
-        private delegate bool WriteKeyToSpanFunc(
-            ECParameters rsaParameters,
-            Span<byte> destination,
-            out int bytesWritten);
+        private delegate void ReadKeyAction(ECDsa ecdsa, ReadOnlyMemory<byte> source, out int bytesRead);
+        private delegate bool WriteKeyToSpanFunc(ECDsa ecdsa, Span<byte> destination, out int bytesWritten);
     }
 }
