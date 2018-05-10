@@ -2,13 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Security.Cryptography.Rsa.Tests;
 using Test.Cryptography;
 using Xunit;
 
-namespace System.Security.Cryptography.Algorithms.Tests
+namespace System.Security.Cryptography.Rsa.Tests
 {
-    public static class RSAParametersTests
+    public static class RSAKeyFileTests
     {
         [Fact]
         public static void ReadWriteBigExponentPrivatePkcs1()
