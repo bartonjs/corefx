@@ -107,9 +107,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             }
         }
 
-#if FIXED_CNG_EXPORT
         [Fact]
-#endif
         public static void WriteOneCertWithKey_Encrypted_SameSafe()
         {
             Pkcs12SafeContents contents = new Pkcs12SafeContents();
@@ -157,9 +155,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             }
         }
 
-#if FIXED_CNG_EXPORT
         [Fact]
-#endif
         public static void WriteOneCertWithKey_LikeWindows()
         {
             Pkcs12SafeContents safe1 = new Pkcs12SafeContents();
