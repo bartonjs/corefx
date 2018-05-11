@@ -10,29 +10,6 @@ namespace System.Security.Cryptography.EcDsa.Tests
 {
     public static class ECDsaKeyFileTests
     {
-        private static readonly ECParameters NistP521Key1 = new ECParameters
-        {
-            Curve = ECCurve.NamedCurves.nistP521,
-
-            Q =
-            {
-                X = (
-                    "00751F26324C73CEF5D45EBB32937E3060E351960A57594AD03EB1CA0C5EA747" +
-                    "1213366BA991D24406717F86FDEFDE086E09B954A57DC0F5E9459756D60C2AAE" +
-                    "6DE0").HexToByteArray(),
-
-                Y = (
-                    "01A8DDBB3F02C8C23524729F548B7E23325233EF67DD30752B924F297459E3C2" +
-                    "E12AE8D8F4FE4454E3847C18B255CACEF59737B918E1DE40F95E9FFE4F57B791" +
-                    "53A0").HexToByteArray(),
-            },
-
-            D = (
-                "01A55F8785A5730BAEE1D6B3D301069F7FD64D8B04CCEA57EFD5961E68F33FAB" +
-                "43545166CA6553CD38FF713D1289C698BD7D086B55E01B5BD5ED27E3630376B1" +
-                "1666").HexToByteArray(),
-        };
-
         [Fact]
         public static void ReadWriteNistP521Pkcs8()
         {
@@ -44,7 +21,7 @@ a6mR0kQGcX+G/e/eCG4JuVSlfcD16UWXVtYMKq5t4AGo3bs/AsjCNSRyn1SLfiMy
 UjPvZ90wdSuSTyl0WePC4Sro2PT+RFTjhHwYslXKzvWXN7kY4d5A+V6f/k9Xt5FT
 oA==";
 
-            ReadWriteBase64Pkcs8(base64, NistP521Key1);
+            ReadWriteBase64Pkcs8(base64, EccTestData.GetNistP521Key2());
         }
 
         [Fact]
@@ -56,7 +33,7 @@ WUrQPrHKDF6nRxITNmupkdJEBnF/hv3v3ghuCblUpX3A9elFl1bWDCqubeABqN27
 PwLIwjUkcp9Ui34jMlIz72fdMHUrkk8pdFnjwuEq6Nj0/kRU44R8GLJVys71lze5
 GOHeQPlen/5PV7eRU6A=";
 
-            ReadWriteBase64SubjectPublicKeyInfo(base64, NistP521Key1);
+            ReadWriteBase64SubjectPublicKeyInfo(base64, EccTestData.GetNistP521Key2());
         }
 
         [Fact]
@@ -80,7 +57,26 @@ qtlbnispri1a/EghiaPQ0po=";
                     PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
                     HashAlgorithmName.SHA1,
                     123321),
-                NistP521Key1);
+                EccTestData.GetNistP521Key2());
+        }
+
+        [Fact]
+        public static void ReadNistP256EncryptedPkcs8_Pbes1_RC2_MD5()
+        {
+            const string base64 = @"
+MIGwMBsGCSqGSIb3DQEFBjAOBAiVk8SDhLdiNwICCAAEgZB2rI9tf7jjGdEwJNrS
+8F/xNIo/0OSUSkQyg5n/ovRK1IodzPpWqipqM8TGfZk4sxn7h7RBmX2FlMkTLO4i
+mVannH3jd9cmCAz0aewDO0/LgmvDnzWiJ/CoDamzwC8bzDocq1Y/PsVYsYzSrJ7n
+m8STNpW+zSpHWlpHpWHgXGq4wrUKJifxOv6Rm5KTYcvUT38=";
+
+            ReadWriteBase64EncryptedPkcs8(
+                base64,
+                "secp256r1",
+                new PbeParameters(
+                    PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
+                    HashAlgorithmName.SHA1,
+                    1024),
+                EccTestData.GetNistP521ReferenceKey());
         }
 
         private static void ReadWriteBase64EncryptedPkcs8(

@@ -172,6 +172,50 @@ namespace System.Security.Cryptography.Tests
                     "956FA22DD3C8682751296C129D55F8F8C15483103D99899446E13285998B7E0F05").HexToByteArray(),
             };
         }
+
+        internal static ECParameters GetNistP521Key2()
+        {
+            return new ECParameters
+            {
+                Curve = ECCurve.NamedCurves.nistP521,
+
+                Q =
+                {
+                    X = (
+                        "00751F26324C73CEF5D45EBB32937E3060E351960A57594AD03EB1CA0C5EA747" +
+                        "1213366BA991D24406717F86FDEFDE086E09B954A57DC0F5E9459756D60C2AAE" +
+                        "6DE0").HexToByteArray(),
+
+                    Y = (
+                        "01A8DDBB3F02C8C23524729F548B7E23325233EF67DD30752B924F297459E3C2" +
+                        "E12AE8D8F4FE4454E3847C18B255CACEF59737B918E1DE40F95E9FFE4F57B791" +
+                        "53A0").HexToByteArray(),
+                },
+
+                D = (
+                    "01A55F8785A5730BAEE1D6B3D301069F7FD64D8B04CCEA57EFD5961E68F33FAB" +
+                    "43545166CA6553CD38FF713D1289C698BD7D086B55E01B5BD5ED27E3630376B1" +
+                    "1666").HexToByteArray(),
+            };
+        }
+
+        internal static ECParameters GetNistP521ReferenceKey()
+        {
+            // From Suite B Implementers's Guide to FIPS 186-3 (ECDSA)
+            // Section D.1.1
+            return new ECParameters
+            {
+                Curve = ECCurve.NamedCurves.nistP256,
+
+                Q =
+                {
+                    X = "8101ECE47464A6EAD70CF69A6E2BD3D88691A3262D22CBA4F7635EAFF26680A8".HexToByteArray(),
+                    Y = "D8A12BA61D599235F67D9CB4D58F1783D3CA43E78F0A5ABAA624079936C0C3A9".HexToByteArray(),
+                },
+
+                D = "70A12C2DB16845ED56FF68CFC21A472B3F04D7D6851BF6349F2D7D5B3452B38A".HexToByteArray(),
+            };
+        }
 #endif // netcoreapp
     }
 }
