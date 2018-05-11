@@ -36,7 +36,7 @@ namespace System.Security.Cryptography.Pkcs
     public sealed partial class Pkcs12Builder
     {
         public bool IsSealed { get; }
-        public void AddSafeContentsEncrypted(Pkcs12SafeContents safeContents, ReadOnlySpan<char> password, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, HashAlgorithmName hashAlgorithm, int iterationCount) => throw null;
+        public void AddSafeContentsEncrypted(Pkcs12SafeContents safeContents, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public void AddSafeContentsEnveloped(Pkcs12SafeContents safeContents, CmsRecipient recipient) => throw null;
         public void AddSafeContentsUnencrypted(Pkcs12SafeContents safeContents) => throw null;
         public byte[] Encode() => throw null;
@@ -75,14 +75,14 @@ namespace System.Security.Cryptography.Pkcs
         public void AddSafeBag(Pkcs12SafeBag safeBag) => throw null;
         public CertBag AddCertificate(X509Certificate2 certificate) => throw null;
         public KeyBag AddKeyUnencrypted(ReadOnlyMemory<byte> pkcs8PrivateKey) => throw null;
-        public SafeContentsBag AddNestedSafeContentsEncrypted(Pkcs12SafeContents safeContents, ReadOnlySpan<char> password, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, HashAlgorithmName hashAlgorithm, int iterationCount) => throw null;
+        public SafeContentsBag AddNestedSafeContentsEncrypted(Pkcs12SafeContents safeContents, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public SafeContentsBag AddNestedSafeContentsEnveloped(Pkcs12SafeContents safeContents, CmsRecipient recipient) => throw null;
         public SafeContentsBag AddNestedSafeContentsUnencrypted(Pkcs12SafeContents safeContents) => throw null;
         public ShroudedKeyBag AddShroudedKey(ReadOnlyMemory<byte> encryptedPkcs8PrivateKey) => throw null;
-        public ShroudedKeyBag AddShroudedKey(DSA key, ReadOnlySpan<char> password, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, HashAlgorithmName hashAlgorithm, int iterationCount) => throw null;
-        public ShroudedKeyBag AddShroudedKey(ECDiffieHellman key, ReadOnlySpan<char> password, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, HashAlgorithmName hashAlgorithm, int iterationCount) => throw null;
-        public ShroudedKeyBag AddShroudedKey(ECDsa key, ReadOnlySpan<char> password, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, HashAlgorithmName hashAlgorithm, int iterationCount) => throw null;
-        public ShroudedKeyBag AddShroudedKey(RSA key, ReadOnlySpan<char> password, Pkcs8.EncryptionAlgorithm encryptionAlgorithm, HashAlgorithmName hashAlgorithm, int iterationCount) => throw null;
+        public ShroudedKeyBag AddShroudedKey(DSA key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
+        public ShroudedKeyBag AddShroudedKey(ECDiffieHellman key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
+        public ShroudedKeyBag AddShroudedKey(ECDsa key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
+        public ShroudedKeyBag AddShroudedKey(RSA key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue) => throw null;
         public void Decrypt(ReadOnlySpan<char> password) => throw null;
         public void DecryptEnveloped(System.Security.Cryptography.X509Certificates.X509Certificate2Collection extraStore=null) => throw null;
@@ -96,6 +96,41 @@ namespace System.Security.Cryptography.Pkcs
             Password = 2,
             PublicKey = 3,
         }
+    }
+    public sealed partial class Pkcs8PrivateKeyInfo
+    {
+        // Could be Oid, if we want.
+        public string AlgorithmId { get; }
+        public ReadOnlyMemory<byte> AlgorithmParameters { get; }
+        public CryptographicAttributeObjectCollection Attributes { get; }
+        public ReadOnlyMemory<byte> PrivateKeyBytes { get; }
+        // Since we need the algorithm identifier (or an is-waterfall) these don't collapse to
+        // AsymmetricAlgorithm.
+        public Pkcs8PrivateKeyInfo(DSA privateKey) { }
+        public Pkcs8PrivateKeyInfo(ECDsa privateKey) { }
+        public Pkcs8PrivateKeyInfo(ECDiffieHellman privateKey) { }
+        public Pkcs8PrivateKeyInfo(RSA privateKey) { }
+        public Pkcs8PrivateKeyInfo(
+            string algorithmId, ReadOnlyMemory<byte> algorithmParameters,
+            ReadOnlyMemory<byte> privateKey, bool skipCopies = false) { }
+        public static void Decode(
+            ReadOnlyMemory<byte> source, out int bytesRead, bool skipCopy = false) => throw null;
+    }
+    public sealed partial class Pkcs8PrivateKeyInfo
+    {
+        public byte[] Encode() => throw null;
+        public byte[] Encrypt(ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
+        public byte[] Encrypt(ReadOnlySpan<byte> passwordBytes, PbeParameters pbeParameters) => throw null;
+        public bool TryEncode(Span<byte> destination, out int bytesWritten) => throw null;
+        public bool TryEncrypt(ReadOnlySpan<char> password, PbeParameters pbeParameters, Span<byte> destination, out int bytesWritten) => throw null;
+        public bool TryEncrypt(ReadOnlySpan<byte> passwordBytes, PbeParameters pbeParameters, Span<byte> destination, out int bytesWritten) => throw null;
+    }
+    public sealed partial class Pkcs8PrivateKeyInfo
+    {
+        public static void Decrypt(
+            ReadOnlySpan<char> password, ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
+        public static void Decrypt(
+            ReadOnlySpan<byte> passwordBytes, ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
     }
     public sealed partial class Rfc3161TimestampRequest
     {

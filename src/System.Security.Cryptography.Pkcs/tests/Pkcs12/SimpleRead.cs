@@ -45,27 +45,32 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.True(certBag.IsX509Certificate, "certBag.IsX509Certificate");
             Assert.InRange(certBag.RawData.Length, loader.CerData.Length + 2, int.MaxValue);
 
+            byte[] data = { 9, 8, 7, 6, 5, 4, 3, 2, 1 };
+            byte[] encrypted;
+
             using (X509Certificate2 fromLoader = loader.GetCertificate())
             using (X509Certificate2 fromBag = certBag.GetCertificate())
+            using (RSA loaderPub = fromLoader.GetRSAPublicKey())
             {
                 Assert.Equal(fromLoader.RawData, fromBag.RawData);
+
+                encrypted = loaderPub.Encrypt(data, RSAEncryptionPadding.OaepSHA1);
             }
 
-            RSAParameters rsaParams = RSAParameters.FromEncryptedPkcs8PrivateKey(
-                loader.Password,
-                shroudedKeyBag.EncryptedPkcs8PrivateKey.Span,
-                out int bytesRead);
+            int bytesRead;
+
+            using (RSA rsa = RSA.Create())
+            {
+                rsa.ImportEncryptedPkcs8PrivateKey(
+                    loader.Password,
+                    shroudedKeyBag.EncryptedPkcs8PrivateKey,
+                    out bytesRead);
+
+                byte[] dec = rsa.Decrypt(encrypted, RSAEncryptionPadding.OaepSHA1);
+                Assert.Equal(data, dec);
+            }
 
             Assert.Equal(shroudedKeyBag.EncryptedPkcs8PrivateKey.Length, bytesRead);
-            Assert.Equal("010001", rsaParams.Exponent.ByteArrayToHex());
-
-            const string expectedDValue =
-                "2A3F837316016A200D379F5B9ABCD5EB353F5A4D0A420758BA71AF2B91CA1C4B" +
-                "33D16DB8D8B23900D67255497CB1B1A7CB061CF5FC40DB8E184848071984EC3F" +
-                "D25A98E7BE825320473D81604AD38D4D642EB30876ABCC4775C47476560C8DCE" +
-                "0DB45094AD7F8CF141FBF5AADE38A501F58665C970E97A68E596A603F43ADB61";
-
-            Assert.Equal(expectedDValue, rsaParams.D.ByteArrayToHex());
         }
 
         [Fact]
@@ -105,31 +110,32 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.Equal(1, safe0Bags.Count);
             ShroudedKeyBag shroudedKeyBag = Assert.IsType<ShroudedKeyBag>(safe1Bags[0]);
 
+            byte[] data = { 9, 8, 7, 6, 5, 4, 3, 2, 1 };
+            byte[] encrypted;
+
             using (X509Certificate2 fromLoader = loader.GetCertificate())
             using (X509Certificate2 fromBag = certBag.GetCertificate())
+            using (RSA loaderPub = fromLoader.GetRSAPublicKey())
             {
                 Assert.Equal(fromLoader.RawData, fromBag.RawData);
+
+                encrypted = loaderPub.Encrypt(data, RSAEncryptionPadding.OaepSHA1);
             }
 
-            RSAParameters rsaParams = RSAParameters.FromEncryptedPkcs8PrivateKey(
-                loader.Password,
-                shroudedKeyBag.EncryptedPkcs8PrivateKey.Span,
-                out int bytesRead);
+            int bytesRead;
+
+            using (RSA rsa = RSA.Create())
+            {
+                rsa.ImportEncryptedPkcs8PrivateKey(
+                    loader.Password,
+                    shroudedKeyBag.EncryptedPkcs8PrivateKey,
+                    out bytesRead);
+
+                byte[] dec = rsa.Decrypt(encrypted, RSAEncryptionPadding.OaepSHA1);
+                Assert.Equal(data, dec);
+            }
 
             Assert.Equal(shroudedKeyBag.EncryptedPkcs8PrivateKey.Length, bytesRead);
-            Assert.Equal("010001", rsaParams.Exponent.ByteArrayToHex());
-
-            const string expectedDValue =
-                "1FA3432AD7E80C5C9E344383E130839BCD524D335A42DACD7D145FB0F7BC53C6" +
-                "2E1D81A1077A8ED1A074E8757F86B3A565FA50C604610A8648F49E93740D2DA5" +
-                "13E04C75F6113C452F45600BAD62B20B70BBE17F7EE5568A146CD76CD11C7955" +
-                "B64AF47E3DDCBD10EBA672F2800093FC7C6E85674DB6DCA63CBBCF7ECE57B868" +
-                "6F148FBC3CCCD832C8C604691193E2D8365C454470EFAE3F2517FDDC39258D69" +
-                "B1803022FF993D8C9D823D476A98A01E435698DC8DE90C659E089FDC191E11BD" +
-                "D9CB2C6425D39A7E5364EEBC4E6764B99079B67FD86664F6AFDA889CEB2B405C" +
-                "504826C90AC58026E992F7AFEFAC7361AE25029F83858AB9C8B0B3BB5A09BA81";
-
-            Assert.Equal(expectedDValue, rsaParams.D.ByteArrayToHex());
         }
 
         private static void CheckMac(Pkcs12Info info, string password)

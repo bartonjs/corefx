@@ -88,9 +88,10 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             builder.AddSafeContentsEncrypted(
                 contents,
                 password,
-                Pkcs8.EncryptionAlgorithm.TripleDes3KeyPkcs12,
-                HashAlgorithmName.SHA1,
-                2050);
+                new PbeParameters(
+                    PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
+                    HashAlgorithmName.SHA1,
+                    2050));
 
             builder.SealAndMac(password, HashAlgorithmName.SHA1, 1024);
             byte[] pfx = builder.Encode();
@@ -106,7 +107,9 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             }
         }
 
+#if FIXED_CNG_EXPORT
         [Fact]
+#endif
         public static void WriteOneCertWithKey_Encrypted_SameSafe()
         {
             Pkcs12SafeContents contents = new Pkcs12SafeContents();
@@ -123,8 +126,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
                 rawData = cert.RawData;
 
-                KeyBag keyBag = contents.AddKeyUnencrypted(
-                    cert.GetRSAPrivateKey().ExportParameters(true).ToPkcs8PrivateKey());
+                KeyBag keyBag = contents.AddKeyUnencrypted(cert.GetRSAPrivateKey().ExportPkcs8PrivateKey());
 
                 keyBag.Attributes.Add(localKeyId);
             }
@@ -132,12 +134,14 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             const string password = nameof(WriteOneCertWithKey_Encrypted_SameSafe);
 
             Pkcs12Builder builder = new Pkcs12Builder();
+
             builder.AddSafeContentsEncrypted(
                 contents,
                 password,
-                Pkcs8.EncryptionAlgorithm.TripleDes3KeyPkcs12,
-                HashAlgorithmName.SHA1,
-                2050);
+                new PbeParameters(
+                    PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
+                    HashAlgorithmName.SHA1,
+                    2050));
 
             builder.SealAndMac(password, HashAlgorithmName.SHA1, 1024);
             byte[] pfx = builder.Encode();
@@ -153,7 +157,9 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             }
         }
 
+#if FIXED_CNG_EXPORT
         [Fact]
+#endif
         public static void WriteOneCertWithKey_LikeWindows()
         {
             Pkcs12SafeContents safe1 = new Pkcs12SafeContents();
@@ -174,22 +180,25 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 rawData = cert.RawData;
 
                 ShroudedKeyBag keyBag = safe2.AddShroudedKey(
-                    cert.GetRSAPrivateKey().ExportParameters(true).ToEncryptedPkcs8PrivateKey(
+                    cert.GetRSAPrivateKey().ExportEncryptedPkcs8PrivateKey(
                         password,
-                        HashAlgorithmName.SHA1,
-                        2068,
-                        Pkcs8.EncryptionAlgorithm.TripleDes3KeyPkcs12));
+                        new PbeParameters(
+                            PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
+                            HashAlgorithmName.SHA1,
+                            2068)));
 
                 keyBag.Attributes.Add(localKeyId);
             }
 
             Pkcs12Builder builder = new Pkcs12Builder();
+
             builder.AddSafeContentsEncrypted(
                 safe1,
                 password,
-                Pkcs8.EncryptionAlgorithm.TripleDes3KeyPkcs12,
-                HashAlgorithmName.SHA1,
-                2068);
+                new PbeParameters(
+                    PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
+                    HashAlgorithmName.SHA1,
+                    2068));
 
             builder.AddSafeContentsUnencrypted(safe2);
 

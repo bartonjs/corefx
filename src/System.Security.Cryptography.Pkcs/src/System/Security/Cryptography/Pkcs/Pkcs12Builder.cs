@@ -21,14 +21,14 @@ namespace System.Security.Cryptography.Pkcs
         public unsafe void AddSafeContentsEncrypted(
             Pkcs12SafeContents safeContents,
             ReadOnlySpan<char> password,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
-            HashAlgorithmName hashAlgorithm,
-            int iterationCount)
+            PbeParameters pbeParameters)
         {
             if (safeContents == null)
                 throw new ArgumentNullException(nameof(safeContents));
-            if (iterationCount < 1)
-                throw new ArgumentOutOfRangeException(nameof(iterationCount));
+            if (pbeParameters == null)
+                throw new ArgumentNullException(nameof(pbeParameters));
+            if (pbeParameters.KdfIterationCount < 1)
+                throw new ArgumentOutOfRangeException(nameof(pbeParameters.KdfIterationCount));
             if (IsSealed)
                 throw new InvalidOperationException("Cannot add new SafeContents when the PFX is sealed.");
 
@@ -44,8 +44,7 @@ namespace System.Security.Cryptography.Pkcs
                 ReadOnlySpan<byte> contentsSpan = contentsWriter.EncodeAsSpan();
                 
                 PasswordBasedEncryption.InitiateEncryption(
-                    encryptionAlgorithm,
-                    hashAlgorithm,
+                    pbeParameters,
                     out SymmetricAlgorithm cipher,
                     out string hmacOid,
                     out string encryptionAlgorithmOid,
@@ -66,8 +65,7 @@ namespace System.Security.Cryptography.Pkcs
                         cipher,
                         isPkcs12,
                         contentsSpan,
-                        hashAlgorithm,
-                        iterationCount,
+                        pbeParameters,
                         salt,
                         encryptedRent,
                         iv);
@@ -93,7 +91,7 @@ namespace System.Security.Cryptography.Pkcs
                             isPkcs12,
                             encryptionAlgorithmOid,
                             salt,
-                            iterationCount,
+                            pbeParameters.KdfIterationCount,
                             hmacOid,
                             iv);
 

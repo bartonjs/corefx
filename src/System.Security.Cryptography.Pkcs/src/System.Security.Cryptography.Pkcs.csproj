@@ -42,6 +42,7 @@
     <Compile Include="System\Security\Cryptography\Pkcs\KeyAgreeRecipientInfo.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\KeyBag.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\KeyTransRecipientInfo.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Pkcs8PrivateKeyInfo.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs9AttributeObject.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs9ContentType.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs9DocumentDescription.cs" />
