@@ -174,8 +174,7 @@ namespace System.Security.Cryptography
         }
 
         internal static void InitiateEncryption(
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
-            HashAlgorithmName pbkdf2Prf,
+            PbeParameters pbeParameters,
             out SymmetricAlgorithm cipher,
             out string hmacOid,
             out string encryptionAlgorithmOid,
@@ -183,24 +182,24 @@ namespace System.Security.Cryptography
         {
             isPkcs12 = false;
 
-            switch (encryptionAlgorithm)
+            switch (pbeParameters.EncryptionAlgorithm)
             {
-                case Pkcs8.EncryptionAlgorithm.Aes128Cbc:
+                case PbeEncryptionAlgorithm.Aes128Cbc:
                     cipher = Aes.Create();
                     cipher.KeySize = 128;
                     encryptionAlgorithmOid = Oids.Aes128Cbc;
                     break;
-                case Pkcs8.EncryptionAlgorithm.Aes192Cbc:
+                case PbeEncryptionAlgorithm.Aes192Cbc:
                     cipher = Aes.Create();
                     cipher.KeySize = 192;
                     encryptionAlgorithmOid = Oids.Aes192Cbc;
                     break;
-                case Pkcs8.EncryptionAlgorithm.Aes256Cbc:
+                case PbeEncryptionAlgorithm.Aes256Cbc:
                     cipher = Aes.Create();
                     cipher.KeySize = 256;
                     encryptionAlgorithmOid = Oids.Aes256Cbc;
                     break;
-                case Pkcs8.EncryptionAlgorithm.TripleDes3KeyPkcs12:
+                case PbeEncryptionAlgorithm.TripleDes3KeyPkcs12:
 #pragma warning disable CA5350 // Do Not Use Weak Cryptographic Algorithms
                     cipher = TripleDES.Create();
 #pragma warning restore CA5350 // Do Not Use Weak Cryptographic Algorithms
@@ -212,29 +211,31 @@ namespace System.Security.Cryptography
                     throw new CryptographicException(
                         SR.Format(
                             SR.Cryptography_UnknownAlgorithmIdentifier,
-                            encryptionAlgorithm));
+                            pbeParameters.HashAlgorithm.Name));
             }
 
-            if (pbkdf2Prf == HashAlgorithmName.SHA256)
+            HashAlgorithmName prf = pbeParameters.HashAlgorithm;
+
+            if (prf == HashAlgorithmName.SHA256)
             {
                 hmacOid = Oids.HmacWithSha256;
             }
-            else if (pbkdf2Prf == HashAlgorithmName.SHA384)
+            else if (prf == HashAlgorithmName.SHA384)
             {
                 hmacOid = Oids.HmacWithSha384;
             }
-            else if (pbkdf2Prf == HashAlgorithmName.SHA512)
+            else if (prf == HashAlgorithmName.SHA512)
             {
                 hmacOid = Oids.HmacWithSha512;
             }
-            else if (pbkdf2Prf == HashAlgorithmName.SHA1)
+            else if (prf == HashAlgorithmName.SHA1)
             {
                 hmacOid = Oids.HmacWithSha1;
             }
             else
             {
                 cipher.Dispose();
-                throw new CryptographicException(SR.Cryptography_UnknownHashAlgorithm, pbkdf2Prf.Name);
+                throw new CryptographicException(SR.Cryptography_UnknownHashAlgorithm, prf.Name);
             }
 
             if (isPkcs12)
@@ -243,7 +244,7 @@ namespace System.Security.Cryptography
                 {
                     // PKCS12 uses a combined PRF+cipher OID, no SHA-2 based OIDs are defined.
                     cipher.Dispose();
-                    throw new CryptographicException(SR.Cryptography_UnknownHashAlgorithm, pbkdf2Prf.Name);
+                    throw new CryptographicException(SR.Cryptography_UnknownHashAlgorithm, prf.Name);
                 }
             }
         }
@@ -254,8 +255,7 @@ namespace System.Security.Cryptography
             SymmetricAlgorithm cipher,
             bool isPkcs12,
             ReadOnlySpan<byte> source,
-            HashAlgorithmName prf,
-            int iterationCount,
+            PbeParameters pbeParameters,
             ReadOnlySpan<byte> salt,
             byte[] destination,
             Span<byte> ivDest)
@@ -266,6 +266,8 @@ namespace System.Security.Cryptography
 
             byte[] sourceRent = ArrayPool.Rent(source.Length);
             int keySizeBytes = cipher.KeySize / 8;
+            int iterationCount = pbeParameters.KdfIterationCount;
+            HashAlgorithmName prf = pbeParameters.HashAlgorithm;
 
             fixed (byte* pkcs8RentPin = sourceRent)
             fixed (byte* pwdTmpBytesPtr = pwdTmpBytes)

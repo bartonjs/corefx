@@ -10,18 +10,6 @@ using System.Security.Cryptography.Asn1;
 
 namespace System.Security.Cryptography
 {
-    internal static partial class Pkcs8
-    {
-        public enum EncryptionAlgorithm
-        {
-            Unknown,
-            Aes128Cbc,
-            Aes192Cbc,
-            Aes256Cbc,
-            TripleDes3KeyPkcs12,
-        }
-    }
-
     internal static class KeyFormatHelper
     {
         internal delegate void KeyReader<TRet, TParsed>(in TParsed key, in AlgorithmIdentifierAsn algId, out TRet ret);
@@ -368,9 +356,7 @@ namespace System.Security.Cryptography
         internal static unsafe AsnWriter WriteEncryptedPkcs8(
             ReadOnlySpan<char> password,
             AsnWriter pkcs8Writer,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
-            HashAlgorithmName pbkdf2Prf,
-            int pbkdf2IterationCount)
+            PbeParameters pbeParameters)
         {
             System.Text.Encoding encoding = System.Text.Encoding.UTF8;
             int requiredBytes = encoding.GetByteCount(password);
@@ -405,9 +391,7 @@ namespace System.Security.Cryptography
                         password,
                         passwordBytes,
                         pkcs8Writer,
-                        encryptionAlgorithm,
-                        pbkdf2Prf,
-                        pbkdf2IterationCount);
+                        pbeParameters);
                 }
             }
             finally
@@ -424,32 +408,25 @@ namespace System.Security.Cryptography
         internal static AsnWriter WriteEncryptedPkcs8(
             ReadOnlySpan<byte> passwordBytes,
             AsnWriter pkcs8Writer,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
-            HashAlgorithmName pbkdf2Prf,
-            int pbkdf2IterationCount)
+            PbeParameters pbeParameters)
         {
             return WriteEncryptedPkcs8(
                 ReadOnlySpan<char>.Empty,
                 passwordBytes,
                 pkcs8Writer,
-                encryptionAlgorithm,
-                pbkdf2Prf,
-                pbkdf2IterationCount);
+                pbeParameters);
         }
 
         private static unsafe AsnWriter WriteEncryptedPkcs8(
             ReadOnlySpan<char> password,
             ReadOnlySpan<byte> passwordBytes,
             AsnWriter pkcs8Writer,
-            Pkcs8.EncryptionAlgorithm encryptionAlgorithm,
-            HashAlgorithmName pbkdf2Prf,
-            int pbkdf2IterationCount)
+            PbeParameters pbeParameters)
         {
             ReadOnlySpan<byte> pkcs8Span = pkcs8Writer.EncodeAsSpan();
 
             PasswordBasedEncryption.InitiateEncryption(
-                encryptionAlgorithm,
-                pbkdf2Prf,
+                pbeParameters,
                 out SymmetricAlgorithm cipher,
                 out string hmacOid,
                 out string encryptionAlgorithmOid,
@@ -475,8 +452,7 @@ namespace System.Security.Cryptography
                     cipher,
                     isPkcs12,
                     pkcs8Span,
-                    pbkdf2Prf,
-                    pbkdf2IterationCount,
+                    pbeParameters,
                     salt,
                     encryptedRent,
                     iv);
@@ -494,7 +470,7 @@ namespace System.Security.Cryptography
                     isPkcs12,
                     encryptionAlgorithmOid,
                     salt,
-                    pbkdf2IterationCount,
+                    pbeParameters.KdfIterationCount,
                     hmacOid,
                     iv);
 

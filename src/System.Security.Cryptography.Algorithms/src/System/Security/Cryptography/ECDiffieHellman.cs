@@ -193,9 +193,7 @@ namespace System.Security.Cryptography
                     using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(
                         passwordBytes,
                         pkcs8PrivateKey,
-                        (Pkcs8.EncryptionAlgorithm)pbeParameters.EncryptionAlgorithm,
-                        pbeParameters.HashAlgorithm,
-                        pbeParameters.KdfIterationCount))
+                        pbeParameters))
                     {
                         return writer.TryEncode(destination, out bytesWritten);
                     }
@@ -224,9 +222,7 @@ namespace System.Security.Cryptography
                     using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(
                         password,
                         pkcs8PrivateKey,
-                        (Pkcs8.EncryptionAlgorithm)pbeParameters.EncryptionAlgorithm,
-                        pbeParameters.HashAlgorithm,
-                        pbeParameters.KdfIterationCount))
+                        pbeParameters))
                     {
                         return writer.TryEncode(destination, out bytesWritten);
                     }
