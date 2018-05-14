@@ -54,6 +54,9 @@ namespace System.Security.Cryptography.Pkcs
             if (safeBag == null)
                 throw new ArgumentNullException(nameof(safeBag));
 
+            if (IsReadOnly)
+                throw new InvalidOperationException();
+
             if (_bags == null)
             {
                 _bags = new List<Pkcs12SafeBag>();
@@ -253,11 +256,21 @@ namespace System.Security.Cryptography.Pkcs
                 {
                     switch (serializedBags[i].BagId)
                     {
-                        case Oids.Pkcs12CertBag:
-                            bag = CertBag.DecodeValue(bagValue);
+                        case Oids.Pkcs12KeyBag:
+                            bag = new KeyBag(bagValue);
                             break;
                         case Oids.Pkcs12ShroudedKeyBag:
                             bag = new ShroudedKeyBag(bagValue);
+                            break;
+                        case Oids.Pkcs12CertBag:
+                            bag = CertBag.DecodeValue(bagValue);
+                            break;
+                        case Oids.Pkcs12CrlBag:
+                            break;
+                        case Oids.Pkcs12SecretBag:
+                            break;
+                        case Oids.Pkcs12SafeContentsBag:
+                            bag = SafeContentsBag.Decode(bagValue);
                             break;
                     }
                 }

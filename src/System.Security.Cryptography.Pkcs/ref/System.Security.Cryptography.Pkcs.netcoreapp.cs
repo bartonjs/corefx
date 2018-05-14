@@ -186,7 +186,7 @@ namespace System.Security.Cryptography.Pkcs
     {
         private SafeContentsBag() : base(null) { }
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
-        public IEnumerable<Pkcs12SafeBag> Bags { get; }
+        public Pkcs12SafeContents SafeContents { get; }
     }
     public sealed partial class SecretBag : Pkcs12SafeBag
     {
