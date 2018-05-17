@@ -517,29 +517,22 @@ namespace System.Security.Cryptography
                 throw new InvalidOperationException(SR.Cryptography_NotValidPrivateKey);
             }
 
-            BigInteger n = new BigInteger(rsaParameters.Modulus, isUnsigned: true, isBigEndian: true);
-            BigInteger e = new BigInteger(rsaParameters.Exponent, isUnsigned: true, isBigEndian: true);
-            BigInteger d = new BigInteger(rsaParameters.D, isUnsigned: true, isBigEndian: true);
-            BigInteger p = new BigInteger(rsaParameters.P, isUnsigned: true, isBigEndian: true);
-            BigInteger q = new BigInteger(rsaParameters.Q, isUnsigned: true, isBigEndian: true);
-            BigInteger dp = new BigInteger(rsaParameters.DP, isUnsigned: true, isBigEndian: true);
-            BigInteger dq = new BigInteger(rsaParameters.DQ, isUnsigned: true, isBigEndian: true);
-            BigInteger qInv = new BigInteger(rsaParameters.InverseQ, isUnsigned: true, isBigEndian: true);
-
             AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
 
             writer.PushSequence();
 
             // Format version 0
             writer.WriteInteger(0);
-            writer.WriteInteger(n);
-            writer.WriteInteger(e);
-            writer.WriteInteger(d);
-            writer.WriteInteger(p);
-            writer.WriteInteger(q);
-            writer.WriteInteger(dp);
-            writer.WriteInteger(dq);
-            writer.WriteInteger(qInv);
+            writer.WriteInteger(new BigInteger(rsaParameters.Modulus, isUnsigned: true, isBigEndian: true));
+            writer.WriteInteger(new BigInteger(rsaParameters.Exponent, isUnsigned: true, isBigEndian: true));
+            writer.WriteInteger(new BigInteger(rsaParameters.D, isUnsigned: true, isBigEndian: true));
+            writer.WriteInteger(new BigInteger(rsaParameters.P, isUnsigned: true, isBigEndian: true));
+            writer.WriteInteger(new BigInteger(rsaParameters.Q, isUnsigned: true, isBigEndian: true));
+            writer.WriteInteger(new BigInteger(rsaParameters.DP, isUnsigned: true, isBigEndian: true));
+            writer.WriteInteger(new BigInteger(rsaParameters.DQ, isUnsigned: true, isBigEndian: true));
+            writer.WriteInteger(new BigInteger(rsaParameters.InverseQ, isUnsigned: true, isBigEndian: true));
+            
+            ClearPrivateParameters(rsaParameters);
 
             writer.PopSequence();
             return writer;
@@ -578,7 +571,10 @@ namespace System.Security.Cryptography
 
             AlgorithmIdentifierAsn ignored = default;
             FromPkcs1PrivateKey(key, ignored, out RSAParameters rsaParameters);
+
             ImportParameters(rsaParameters);
+            ClearPrivateParameters(rsaParameters);
+
             bytesRead = localRead;
         }
 
@@ -607,6 +603,8 @@ namespace System.Security.Cryptography
                 out RSAParameters ret);
 
             ImportParameters(ret);
+            ClearPrivateParameters(ret);
+
             bytesRead = localRead;
         }
 
@@ -659,6 +657,16 @@ namespace System.Security.Cryptography
             }
 
             throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
+        }
+
+        private static void ClearPrivateParameters(in RSAParameters rsaParameters)
+        {
+            CryptographicOperations.ZeroMemory(rsaParameters.D);
+            CryptographicOperations.ZeroMemory(rsaParameters.P);
+            CryptographicOperations.ZeroMemory(rsaParameters.Q);
+            CryptographicOperations.ZeroMemory(rsaParameters.DP);
+            CryptographicOperations.ZeroMemory(rsaParameters.DQ);
+            CryptographicOperations.ZeroMemory(rsaParameters.InverseQ);
         }
 
         public override string KeyExchangeAlgorithm => "RSA";
