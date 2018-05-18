@@ -16,6 +16,12 @@ namespace System.Security.Cryptography
         public virtual bool VerifyData(ReadOnlySpan<byte> data, ReadOnlySpan<byte> signature, HashAlgorithmName hashAlgorithm) { throw null; }
         public virtual bool VerifySignature(ReadOnlySpan<byte> hash, ReadOnlySpan<byte> signature) { throw null; }
     }
+    public abstract partial class ECDiffieHellman : System.Security.Cryptography.AsymmetricAlgorithm
+    {
+        public virtual void ImportECPrivateKey(ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
+        public virtual byte[] ExportECPrivateKey() => throw null;
+        public virtual bool TryExportECPrivateKey(Span<byte> destination, out int bytesWritten) => throw null;
+    }
     public abstract partial class ECDsa : System.Security.Cryptography.AsymmetricAlgorithm
     {
         protected virtual bool TryHashData(ReadOnlySpan<byte> data, Span<byte> destination, HashAlgorithmName hashAlgorithm, out int bytesWritten) { throw null; }
@@ -23,6 +29,9 @@ namespace System.Security.Cryptography
         public virtual bool TrySignHash(ReadOnlySpan<byte> hash, Span<byte> destination, out int bytesWritten) { throw null; }
         public virtual bool VerifyData(ReadOnlySpan<byte> data, ReadOnlySpan<byte> signature, HashAlgorithmName hashAlgorithm) { throw null; }
         public virtual bool VerifyHash(ReadOnlySpan<byte> hash, ReadOnlySpan<byte> signature) { throw null; }
+        public virtual void ImportECPrivateKey(ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
+        public virtual byte[] ExportECPrivateKey() => throw null;
+        public virtual bool TryExportECPrivateKey(Span<byte> destination, out int bytesWritten) => throw null;
     }
     public sealed partial class IncrementalHash : System.IDisposable
     {

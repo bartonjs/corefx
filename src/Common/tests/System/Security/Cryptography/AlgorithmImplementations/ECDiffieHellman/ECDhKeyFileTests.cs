@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Security.Cryptography.Tests;
+using System.Text;
 using Test.Cryptography;
 using Xunit;
 
@@ -61,6 +62,30 @@ qtlbnispri1a/EghiaPQ0po=";
         }
 
         [Fact]
+        public static void ReadNistP521EncryptedPkcs8_Pbes2_Aes128_Sha384_PasswordBytes()
+        {
+            // PBES2, PBKDF2 (SHA384), AES128
+            const string base64 = @"
+MIIBXTBXBgkqhkiG9w0BBQ0wSjApBgkqhkiG9w0BBQwwHAQI/JyXWyp/t3kCAggA
+MAwGCCqGSIb3DQIKBQAwHQYJYIZIAWUDBAECBBA3H8mbFK5afB5GzIemCCQkBIIB
+AKAz1z09ATUA8UfoDMwTyXiHUS8Mb/zkUCH+I7rav4orhAnSyYAyLKcHeGne+kUa
+8ewQ5S7oMMLXE0HHQ8CpORlSgxTssqTAHigXEqdRb8nQ8hJJa2dFtNXyUeFtxZ7p
+x+aSLD6Y3J+mgzeVp1ICgROtuRjA9RYjUdd/3cy2BAlW+Atfs/300Jhkke3H0Gqc
+F71o65UNB+verEgN49rQK7FAFtoVI2oRjHLO1cGjxZkbWe2KLtgJWsgmexRq3/a+
+Pfuapj3LAHALZtDNMZ+QCFN2ZXUSFNWiBSwnwCAtfFCn/EchPo3MFR3K0q/qXTua
+qtlbnispri1a/EghiaPQ0po=";
+
+            ReadWriteBase64EncryptedPkcs8(
+                base64,
+                Encoding.UTF8.GetBytes("qwerty"),
+                new PbeParameters(
+                    PbeEncryptionAlgorithm.Aes192Cbc,
+                    HashAlgorithmName.SHA1,
+                    123321),
+                EccTestData.GetNistP521Key2());
+        }
+
+        [Fact]
         public static void ReadNistP256EncryptedPkcs8_Pkcs12_3DES128_SHA1()
         {
             // PKCS12-PBE with 2-key 3DES and SHA1
@@ -80,6 +105,19 @@ g720ICbxkZD7UWoAh/ONV/DptxequpV7lmi7ZS44kRIdtsVIFQlf/hTob4arbD1O
                 EccTestData.GetNistP521ReferenceKey());
         }
 
+        [Fact]
+        public static void ReadWriteNistP256ECPrivateKey()
+        {
+            const string base64 = @"
+MHcCAQEEIHChLC2xaEXtVv9oz8IaRys/BNfWhRv2NJ8tfVs0UrOKoAoGCCqGSM49
+AwEHoUQDQgAEgQHs5HRkpurXDPaabivT2IaRoyYtIsuk92Ner/JmgKjYoSumHVmS
+NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
+
+            ReadWriteBase64ECPrivateKey(
+                base64,
+                EccTestData.GetNistP521ReferenceKey());
+        }
+
         private static void ReadWriteBase64EncryptedPkcs8(
             string base64EncryptedPkcs8,
             string password,
@@ -95,6 +133,35 @@ g720ICbxkZD7UWoAh/ONV/DptxequpV7lmi7ZS44kRIdtsVIFQlf/hTob4arbD1O
                 (ECDiffieHellman ecdh, Span<byte> destination, out int bytesWritten) =>
                     ecdh.TryExportEncryptedPkcs8PrivateKey(password, pbe, destination, out bytesWritten),
                 isEncrypted: true);
+        }
+
+        private static void ReadWriteBase64EncryptedPkcs8(
+            string base64EncryptedPkcs8,
+            byte[] passwordBytes,
+            PbeParameters pbe,
+            in ECParameters expected)
+        {
+            ReadWriteKey(
+                base64EncryptedPkcs8,
+                expected,
+                (ECDiffieHellman ecdh, ReadOnlyMemory<byte> source, out int read) =>
+                    ecdh.ImportEncryptedPkcs8PrivateKey(passwordBytes, source, out read),
+                ecdh => ecdh.ExportEncryptedPkcs8PrivateKey(passwordBytes, pbe),
+                (ECDiffieHellman ecdh, Span<byte> destination, out int bytesWritten) =>
+                    ecdh.TryExportEncryptedPkcs8PrivateKey(passwordBytes, pbe, destination, out bytesWritten),
+                isEncrypted: true);
+        }
+
+        private static void ReadWriteBase64ECPrivateKey(string base64Pkcs8, in ECParameters expected)
+        {
+            ReadWriteKey(
+                base64Pkcs8,
+                expected,
+                (ECDiffieHellman ecdh, ReadOnlyMemory<byte> source, out int read) =>
+                    ecdh.ImportECPrivateKey(source, out read),
+                ecdh => ecdh.ExportECPrivateKey(),
+                (ECDiffieHellman ecdh, Span<byte> destination, out int bytesWritten) =>
+                    ecdh.TryExportECPrivateKey(destination, out bytesWritten));
         }
 
         private static void ReadWriteBase64Pkcs8(string base64Pkcs8, in ECParameters expected)

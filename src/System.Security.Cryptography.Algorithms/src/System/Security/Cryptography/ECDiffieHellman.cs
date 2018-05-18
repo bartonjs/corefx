@@ -182,7 +182,6 @@ namespace System.Security.Cryptography
             Span<byte> destination,
             out int bytesWritten)
         {
-            // TODO: Make (Try)ExportECPrivateKey, defer to that.
             ECParameters ecParameters = ExportParameters(true);
 
             fixed (byte* privPtr = ecParameters.D)
@@ -211,7 +210,6 @@ namespace System.Security.Cryptography
             Span<byte> destination,
             out int bytesWritten)
         {
-            // TODO: Make (Try)ExportECPrivateKey, defer to that.
             ECParameters ecParameters = ExportParameters(true);
 
             fixed (byte* privPtr = ecParameters.D)
@@ -238,7 +236,6 @@ namespace System.Security.Cryptography
             Span<byte> destination,
             out int bytesWritten)
         {
-            // TODO: Make (Try)ExportECPrivateKey, defer to that.
             ECParameters ecParameters = ExportParameters(true);
 
             fixed (byte* privPtr = ecParameters.D)
@@ -261,7 +258,6 @@ namespace System.Security.Cryptography
             Span<byte> destination,
             out int bytesWritten)
         {
-            // TODO: Make (Try)ExportECPublicKey, defer to that.
             ECParameters ecParameters = ExportParameters(false);
 
             using (AsnWriter writer = ecParameters.WriteSubjectPublicKeyInfo())
@@ -270,7 +266,7 @@ namespace System.Security.Cryptography
             }
         }
 
-        public override void ImportEncryptedPkcs8PrivateKey(
+        public override unsafe void ImportEncryptedPkcs8PrivateKey(
             ReadOnlySpan<byte> passwordBytes,
             ReadOnlyMemory<byte> source,
             out int bytesRead)
@@ -283,11 +279,21 @@ namespace System.Security.Cryptography
                 out int localRead,
                 out ECParameters ret);
 
-            ImportParameters(ret);
-            bytesRead = localRead;
+            fixed (byte* privPin = ret.D)
+            {
+                try
+                {
+                    ImportParameters(ret);
+                    bytesRead = localRead;
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(ret.D);
+                }
+            }
         }
 
-        public override void ImportEncryptedPkcs8PrivateKey(
+        public override unsafe void ImportEncryptedPkcs8PrivateKey(
             ReadOnlySpan<char> password,
             ReadOnlyMemory<byte> source,
             out int bytesRead)
@@ -300,11 +306,21 @@ namespace System.Security.Cryptography
                 out int localRead,
                 out ECParameters ret);
 
-            ImportParameters(ret);
-            bytesRead = localRead;
+            fixed (byte* privPin = ret.D)
+            {
+                try
+                {
+                    ImportParameters(ret);
+                    bytesRead = localRead;
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(ret.D);
+                }
+            }
         }
 
-        public override void ImportPkcs8PrivateKey(
+        public override unsafe void ImportPkcs8PrivateKey(
             ReadOnlyMemory<byte> source,
             out int bytesRead)
         {
@@ -315,8 +331,18 @@ namespace System.Security.Cryptography
                 out int localRead,
                 out ECParameters key);
 
-            ImportParameters(key);
-            bytesRead = localRead;
+            fixed (byte* privPin = key.D)
+            {
+                try
+                {
+                    ImportParameters(key);
+                    bytesRead = localRead;
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(key.D);
+                }
+            }
         }
 
         public override void ImportSubjectPublicKeyInfo(
@@ -332,6 +358,64 @@ namespace System.Security.Cryptography
 
             ImportParameters(key);
             bytesRead = localRead;
+        }
+
+        public virtual unsafe void ImportECPrivateKey(ReadOnlyMemory<byte> source, out int bytesRead)
+        {
+            ECParameters ecParameters = ECParameters.FromECPrivateKey(source, out int localRead);
+
+            fixed (byte* privPin = ecParameters.D)
+            {
+                try
+                {
+                    ImportParameters(ecParameters);
+                    bytesRead = localRead;
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(ecParameters.D);
+                }
+            }
+        }
+
+        public virtual unsafe byte[] ExportECPrivateKey()
+        {
+            ECParameters ecParameters = ExportParameters(true);
+
+            fixed (byte* privPin = ecParameters.D)
+            {
+                try
+                {
+                    using (AsnWriter writer = ecParameters.WriteECPrivateKey())
+                    {
+                        return writer.Encode();
+                    }
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(ecParameters.D);
+                }
+            }
+        }
+
+        public virtual unsafe bool TryExportECPrivateKey(Span<byte> destination, out int bytesWritten)
+        {
+            ECParameters ecParameters = ExportParameters(true);
+
+            fixed (byte* privPin = ecParameters.D)
+            {
+                try
+                {
+                    using (AsnWriter writer = ecParameters.WriteECPrivateKey())
+                    {
+                        return writer.TryEncode(destination, out bytesWritten);
+                    }
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(ecParameters.D);
+                }
+            }
         }
     }
 }

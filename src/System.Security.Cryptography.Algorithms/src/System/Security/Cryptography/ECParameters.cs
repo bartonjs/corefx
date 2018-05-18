@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Buffers;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.Asn1;
 
@@ -14,13 +13,6 @@ namespace System.Security.Cryptography
     /// </summary>
     public struct ECParameters
     {
-        private static readonly string[] s_validOids =
-        {
-            Oids.EcPublicKey,
-            Oids.EcDiffieHellman,
-            Oids.EcMQV,
-        };
-
         /// <summary>
         /// Public point.
         /// </summary>
@@ -75,20 +67,13 @@ namespace System.Security.Cryptography
             Curve.Validate();
         }
 
-        //public static ECParameters FromECPrivateKey(ReadOnlySpan<byte> source, out int bytesRead)
-        //{
-        //    // RFC 5915.
-        //    throw new NotImplementedException();
-        //}
-
-        internal static ECParameters FromECPrivateKey(
-            in AlgorithmIdentifierAsn algId,
-            ReadOnlyMemory<byte> key)
+        internal static ECParameters FromECPrivateKey(ReadOnlyMemory<byte> key, out int bytesRead)
         {
             ECPrivateKey parsedKey =
-                AsnSerializer.Deserialize<ECPrivateKey>(key, AsnEncodingRules.BER);
+                AsnSerializer.Deserialize<ECPrivateKey>(key, AsnEncodingRules.BER, out bytesRead);
 
             ECParameters ret;
+            AlgorithmIdentifierAsn algId = default;
             FromECPrivateKey(parsedKey, algId, out ret);
             return ret;
         }
@@ -377,6 +362,11 @@ namespace System.Security.Cryptography
                     ArrayPool<byte>.Shared.Return(publicKeyRented);
                 }
             }
+        }
+
+        internal AsnWriter WriteECPrivateKey()
+        {
+            return WriteEcPrivateKey(includeDomainParameters: true);
         }
 
         private AsnWriter WriteEcPrivateKey(bool includeDomainParameters)
