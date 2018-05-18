@@ -44,5 +44,7 @@ namespace System.Security.Cryptography
         internal const string Pkcs12PbeWithShaAnd2Key3Des= Pkcs12PbePrefix + "4";
         internal const string Pkcs12PbeWithShaAnd128BitRC2 = Pkcs12PbePrefix + "5";
         internal const string Pkcs12PbeWithShaAnd40BitRC2 = Pkcs12PbePrefix + "6";
+
+        internal const string Dsa = "1.2.840.10040.4.1";
     }
 }
