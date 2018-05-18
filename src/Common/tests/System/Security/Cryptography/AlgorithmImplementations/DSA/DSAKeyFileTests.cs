@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Text;
 using Test.Cryptography;
 using Xunit;
 
@@ -79,6 +80,28 @@ qE3Db1UI4anCCnyEj/jDA8R6hZTFDjxu6bG0Z66g7I2GBDEYaaB+8x0vtiyu5LXo
 6UZ53SX6S+jfIqJoF5YME9zVMoO2kwS/EGvc64+epCGcee1Nx4SGgUcr5HJYz1P4
 CU+l4wPQR0rRmYHIJJIvFh5OXk84pV0crsOrekw7tHeNU6DMzw==",
                 "Password > cipher",
+                new PbeParameters(
+                    PbeEncryptionAlgorithm.Aes192Cbc,
+                    HashAlgorithmName.SHA256,
+                    123456),
+                DSATestData.GetDSA1024Params());
+        }
+
+        [Fact]
+        public static void ReadWriteDsa1024EncryptedPkcs8_PasswordBytes()
+        {
+            // pbeWithSHA1AndDES-CBC (PBES1)
+            ReadBase64EncryptedPkcs8(
+                @"
+MIIBcTAbBgkqhkiG9w0BBQowDgQIEibTj5fv8jUCAggABIIBUPDssHf/llBiWN/M
+e3cyuqVHA89Zda1Myh/YcKmGWpQgflr2CKOrmsw7nin+9bWlZDYP795EEKSAkCZg
+ABHwJlTI9BKMUiXQUW8AwM5zqBJb/P/JOG2bFNXsZHUYUNh9g7I5mBwdCAih4D+R
+QT4YuclwLvQmTewyjLtDGiDF/mC+4kpyBePeO9kfkRUDHiwSNk/efN4ug1xQgwhu
+2RXvjJaAYu3JVTp9Gp86suix1gRWMOg+pHCamtCjC4B+91q3LLMdseAoSHmy25/x
+qE3Db1UI4anCCnyEj/jDA8R6hZTFDjxu6bG0Z66g7I2GBDEYaaB+8x0vtiyu5LXo
+6UZ53SX6S+jfIqJoF5YME9zVMoO2kwS/EGvc64+epCGcee1Nx4SGgUcr5HJYz1P4
+CU+l4wPQR0rRmYHIJJIvFh5OXk84pV0crsOrekw7tHeNU6DMzw==",
+                Encoding.UTF8.GetBytes("Password > cipher"),
                 new PbeParameters(
                     PbeEncryptionAlgorithm.Aes192Cbc,
                     HashAlgorithmName.SHA256,
@@ -185,6 +208,23 @@ vAB5Wz646GeWztKawSR/9xIqHq8IECV1FXI=",
                 dsa => dsa.ExportEncryptedPkcs8PrivateKey(password, pbeParameters),
                 (DSA dsa, Span<byte> destination, out int written) =>
                     dsa.TryExportEncryptedPkcs8PrivateKey(password, pbeParameters, destination, out written),
+                isEncrypted: true);
+        }
+
+        private static void ReadBase64EncryptedPkcs8(
+            string base64EncPkcs8,
+            byte[] passwordBytes,
+            PbeParameters pbeParameters,
+            in DSAParameters expected)
+        {
+            ReadWriteKey(
+                base64EncPkcs8,
+                expected,
+                (DSA dsa, ReadOnlyMemory<byte> source, out int read) =>
+                    dsa.ImportEncryptedPkcs8PrivateKey(passwordBytes, source, out read),
+                dsa => dsa.ExportEncryptedPkcs8PrivateKey(passwordBytes, pbeParameters),
+                (DSA dsa, Span<byte> destination, out int written) =>
+                    dsa.TryExportEncryptedPkcs8PrivateKey(passwordBytes, pbeParameters, destination, out written),
                 isEncrypted: true);
         }
 
