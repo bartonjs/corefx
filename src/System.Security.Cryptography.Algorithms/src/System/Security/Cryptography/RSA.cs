@@ -590,6 +590,25 @@ namespace System.Security.Cryptography
         }
 
         public override void ImportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<byte> passwordBytes,
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            KeyFormatHelper.ReadEncryptedPkcs8<RSAParameters, RSAPrivateKey>(
+                s_validOids,
+                source,
+                passwordBytes,
+                FromPkcs1PrivateKey,
+                out int localRead,
+                out RSAParameters ret);
+
+            ImportParameters(ret);
+            ClearPrivateParameters(ret);
+
+            bytesRead = localRead;
+        }
+
+        public override void ImportEncryptedPkcs8PrivateKey(
             ReadOnlySpan<char> password,
             ReadOnlyMemory<byte> source,
             out int bytesRead)

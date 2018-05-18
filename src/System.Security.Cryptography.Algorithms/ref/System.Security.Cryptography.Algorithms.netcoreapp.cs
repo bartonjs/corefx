@@ -56,8 +56,8 @@ namespace System.Security.Cryptography
     }
     public abstract partial class RSA : System.Security.Cryptography.AsymmetricAlgorithm
     {
-        public virtual void ImportRSAPrivateKey(ReadOnlyMemory<byte> source, out int bytesWritten) => throw null;
-        public virtual void ImportRSAPublicKey(ReadOnlyMemory<byte> source, out int bytesWritten) => throw null;
+        public virtual void ImportRSAPrivateKey(ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
+        public virtual void ImportRSAPublicKey(ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
         public virtual byte[] ExportRSAPrivateKey() => throw null;
         public virtual byte[] ExportRSAPublicKey() => throw null;
         public virtual bool TryExportRSAPrivateKey(Span<byte> destination, out int bytesWritten) => throw null;
