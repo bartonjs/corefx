@@ -11,8 +11,9 @@ namespace System.Security.Cryptography.Rsa.Tests
     public static class RSAKeyFileTests
     {
         public static bool Supports384BitPrivateKey { get; } = RSAFactory.Supports384PrivateKey;
+        public static bool SupportsLargeExponent { get; } = RSAFactory.SupportsLargeExponent;
 
-        [Fact]
+        [ConditionalFact(nameof(SupportsLargeExponent))]
         public static void ReadWriteBigExponentPrivatePkcs1()
         {
             ReadWriteBase64PrivatePkcs1(
@@ -111,7 +112,7 @@ t4Ru7LOzqUULk+Y3+gSNHX34/+Jw+VCq5hHlolNkpw+thqvba8lMvzMCAwEAAQ==",
                 TestData.RSA16384Params);
         }
 
-        [Fact]
+        [ConditionalFact(nameof(SupportsLargeExponent))]
         public static void ReadWriteSubjectPublicKeyInfo()
         {
             ReadWriteBase64SubjectPublicKeyInfo(
@@ -124,6 +125,58 @@ lK46WguztMeSlX1DI5FWbPPipSr7DBQrngaBuJcmca8rgt05Cjm5Oc9xlWhofkmQ
 pjBQyndo3NazeIQvGP2x9tn/CWuve+uY3Pkw1m/P1QP1jUG/9GIS4k46/EXqQr2I
 RwIFAgAABEE=",
                 TestData.RsaBigExponentParams);
+        }
+
+        [Fact]
+        public static void ReadWriteRsa16384SubjectPublicKeyInfo()
+        {
+            ReadWriteBase64SubjectPublicKeyInfo(
+                @"
+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
+5hHlolNkpw+thqvba8lMvzMCAwEAAQ==",
+                TestData.RSA16384Params);
         }
 
         [Fact]

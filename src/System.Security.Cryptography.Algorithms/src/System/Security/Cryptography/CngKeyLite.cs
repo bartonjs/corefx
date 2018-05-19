@@ -70,11 +70,6 @@ namespace System.Security.Cryptography
                         keyBlob.Length,
                         0);
                 }
-
-                if (errorCode != ErrorCode.ERROR_SUCCESS)
-                {
-                    throw new CryptographicException(errorCode.ToString("X"));
-                }
             }
             else
             {
