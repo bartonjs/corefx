@@ -2,8 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Buffers;
+using System.Buffers.Text;
 using System.Diagnostics;
-
+using System.Runtime.CompilerServices;
+using System.Security.Cryptography.Asn1;
 using Internal.Cryptography;
 
 using ErrorCode = Interop.NCrypt.ErrorCode;
@@ -110,25 +113,216 @@ namespace System.Security.Cryptography
             }
         }
 
+        public override void ImportPkcs8PrivateKey(ReadOnlyMemory<byte> source, out int bytesRead)
+        {
+            AsnReader reader = new AsnReader(source, AsnEncodingRules.BER);
+            int len = reader.GetEncodedValue().Length;
+
+            ImportPkcs8(source.Slice(0, len));
+            bytesRead = len;
+        }
+
+        public override void ImportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            AsnReader reader = new AsnReader(source, AsnEncodingRules.BER);
+            int len = reader.GetEncodedValue().Length;
+            source = source.Slice(0, len);
+
+            try
+            {
+                ImportPkcs8(source, password);
+                bytesRead = len;
+                return;
+            }
+            catch (CryptographicException)
+            {
+            }
+
+            EncryptedPrivateKeyInfo epki =
+                AsnSerializer.Deserialize<EncryptedPrivateKeyInfo>(source, AsnEncodingRules.BER);
+
+            // No supported encryption algorithms produce more bytes of decryption output than there
+            // were of decryption input.
+            byte[] decrypted = ArrayPool<byte>.Shared.Rent(epki.EncryptedData.Length);
+            Memory<byte> decryptedMemory = decrypted;
+
+            try
+            {
+                int decryptedBytes = PasswordBasedEncryption.Decrypt(
+                    epki.EncryptionAlgorithm,
+                    password,
+                    ReadOnlySpan<byte>.Empty,
+                    epki.EncryptedData.Span,
+                    decrypted);
+
+                decryptedMemory = decryptedMemory.Slice(0, decryptedBytes);
+                ImportPkcs8(decryptedMemory);
+                bytesRead = len;
+            }
+            catch (CryptographicException e)
+            {
+                throw new CryptographicException(SR.Cryptography_Pkcs8_EncryptedReadFailed, e);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(decryptedMemory.Span);
+                ArrayPool<byte>.Shared.Return(decrypted);
+            }
+        }
+
+        public override byte[] ExportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<byte> passwordBytes,
+            PbeParameters pbeParameters)
+        {
+            if (pbeParameters == null)
+            {
+                throw new ArgumentNullException(nameof(pbeParameters));
+            }
+
+            if (pbeParameters.KdfIterationCount < 1)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(pbeParameters.KdfIterationCount),
+                    pbeParameters.KdfIterationCount,
+                    SR.ArgumentOutOfRange_NeedPosNum);
+            }
+
+            if (!CngPkcs8.CanUsePasswordBytes(pbeParameters.EncryptionAlgorithm))
+            {
+                // Values that don't work with byte-based passwords, throw as normal.
+                return base.ExportEncryptedPkcs8PrivateKey(passwordBytes, pbeParameters);
+            }
+
+            if (passwordBytes.Length == 0)
+            {
+                // Switch to character-based, since that's the native input format.
+                return ExportEncryptedPkcs8PrivateKey(ReadOnlySpan<char>.Empty, pbeParameters);
+            }
+
+            return CngPkcs8.ExportEncryptedPkcs8PrivateKey(
+                this,
+                passwordBytes,
+                pbeParameters);
+        }
+
+        public override byte[] ExportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            PbeParameters pbeParameters)
+        {
+            if (pbeParameters == null)
+            {
+                throw new ArgumentNullException(nameof(pbeParameters));
+            }
+
+            if (pbeParameters.KdfIterationCount < 1)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(pbeParameters.KdfIterationCount),
+                    pbeParameters.KdfIterationCount,
+                    SR.ArgumentOutOfRange_NeedPosNum);
+            }
+
+            if (CngPkcs8.IsPlatformScheme(pbeParameters))
+            {
+                return ExportEncryptedPkcs8(password, pbeParameters.KdfIterationCount);
+            }
+
+            return CngPkcs8.ExportEncryptedPkcs8PrivateKey(
+                this,
+                password,
+                pbeParameters);
+        }
+
+        public override bool TryExportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<byte> passwordBytes,
+            PbeParameters pbeParameters,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            if (pbeParameters == null)
+            {
+                throw new ArgumentNullException(nameof(pbeParameters));
+            }
+
+            if (pbeParameters.KdfIterationCount < 1)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(pbeParameters.KdfIterationCount),
+                    pbeParameters.KdfIterationCount,
+                    SR.ArgumentOutOfRange_NeedPosNum);
+            }
+
+            if (!CngPkcs8.CanUsePasswordBytes(pbeParameters.EncryptionAlgorithm))
+            {
+                // Values that don't work with byte-based passwords, throw as normal.
+                return base.TryExportEncryptedPkcs8PrivateKey(
+                    passwordBytes,
+                    pbeParameters,
+                    destination,
+                    out bytesWritten);
+            }
+
+            if (passwordBytes.Length == 0)
+            {
+                // Switch to character-based, since that's the native input format.
+                return TryExportEncryptedPkcs8PrivateKey(
+                    ReadOnlySpan<char>.Empty,
+                    pbeParameters,
+                    destination,
+                    out bytesWritten);
+            }
+
+            return CngPkcs8.TryExportEncryptedPkcs8PrivateKey(
+                this,
+                passwordBytes,
+                pbeParameters,
+                destination,
+                out bytesWritten);
+        }
+
+        public override bool TryExportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            PbeParameters pbeParameters,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            if (pbeParameters == null)
+                throw new ArgumentNullException(nameof(pbeParameters));
+
+            if (pbeParameters.KdfIterationCount < 1)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(pbeParameters.KdfIterationCount),
+                    pbeParameters.KdfIterationCount,
+                    SR.ArgumentOutOfRange_NeedPosNum);
+            }
+
+            if (CngPkcs8.IsPlatformScheme(pbeParameters))
+            {
+                return TryExportEncryptedPkcs8(
+                    password,
+                    pbeParameters.KdfIterationCount,
+                    destination,
+                    out bytesWritten);
+            }
+
+            return CngPkcs8.TryExportEncryptedPkcs8PrivateKey(
+                this,
+                password,
+                pbeParameters,
+                destination,
+                out bytesWritten);
+        }
+
         /// <summary>
         ///     Exports the key used by the RSA object into an RSAParameters object.
         /// </summary>
         public override RSAParameters ExportParameters(bool includePrivateParameters)
         {
             byte[] rsaBlob = ExportKeyBlob(includePrivateParameters);
-
-            if (includePrivateParameters && rsaBlob == null)
-            {
-                string password = Guid.NewGuid().ToString("N");
-                byte[] pkcs8 = ExportKeyBlob(password);
-
-                using (RSA tmp = new RSACng())
-                {
-                    tmp.ImportEncryptedPkcs8PrivateKey(password, pkcs8, out _);
-                    return tmp.ExportParameters(true);
-                }
-            }
-
             RSAParameters rsaParams = new RSAParameters();
             ExportParameters(ref rsaParams, rsaBlob, includePrivateParameters);
             return rsaParams;
@@ -213,4 +407,217 @@ namespace System.Security.Cryptography
 #if INTERNAL_ASYMMETRIC_IMPLEMENTATIONS
     }
 #endif
+
+    internal static class CngPkcs8
+    {
+        // Windows 7, 8, and 8.1 don't support PBES2 export, so use
+        // the 3DES-192 scheme from PKCS12-PBE whenever deferring to the system.
+        private static readonly PbeParameters s_platformParameters =
+            new PbeParameters(
+                PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
+                HashAlgorithmName.SHA1,
+                10000);
+
+        internal static bool CanUsePasswordBytes(PbeEncryptionAlgorithm algorithm)
+        {
+            switch (algorithm)
+            {
+                case PbeEncryptionAlgorithm.Aes128Cbc:
+                case PbeEncryptionAlgorithm.Aes192Cbc:
+                case PbeEncryptionAlgorithm.Aes256Cbc:
+                    return true;
+                case PbeEncryptionAlgorithm.TripleDes3KeyPkcs12:
+                    return false;
+            }
+
+            Debug.Assert(
+                algorithm == PbeEncryptionAlgorithm.Unknown,
+                $"Unhandled algorithm '{algorithm}'");
+            return false;
+        }
+
+        internal static bool IsPlatformScheme(PbeParameters pbeParameters)
+        {
+            Debug.Assert(pbeParameters != null);
+
+            return pbeParameters.EncryptionAlgorithm == s_platformParameters.EncryptionAlgorithm &&
+                   pbeParameters.HashAlgorithm == s_platformParameters.HashAlgorithm;
+        }
+
+        internal static byte[] ExportEncryptedPkcs8PrivateKey(
+            AsymmetricAlgorithm key,
+            ReadOnlySpan<byte> passwordBytes,
+            PbeParameters pbeParameters)
+        {
+            AsnWriter writer = RewriteEncryptedPkcs8PrivateKey(
+                key,
+                passwordBytes,
+                pbeParameters);
+
+            using (writer)
+            {
+                return writer.Encode();
+            }
+        }
+
+        internal static bool TryExportEncryptedPkcs8PrivateKey(
+            AsymmetricAlgorithm key,
+            ReadOnlySpan<byte> passwordBytes,
+            PbeParameters pbeParameters,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            AsnWriter writer = RewriteEncryptedPkcs8PrivateKey(
+                key,
+                passwordBytes,
+                pbeParameters);
+
+            using (writer)
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
+        }
+
+        internal static byte[] ExportEncryptedPkcs8PrivateKey(
+            AsymmetricAlgorithm key,
+            ReadOnlySpan<char> password,
+            PbeParameters pbeParameters)
+        {
+            AsnWriter writer = RewriteEncryptedPkcs8PrivateKey(
+                key,
+                password,
+                pbeParameters);
+
+            using (writer)
+            {
+                return writer.Encode();
+            }
+        }
+
+        internal static bool TryExportEncryptedPkcs8PrivateKey(
+            AsymmetricAlgorithm key,
+            ReadOnlySpan<char> password,
+            PbeParameters pbeParameters,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            AsnWriter writer = RewriteEncryptedPkcs8PrivateKey(
+                key,
+                password,
+                pbeParameters);
+
+            using (writer)
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
+        }
+
+        private static AsnWriter RewriteEncryptedPkcs8PrivateKey(
+            AsymmetricAlgorithm key,
+            ReadOnlySpan<byte> passwordBytes,
+            PbeParameters pbeParameters)
+        {
+            Debug.Assert(pbeParameters != null);
+
+            // For RSA:
+            //  * 512-bit key needs ~400 bytes
+            //  * 16384-bit key needs ~10k bytes.
+            //  * KeySize (bits) should avoid re-rent.
+            //
+            // For DSA:
+            //  * 512-bit key needs ~300 bytes.
+            //  * 1024-bit key needs ~400 bytes.
+            //  * 2048-bit key needs ~700 bytes.
+            //  * KeySize (bits) should avoid re-rent.
+            //
+            // For ECC:
+            //  * secp256r1 needs ~200 bytes (named) or ~450 (explicit)
+            //  * secp384r1 needs ~250 bytes (named) or ~600 (explicit)
+            //  * secp521r1 needs ~300 bytes (named) or ~730 (explicit)
+            //  * KeySize (bits) should avoid re-rent for named, and probably
+            //    gets one re-rent for explicit.
+            byte[] rented = ArrayPool<byte>.Shared.Rent(key.KeySize);
+            int rentWritten = 0;
+
+            // If we use 6 bits from each byte, that's 22 * 6 = 132
+            Span<char> randomString = stackalloc char[22];
+
+            try
+            {
+                FillRandomAsciiString(randomString);
+
+                while (!key.TryExportEncryptedPkcs8PrivateKey(
+                    randomString,
+                    s_platformParameters,
+                    rented,
+                    out rentWritten))
+                {
+                    int size = rented.Length;
+                    ArrayPool<byte>.Shared.Return(rented);
+                    rented = ArrayPool<byte>.Shared.Rent(checked(size * 2));
+                }
+
+                return KeyFormatHelper.ReencryptPkcs8(
+                    randomString,
+                    rented.AsMemory(0, rentWritten),
+                    passwordBytes,
+                    pbeParameters);
+            }
+            finally
+            {
+                randomString.Clear();
+                CryptographicOperations.ZeroMemory(rented.AsSpan(0, rentWritten));
+                ArrayPool<byte>.Shared.Return(rented);
+            }
+        }
+
+        private static AsnWriter RewriteEncryptedPkcs8PrivateKey(
+            AsymmetricAlgorithm key,
+            ReadOnlySpan<char> password,
+            PbeParameters pbeParameters)
+        {
+            Debug.Assert(pbeParameters != null);
+
+            byte[] rented = ArrayPool<byte>.Shared.Rent(key.KeySize);
+            int rentWritten = 0;
+
+            try
+            {
+                while (!key.TryExportEncryptedPkcs8PrivateKey(
+                    password,
+                    s_platformParameters,
+                    rented,
+                    out rentWritten))
+                {
+                    int size = rented.Length;
+                    ArrayPool<byte>.Shared.Return(rented);
+                    rented = ArrayPool<byte>.Shared.Rent(checked(size * 2));
+                }
+
+                return KeyFormatHelper.ReencryptPkcs8(
+                    password,
+                    rented.AsMemory(0, rentWritten),
+                    password,
+                    pbeParameters);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(rented.AsSpan(0, rentWritten));
+                ArrayPool<byte>.Shared.Return(rented);
+            }
+        }
+
+        private static void FillRandomAsciiString(Span<char> destination)
+        {
+            Debug.Assert(destination.Length < 128);
+            Span<byte> randomKey = stackalloc byte[destination.Length];
+            RandomNumberGenerator.Fill(randomKey);
+
+            for (int i = 0; i < randomKey.Length; i++)
+            {
+                // 33 (!) up to 33 + 63 = 96 (`)
+                destination[i] = (char)(33 + (randomKey[i] & 0b0011_1111));
+            }
+        }
+    }
 }

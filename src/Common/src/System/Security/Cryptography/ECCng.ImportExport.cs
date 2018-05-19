@@ -496,7 +496,15 @@ namespace System.Security.Cryptography
                     desc.ulVersion = Interop.BCrypt.BCRYPTBUFFER_VERSION;
                     Marshal.StructureToPtr(desc, descPtr, false);
 
-                    errorCode = Interop.NCrypt.NCryptImportKey(provider, IntPtr.Zero, blobType, descPtr, out keyHandle, keyBlob, keyBlob.Length, 0);
+                    errorCode = Interop.NCrypt.NCryptImportKey(
+                        provider,
+                        IntPtr.Zero,
+                        blobType,
+                        descPtr,
+                        out keyHandle,
+                        ref keyBlob[0],
+                        keyBlob.Length,
+                        0);
                 }
                 finally
                 {

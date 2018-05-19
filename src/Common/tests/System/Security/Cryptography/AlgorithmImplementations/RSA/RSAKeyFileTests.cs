@@ -10,6 +10,8 @@ namespace System.Security.Cryptography.Rsa.Tests
 {
     public static class RSAKeyFileTests
     {
+        public static bool Supports384BitPrivateKey { get; } = RSAFactory.Supports384PrivateKey;
+
         [Fact]
         public static void ReadWriteBigExponentPrivatePkcs1()
         {
@@ -663,6 +665,54 @@ RdMKfFP3he4C+CFyGGslffbxCaJhKebeuOil5xxlvP8aBPVNDtQfSS1HXHd1/Ikq
         }
 
         [Fact]
+        public static void ReadEncryptedDiminishedDP_EmptyPassword()
+        {
+            const string base64 = @"
+MIIBgTAbBgkqhkiG9w0BBQMwDgQIJtjMez/9Gg4CAggABIIBYElq9UOOphEPU3b7
+G/mV8M1uEdjigidMPih3b9IIJhrjMAEix2IjS+brFL7KRQgucpZZoaFU1utvkUHg
+uKhKxjHV7uczG1NjRHmDdwpCadYx4dNaQpgGGAisFiED5hx8W8d9mAL1Kkaedhyb
+qfTRO8LqB1SGl52mxIhZ4g5mCQH8uSOZc+k4jBhWBaSk0RaAHtIiKH6VmAiZ2r6C
+7L3UTU1bhxlOMt0tABC+b4FMhEJVzl97na2KfpazpNVA4dr973rjqBid9QzXTRl6
+Avdd74QjVeZug3ArZqS/3o8E0e2F2JKGty+A4dqFYxHIHvL/2N694HerYHiOJVan
+nLHGUzIOxZNTB0TtcWJXP2xUBdHgdBP9/bL0qADYUhYN4e/7TQjuFpzqps3eQiVd
+Dmw2pL/LzHORugcg9BxRkur91lenPNcLAvnke76tMGvSGkA82I9NpBDcGRK4cPie
+5SeeJT4=";
+
+            ReadBase64EncryptedPkcs8(
+                base64,
+                "",
+                new PbeParameters(
+                    PbeEncryptionAlgorithm.Aes192Cbc,
+                    HashAlgorithmName.SHA256,
+                    3),
+                TestData.DiminishedDPParameters);
+        }
+
+        [Fact]
+        public static void ReadEncryptedDiminishedDP_EmptyPasswordBytes()
+        {
+            const string base64 = @"
+MIIBgTAbBgkqhkiG9w0BBQMwDgQIJtjMez/9Gg4CAggABIIBYElq9UOOphEPU3b7
+G/mV8M1uEdjigidMPih3b9IIJhrjMAEix2IjS+brFL7KRQgucpZZoaFU1utvkUHg
+uKhKxjHV7uczG1NjRHmDdwpCadYx4dNaQpgGGAisFiED5hx8W8d9mAL1Kkaedhyb
+qfTRO8LqB1SGl52mxIhZ4g5mCQH8uSOZc+k4jBhWBaSk0RaAHtIiKH6VmAiZ2r6C
+7L3UTU1bhxlOMt0tABC+b4FMhEJVzl97na2KfpazpNVA4dr973rjqBid9QzXTRl6
+Avdd74QjVeZug3ArZqS/3o8E0e2F2JKGty+A4dqFYxHIHvL/2N694HerYHiOJVan
+nLHGUzIOxZNTB0TtcWJXP2xUBdHgdBP9/bL0qADYUhYN4e/7TQjuFpzqps3eQiVd
+Dmw2pL/LzHORugcg9BxRkur91lenPNcLAvnke76tMGvSGkA82I9NpBDcGRK4cPie
+5SeeJT4=";
+
+            ReadBase64EncryptedPkcs8(
+                base64,
+                Array.Empty<byte>(),
+                new PbeParameters(
+                    PbeEncryptionAlgorithm.Aes192Cbc,
+                    HashAlgorithmName.SHA256,
+                    3),
+                TestData.DiminishedDPParameters);
+        }
+
+        [ConditionalFact(nameof(Supports384BitPrivateKey))]
         public static void ReadPbes1Rc2EncryptedRsa384()
         {
             // PbeWithSha1AndRC2CBC
