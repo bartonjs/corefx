@@ -105,6 +105,7 @@
   <ItemGroup Condition="'$(TargetGroup)'=='netcoreapp'">
     <Compile Include="DSACngProvider.cs" />
     <Compile Include="DSACngTests.cs" />
+    <Compile Include="RSACngPkcs8Tests.cs" />
     <Compile Include="$(CommonTestPath)\System\Security\Cryptography\AsymmetricSignatureFormatter.cs">
       <Link>CommonTest\System\Security\Cryptography\AsymmetricSignatureFormatter.cs</Link>
     </Compile>
