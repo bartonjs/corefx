@@ -19,7 +19,7 @@ namespace System.Security.Cryptography.Asn1
     // PrivateKey ::= OCTET STRING
     // Attributes ::= SET OF Attribute
     [StructLayout(LayoutKind.Sequential)]
-    internal struct PrivateKeyInfo
+    internal struct PrivateKeyInfoAsn
     {
         public byte Version;
 

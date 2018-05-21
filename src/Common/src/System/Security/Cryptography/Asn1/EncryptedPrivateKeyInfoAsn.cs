@@ -15,7 +15,7 @@ namespace System.Security.Cryptography.Asn1
     // EncryptionAlgorithmIdentifier ::= AlgorithmIdentifier
     // EncryptedData ::= OCTET STRING
     [StructLayout(LayoutKind.Sequential)]
-    internal struct EncryptedPrivateKeyInfo
+    internal struct EncryptedPrivateKeyInfoAsn
     {
         public AlgorithmIdentifierAsn EncryptionAlgorithm;
 

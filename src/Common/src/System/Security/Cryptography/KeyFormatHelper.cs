@@ -140,8 +140,8 @@ namespace System.Security.Cryptography
             Action<AlgorithmIdentifierAsn, ReadOnlyMemory<byte>> reader,
             out int bytesRead)
         {
-            PrivateKeyInfo privateKeyInfo =
-                AsnSerializer.Deserialize<PrivateKeyInfo>(source, AsnEncodingRules.BER, out int read);
+            PrivateKeyInfoAsn privateKeyInfo =
+                AsnSerializer.Deserialize<PrivateKeyInfoAsn>(source, AsnEncodingRules.BER, out int read);
 
             if (Array.IndexOf(validOids, privateKeyInfo.PrivateKeyAlgorithm.Algorithm.Value) < 0)
             {
@@ -158,8 +158,8 @@ namespace System.Security.Cryptography
             ReadOnlyMemory<byte> source,
             out int bytesRead)
         {
-            PrivateKeyInfo privateKeyInfo =
-                AsnSerializer.Deserialize<PrivateKeyInfo>(source, AsnEncodingRules.BER, out int read);
+            PrivateKeyInfoAsn privateKeyInfo =
+                AsnSerializer.Deserialize<PrivateKeyInfoAsn>(source, AsnEncodingRules.BER, out int read);
 
             if (Array.IndexOf(validOids, privateKeyInfo.PrivateKeyAlgorithm.Algorithm.Value) < 0)
             {
@@ -178,8 +178,8 @@ namespace System.Security.Cryptography
             out int bytesRead,
             out TRet ret)
         {
-            PrivateKeyInfo privateKeyInfo =
-                AsnSerializer.Deserialize<PrivateKeyInfo>(source, AsnEncodingRules.BER, out int read);
+            PrivateKeyInfoAsn privateKeyInfo =
+                AsnSerializer.Deserialize<PrivateKeyInfoAsn>(source, AsnEncodingRules.BER, out int read);
 
             if (Array.IndexOf(validOids, privateKeyInfo.PrivateKeyAlgorithm.Algorithm.Value) < 0)
             {
@@ -273,8 +273,8 @@ namespace System.Security.Cryptography
             out int bytesRead,
             out TRet ret)
         {
-            EncryptedPrivateKeyInfo epki =
-                AsnSerializer.Deserialize<EncryptedPrivateKeyInfo>(source, AsnEncodingRules.BER, out int read);
+            EncryptedPrivateKeyInfoAsn epki =
+                AsnSerializer.Deserialize<EncryptedPrivateKeyInfoAsn>(source, AsnEncodingRules.BER, out int read);
 
             // No supported encryption algorithms produce more bytes of decryption output than there
             // were of decryption input.
@@ -522,8 +522,8 @@ namespace System.Security.Cryptography
             ReadOnlySpan<char> newPassword,
             PbeParameters pbeParameters)
         {
-            EncryptedPrivateKeyInfo epki =
-                AsnSerializer.Deserialize<EncryptedPrivateKeyInfo>(current, AsnEncodingRules.BER);
+            EncryptedPrivateKeyInfoAsn epki =
+                AsnSerializer.Deserialize<EncryptedPrivateKeyInfoAsn>(current, AsnEncodingRules.BER);
 
             // No supported encryption algorithms produce more bytes of decryption output than there
             // were of decryption input.
@@ -563,8 +563,8 @@ namespace System.Security.Cryptography
             ReadOnlySpan<byte> newPasswordBytes,
             PbeParameters pbeParameters)
         {
-            EncryptedPrivateKeyInfo epki =
-                AsnSerializer.Deserialize<EncryptedPrivateKeyInfo>(current, AsnEncodingRules.BER);
+            EncryptedPrivateKeyInfoAsn epki =
+                AsnSerializer.Deserialize<EncryptedPrivateKeyInfoAsn>(current, AsnEncodingRules.BER);
 
             // No supported encryption algorithms produce more bytes of decryption output than there
             // were of decryption input.

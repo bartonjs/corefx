@@ -141,8 +141,8 @@ namespace System.Security.Cryptography
             {
             }
 
-            EncryptedPrivateKeyInfo epki =
-                AsnSerializer.Deserialize<EncryptedPrivateKeyInfo>(source, AsnEncodingRules.BER);
+            EncryptedPrivateKeyInfoAsn epki =
+                AsnSerializer.Deserialize<EncryptedPrivateKeyInfoAsn>(source, AsnEncodingRules.BER);
 
             // No supported encryption algorithms produce more bytes of decryption output than there
             // were of decryption input.
