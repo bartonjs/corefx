@@ -135,6 +135,18 @@
     <Compile Include="$(CommonPath)\System\Security\Cryptography\RsaPaddingProcessor.cs">
       <Link>Common\System\Security\Cryptography\RsaPaddingProcessor.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\AlgorithmIdentifierAsn.cs">
+      <Link>Common\System\Security\Cryptography\Asn1\AlgorithmIdentifierAsn.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\AttributeAsn.cs">
+      <Link>Common\System\Security\Cryptography\Asn1\AttributeAsn.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\EncryptedPrivateKeyInfoAsn.cs">
+      <Link>Common\System\Security\Cryptography\Asn1\EncryptedPrivateKeyInfoAsn.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\PrivateKeyInfoAsn.cs">
+      <Link>Common\System\Security\Cryptography\Asn1\PrivateKeyInfoAsn.cs</Link>
+    </Compile>
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetsWindows)' == 'true' and '$(IsPartialFacadeAssembly)' != 'true'">
     <Compile Include="System\Security\Cryptography\CngKeyLite.cs" />

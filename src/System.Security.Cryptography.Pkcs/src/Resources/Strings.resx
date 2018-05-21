@@ -229,8 +229,14 @@
   <data name="Cryptography_Cms_WrongKeyUsage" xml:space="preserve">
     <value>The certificate is not valid for the requested usage.</value>
   </data>
+  <data name="Cryptography_NotValidPublicOrPrivateKey" xml:space="preserve">
+    <value>Key is not a valid public or private key.</value>
+  </data>
   <data name="Cryptography_Pkcs_InvalidSignatureParameters" xml:space="preserve">
     <value>Invalid signature paramters.</value>
+  </data>
+  <data name="Cryptography_Pkcs8_EncryptedReadFailed" xml:space="preserve">
+    <value>The EncryptedPrivateKeyInfo structure was decoded but was not successfully interpreted, the password may be incorrect.</value>
   </data>
   <data name="Cryptography_Pkcs9_AttributeMismatch" xml:space="preserve">
     <value>The parameter should be a PKCS 9 attribute.</value>

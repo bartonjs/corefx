@@ -228,6 +228,7 @@
     <Reference Include="System.Runtime.InteropServices" />
     <Reference Include="System.Diagnostics.Debug" />
     <Reference Include="System.Diagnostics.Tools" />
+    <Reference Include="System.Runtime.CompilerServices.Unsafe" />
     <Reference Include="System.Runtime.Extensions" />
     <Reference Include="System.Runtime.InteropServices.RuntimeInformation" />
     <Reference Include="System.Security.Cryptography.Primitives" />
@@ -254,6 +255,9 @@
     <Compile Include="$(CommonPath)\System\Security\Cryptography\AsnWriter.cs">
       <Link>Common\System\Security\Cryptography\AsnWriter.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\KeyFormatHelper.cs">
+      <Link>Common\System\Security\Cryptography\KeyFormatHelper.cs</Link>
+    </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\Oids.cs">
       <Link>Common\System\Security\Cryptography\Oids.cs</Link>
     </Compile>
@@ -263,8 +267,18 @@
     <Compile Include="$(CommonPath)\System\Security\Cryptography\Pkcs12Kdf.cs">
       <Link>Common\System\Security\Cryptography\Pkcs12Kdf.cs</Link>
     </Compile>
-    <Compile Include="System\Security\Cryptography\Pkcs\Asn1\AlgorithmIdentifierAsn.cs" />
-    <Compile Include="System\Security\Cryptography\Pkcs\Asn1\AttributeAsn.cs" />
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\AlgorithmIdentifierAsn.cs">
+      <Link>Common\System\Security\Cryptography\Asn1\AlgorithmIdentifierAsn.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\AttributeAsn.cs">
+      <Link>Common\System\Security\Cryptography\Asn1\AttributeAsn.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\EncryptedPrivateKeyInfoAsn.cs">
+      <Link>Common\System\Security\Cryptography\Asn1\EncryptedPrivateKeyInfoAsn.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\PrivateKeyInfoAsn.cs">
+      <Link>Common\System\Security\Cryptography\Asn1\PrivateKeyInfoAsn.cs</Link>
+    </Compile>
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\CertificateChoiceAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\ContentInfoAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\EncapsulatedContentInfoAsn.cs" />

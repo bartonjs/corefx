@@ -104,16 +104,11 @@ namespace System.Security.Cryptography.Pkcs
         public ReadOnlyMemory<byte> AlgorithmParameters { get; }
         public CryptographicAttributeObjectCollection Attributes { get; }
         public ReadOnlyMemory<byte> PrivateKeyBytes { get; }
-        // Since we need the algorithm identifier (or an is-waterfall) these don't collapse to
-        // AsymmetricAlgorithm.
-        public Pkcs8PrivateKeyInfo(DSA privateKey) { }
-        public Pkcs8PrivateKeyInfo(ECDsa privateKey) { }
-        public Pkcs8PrivateKeyInfo(ECDiffieHellman privateKey) { }
-        public Pkcs8PrivateKeyInfo(RSA privateKey) { }
         public Pkcs8PrivateKeyInfo(
             string algorithmId, ReadOnlyMemory<byte> algorithmParameters,
             ReadOnlyMemory<byte> privateKey, bool skipCopies = false) { }
-        public static void Decode(
+        public static Pkcs8PrivateKeyInfo Create(AsymmetricAlgorithm privateKey) => throw null;
+        public static Pkcs8PrivateKeyInfo Decode(
             ReadOnlyMemory<byte> source, out int bytesRead, bool skipCopy = false) => throw null;
     }
     public sealed partial class Pkcs8PrivateKeyInfo
