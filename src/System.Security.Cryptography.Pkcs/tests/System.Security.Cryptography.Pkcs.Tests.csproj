@@ -50,6 +50,7 @@
     <Compile Include="Rfc3161\TimestampTokenTests.cs" />
     <Compile Include="Pkcs12\SimpleRead.cs" />
     <Compile Include="Pkcs12\WriteToWindows.cs" />
+    <Compile Include="Pkcs8PrivateKeyInfoTests.cs" />
     <Compile Include="PrivateKeyHelpers.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetsWindows)' == 'true' AND '$(TargetGroup)'=='netcoreapp'">

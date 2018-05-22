@@ -2,35 +2,35 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Runtime.InteropServices;
+using System.Buffers;
+using System.Diagnostics;
 using System.Security.Cryptography.Asn1;
-using System.Security.Cryptography.Pkcs.Asn1;
 using Internal.Cryptography;
 
 namespace System.Security.Cryptography.Pkcs
 {
-    public sealed partial class Pkcs8PrivateKeyInfo
+    public sealed class Pkcs8PrivateKeyInfo
     {
-        public string AlgorithmId { get; }
-        public ReadOnlyMemory<byte> AlgorithmParameters { get; }
+        public Oid AlgorithmId { get; }
+        public ReadOnlyMemory<byte>? AlgorithmParameters { get; }
         public CryptographicAttributeObjectCollection Attributes { get; }
         public ReadOnlyMemory<byte> PrivateKeyBytes { get; }
 
         public Pkcs8PrivateKeyInfo(
-            string algorithmId,
-            ReadOnlyMemory<byte> algorithmParameters,
+            Oid algorithmId,
+            ReadOnlyMemory<byte>? algorithmParameters,
             ReadOnlyMemory<byte> privateKey,
             bool skipCopies = false)
         {
             AlgorithmId = algorithmId;
-            AlgorithmParameters = skipCopies ? algorithmParameters : algorithmParameters.ToArray();
+            AlgorithmParameters = skipCopies ? algorithmParameters : algorithmParameters?.ToArray();
             PrivateKeyBytes = skipCopies ? privateKey : privateKey.ToArray();
             Attributes = new CryptographicAttributeObjectCollection();
         }
 
         private Pkcs8PrivateKeyInfo(
-            string algorithmId,
-            ReadOnlyMemory<byte> algorithmParameters,
+            Oid algorithmId,
+            ReadOnlyMemory<byte>? algorithmParameters,
             ReadOnlyMemory<byte> privateKey,
             CryptographicAttributeObjectCollection attributes)
         {
@@ -47,7 +47,9 @@ namespace System.Security.Cryptography.Pkcs
         }
 
         public static Pkcs8PrivateKeyInfo Decode(
-            ReadOnlyMemory<byte> source, out int bytesRead, bool skipCopy = false)
+            ReadOnlyMemory<byte> source,
+            out int bytesRead,
+            bool skipCopy = false)
         {
             if (!skipCopy)
             {
@@ -55,12 +57,12 @@ namespace System.Security.Cryptography.Pkcs
                 source = reader.GetEncodedValue().ToArray();
             }
 
-            PrivateKeyInfo privateKeyInfo =
-                AsnSerializer.Deserialize<PrivateKeyInfo>(source, AsnEncodingRules.BER, out bytesRead);
+            PrivateKeyInfoAsn privateKeyInfo =
+                AsnSerializer.Deserialize<PrivateKeyInfoAsn>(source, AsnEncodingRules.BER, out bytesRead);
 
             return new Pkcs8PrivateKeyInfo(
-                privateKeyInfo.PrivateKeyAlgorithm.Algorithm.Value,
-                privateKeyInfo.PrivateKeyAlgorithm.Parameters.GetValueOrDefault(),
+                privateKeyInfo.PrivateKeyAlgorithm.Algorithm,
+                privateKeyInfo.PrivateKeyAlgorithm.Parameters,
                 privateKeyInfo.PrivateKey,
                 SignerInfo.MakeAttributeCollection(privateKeyInfo.Attributes));
         }
@@ -75,13 +77,21 @@ namespace System.Security.Cryptography.Pkcs
 
         public byte[] Encrypt(ReadOnlySpan<char> password, PbeParameters pbeParameters)
         {
-            using (AsnWriter writer = WritePkcs8())
+            using (AsnWriter pkcs8 = WritePkcs8())
+            using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(password, pkcs8, pbeParameters))
             {
-                throw null;
+                return writer.Encode();
             }
         }
 
-        public byte[] Encrypt(ReadOnlySpan<byte> passwordBytes, PbeParameters pbeParameters) => throw null;
+        public byte[] Encrypt(ReadOnlySpan<byte> passwordBytes, PbeParameters pbeParameters)
+        {
+            using (AsnWriter pkcs8 = WritePkcs8())
+            using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(passwordBytes, pkcs8, pbeParameters))
+            {
+                return writer.Encode();
+            }
+        }
 
         public bool TryEncode(Span<byte> destination, out int bytesWritten)
         {
@@ -91,30 +101,108 @@ namespace System.Security.Cryptography.Pkcs
             }
         }
 
-        public bool TryEncrypt(ReadOnlySpan<char> password, PbeParameters pbeParameters, Span<byte> destination,
-            out int bytesWritten) => throw null;
+        public bool TryEncrypt(
+            ReadOnlySpan<char> password,
+            PbeParameters pbeParameters,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            using (AsnWriter pkcs8 = WritePkcs8())
+            using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(password, pkcs8, pbeParameters))
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
+        }
 
-        public bool TryEncrypt(ReadOnlySpan<byte> passwordBytes, PbeParameters pbeParameters, Span<byte> destination,
-            out int bytesWritten) => throw null;
+        public bool TryEncrypt(
+            ReadOnlySpan<byte> passwordBytes,
+            PbeParameters pbeParameters,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            using (AsnWriter pkcs8 = WritePkcs8())
+            using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(passwordBytes, pkcs8, pbeParameters))
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
+        }
 
-        public static void Decrypt(
-            ReadOnlySpan<char> password, ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
+        public static Pkcs8PrivateKeyInfo DecryptAndDecode(
+            ReadOnlySpan<char> password,
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            ArraySegment<byte> decrypted = KeyFormatHelper.DecryptPkcs8(
+                password,
+                source,
+                out int localRead);
 
-        public static void Decrypt(
-            ReadOnlySpan<byte> passwordBytes, ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
+            Memory<byte> decryptedMemory = decrypted;
+
+            try
+            {
+                Pkcs8PrivateKeyInfo ret = Decode(decryptedMemory, out int decoded);
+                Debug.Assert(!ret.PrivateKeyBytes.Span.Overlaps(decryptedMemory.Span));
+
+                if (decoded != decryptedMemory.Length)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+
+                bytesRead = localRead;
+                return ret;
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(decryptedMemory.Span);
+                ArrayPool<byte>.Shared.Return(decrypted.Array);
+            }
+        }
+
+        public static Pkcs8PrivateKeyInfo DecryptAndDecode(
+            ReadOnlySpan<byte> passwordBytes,
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            ArraySegment<byte> decrypted = KeyFormatHelper.DecryptPkcs8(
+                passwordBytes,
+                source,
+                out int localRead);
+
+            Memory<byte> decryptedMemory = decrypted;
+
+            try
+            {
+                Pkcs8PrivateKeyInfo ret = Decode(decryptedMemory, out int decoded);
+                Debug.Assert(!ret.PrivateKeyBytes.Span.Overlaps(decryptedMemory.Span));
+
+                if (decoded != decryptedMemory.Length)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
+
+                bytesRead = localRead;
+                return ret;
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(decryptedMemory.Span);
+                ArrayPool<byte>.Shared.Return(decrypted.Array);
+            }
+        }
 
         private AsnWriter WritePkcs8()
         {
-            PrivateKeyInfo info = new PrivateKeyInfo
+            PrivateKeyInfoAsn info = new PrivateKeyInfoAsn
             {
                 PrivateKeyAlgorithm =
                 {
-                    Algorithm = new Oid(AlgorithmId, AlgorithmId),
+                    Algorithm = AlgorithmId,
                 },
                 PrivateKey = PrivateKeyBytes,
             };
 
-            if (AlgorithmParameters.Length > 0)
+            if (AlgorithmParameters?.Length > 0)
             {
                 info.PrivateKeyAlgorithm.Parameters = AlgorithmParameters;
             }
@@ -127,32 +215,5 @@ namespace System.Security.Cryptography.Pkcs
             // Write in BER in case any of the provided fields was BER.
             return AsnSerializer.Serialize(info, AsnEncodingRules.BER);
         }
-    }
-
-    // https://tools.ietf.org/html/rfc5208#section-5
-    //
-    // PrivateKeyInfo ::= SEQUENCE {
-    //   version                   Version,
-    //   privateKeyAlgorithm       PrivateKeyAlgorithmIdentifier,
-    //   privateKey                PrivateKey,
-    //   attributes           [0]  IMPLICIT Attributes OPTIONAL }
-    // 
-    // Version ::= INTEGER
-    // PrivateKeyAlgorithmIdentifier ::= AlgorithmIdentifier
-    // PrivateKey ::= OCTET STRING
-    // Attributes ::= SET OF Attribute
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct PrivateKeyInfo
-    {
-        public byte Version;
-
-        public AlgorithmIdentifierAsn PrivateKeyAlgorithm;
-
-        [OctetString]
-        public ReadOnlyMemory<byte> PrivateKey;
-
-        [ExpectedTag(0)]
-        [OptionalValue]
-        public AttributeAsn[] Attributes;
     }
 }

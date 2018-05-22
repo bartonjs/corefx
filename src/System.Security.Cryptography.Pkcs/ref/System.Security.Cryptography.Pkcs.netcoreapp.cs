@@ -99,13 +99,12 @@ namespace System.Security.Cryptography.Pkcs
     }
     public sealed partial class Pkcs8PrivateKeyInfo
     {
-        // Could be Oid, if we want.
-        public string AlgorithmId { get; }
-        public ReadOnlyMemory<byte> AlgorithmParameters { get; }
+        public Oid AlgorithmId { get; }
+        public ReadOnlyMemory<byte>? AlgorithmParameters { get; }
         public CryptographicAttributeObjectCollection Attributes { get; }
         public ReadOnlyMemory<byte> PrivateKeyBytes { get; }
         public Pkcs8PrivateKeyInfo(
-            string algorithmId, ReadOnlyMemory<byte> algorithmParameters,
+            Oid algorithmId, ReadOnlyMemory<byte>? algorithmParameters,
             ReadOnlyMemory<byte> privateKey, bool skipCopies = false) { }
         public static Pkcs8PrivateKeyInfo Create(AsymmetricAlgorithm privateKey) => throw null;
         public static Pkcs8PrivateKeyInfo Decode(
@@ -122,9 +121,9 @@ namespace System.Security.Cryptography.Pkcs
     }
     public sealed partial class Pkcs8PrivateKeyInfo
     {
-        public static void Decrypt(
+        public static Pkcs8PrivateKeyInfo DecryptAndDecode(
             ReadOnlySpan<char> password, ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
-        public static void Decrypt(
+        public static Pkcs8PrivateKeyInfo DecryptAndDecode(
             ReadOnlySpan<byte> passwordBytes, ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
     }
     public sealed partial class Rfc3161TimestampRequest

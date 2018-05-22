@@ -516,30 +516,80 @@ namespace System.Security.Cryptography
             }
         }
 
-        internal static AsnWriter ReencryptPkcs8(
+        internal static ArraySegment<byte> DecryptPkcs8(
             ReadOnlySpan<char> inputPassword,
-            ReadOnlyMemory<byte> current,
-            ReadOnlySpan<char> newPassword,
-            PbeParameters pbeParameters)
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            return DecryptPkcs8(
+                inputPassword,
+                ReadOnlySpan<byte>.Empty,
+                source,
+                out bytesRead);
+        }
+
+        internal static ArraySegment<byte> DecryptPkcs8(
+            ReadOnlySpan<byte> inputPasswordBytes,
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            return DecryptPkcs8(
+                ReadOnlySpan<char>.Empty,
+                inputPasswordBytes,
+                source,
+                out bytesRead);
+        }
+
+        private static ArraySegment<byte> DecryptPkcs8(
+            ReadOnlySpan<char> inputPassword,
+            ReadOnlySpan<byte> inputPasswordBytes,
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
         {
             EncryptedPrivateKeyInfoAsn epki =
-                AsnSerializer.Deserialize<EncryptedPrivateKeyInfoAsn>(current, AsnEncodingRules.BER);
+                AsnSerializer.Deserialize<EncryptedPrivateKeyInfoAsn>(source, AsnEncodingRules.BER, out bytesRead);
 
             // No supported encryption algorithms produce more bytes of decryption output than there
             // were of decryption input.
             byte[] decrypted = ArrayPool<byte>.Shared.Rent(epki.EncryptedData.Length);
-            Memory<byte> decryptedMemory = decrypted;
 
             try
             {
                 int decryptedBytes = PasswordBasedEncryption.Decrypt(
                     epki.EncryptionAlgorithm,
                     inputPassword,
-                    ReadOnlySpan<byte>.Empty,
+                    inputPasswordBytes,
                     epki.EncryptedData.Span,
                     decrypted);
 
-                decryptedMemory = decryptedMemory.Slice(0, decryptedBytes);
+                return new ArraySegment<byte>(decrypted, 0, decryptedBytes);
+            }
+            catch (CryptographicException e)
+            {
+                ArrayPool<byte>.Shared.Return(decrypted);
+                throw new CryptographicException(SR.Cryptography_Pkcs8_EncryptedReadFailed, e);
+            }
+        }
+
+        internal static AsnWriter ReencryptPkcs8(
+            ReadOnlySpan<char> inputPassword,
+            ReadOnlyMemory<byte> current,
+            ReadOnlySpan<char> newPassword,
+            PbeParameters pbeParameters)
+        {
+            ArraySegment<byte> decrypted = DecryptPkcs8(
+                inputPassword,
+                current,
+                out int bytesRead);
+
+            Memory<byte> decryptedMemory = decrypted;
+
+            try
+            {
+                if (bytesRead != current.Length)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
 
                 using (AsnWriter pkcs8Writer = new AsnWriter(AsnEncodingRules.BER))
                 {
@@ -555,32 +605,32 @@ namespace System.Security.Cryptography
             {
                 throw new CryptographicException(SR.Cryptography_Pkcs8_EncryptedReadFailed, e);
             }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(decryptedMemory.Span);
+                ArrayPool<byte>.Shared.Return(decrypted.Array);
+            }
         }
 
         internal static AsnWriter ReencryptPkcs8(
-            ReadOnlySpan<char> inputPassword,
+            ReadOnlySpan<byte> inputPasswordBytes,
             ReadOnlyMemory<byte> current,
             ReadOnlySpan<byte> newPasswordBytes,
             PbeParameters pbeParameters)
         {
-            EncryptedPrivateKeyInfoAsn epki =
-                AsnSerializer.Deserialize<EncryptedPrivateKeyInfoAsn>(current, AsnEncodingRules.BER);
+            ArraySegment<byte> decrypted = DecryptPkcs8(
+                inputPasswordBytes,
+                current,
+                out int bytesRead);
 
-            // No supported encryption algorithms produce more bytes of decryption output than there
-            // were of decryption input.
-            byte[] decrypted = ArrayPool<byte>.Shared.Rent(epki.EncryptedData.Length);
             Memory<byte> decryptedMemory = decrypted;
 
             try
             {
-                int decryptedBytes = PasswordBasedEncryption.Decrypt(
-                    epki.EncryptionAlgorithm,
-                    inputPassword,
-                    ReadOnlySpan<byte>.Empty,
-                    epki.EncryptedData.Span,
-                    decrypted);
-
-                decryptedMemory = decryptedMemory.Slice(0, decryptedBytes);
+                if (bytesRead != current.Length)
+                {
+                    throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                }
 
                 using (AsnWriter pkcs8Writer = new AsnWriter(AsnEncodingRules.BER))
                 {
@@ -595,6 +645,11 @@ namespace System.Security.Cryptography
             catch (CryptographicException e)
             {
                 throw new CryptographicException(SR.Cryptography_Pkcs8_EncryptedReadFailed, e);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(decryptedMemory.Span);
+                ArrayPool<byte>.Shared.Return(decrypted.Array);
             }
         }
     }
