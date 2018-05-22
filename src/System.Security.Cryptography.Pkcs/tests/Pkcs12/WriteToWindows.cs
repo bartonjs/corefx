@@ -118,13 +118,15 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 "040101".HexToByteArray());
 
             using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.TryGetCertificateWithPrivateKey())
+            using (RSA certKey = cert.GetRSAPrivateKey())
+            using (RSA exportableKey = certKey.MakeExportable())
             {
                 CertBag certBag = contents.AddCertificate(cert);
                 certBag.Attributes.Add(localKeyId);
 
                 rawData = cert.RawData;
 
-                KeyBag keyBag = contents.AddKeyUnencrypted(cert.GetRSAPrivateKey().ExportPkcs8PrivateKey());
+                KeyBag keyBag = contents.AddKeyUnencrypted(exportableKey.ExportPkcs8PrivateKey());
 
                 keyBag.Attributes.Add(localKeyId);
             }
