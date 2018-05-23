@@ -613,13 +613,13 @@ namespace System.Security.Cryptography
         }
 
         internal static AsnWriter ReencryptPkcs8(
-            ReadOnlySpan<byte> inputPasswordBytes,
+            ReadOnlySpan<char> inputPassword,
             ReadOnlyMemory<byte> current,
             ReadOnlySpan<byte> newPasswordBytes,
             PbeParameters pbeParameters)
         {
             ArraySegment<byte> decrypted = DecryptPkcs8(
-                inputPasswordBytes,
+                inputPassword,
                 current,
                 out int bytesRead);
 

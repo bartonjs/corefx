@@ -298,6 +298,9 @@
     <Compile Include="$(CommonPath)\Interop\Windows\kernel32\Interop.FormatMessage.cs">
       <Link>Internal\Windows\kernel32\Interop.FormatMessage.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\CngPkcs8.cs">
+      <Link>Common\System\Security\Cryptography\CngPkcs8.cs</Link>
+    </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\DSACng.cs">
       <Link>Common\System\Security\Cryptography\DSACng.cs</Link>
     </Compile>

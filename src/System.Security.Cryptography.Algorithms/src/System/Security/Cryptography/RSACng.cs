@@ -116,12 +116,12 @@ namespace System.Security.Cryptography
             }
 
             private void ImportKeyBlob(
-                ReadOnlyMemory<byte> rsaBlob,
+                ReadOnlyMemory<byte> keyBlob,
                 string blobType,
                 bool encrypted=false,
                 ReadOnlySpan<char> password=default)
             {
-                SafeNCryptKeyHandle keyHandle = CngKeyLite.ImportKeyBlob(blobType, rsaBlob, encrypted, password);
+                SafeNCryptKeyHandle keyHandle = CngKeyLite.ImportKeyBlob(blobType, keyBlob, encrypted, password);
 
                 Debug.Assert(!keyHandle.IsInvalid);
 

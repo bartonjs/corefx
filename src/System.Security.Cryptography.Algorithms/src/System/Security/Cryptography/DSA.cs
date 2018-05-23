@@ -353,7 +353,7 @@ namespace System.Security.Cryptography
             ReadOnlyMemory<byte> source,
             out int bytesRead)
         {
-            KeyFormatHelper.ReadEncryptedPkcs8<DSAParameters, BigInteger>(
+            KeyFormatHelper.ReadEncryptedPkcs8<DSAParameters, DsaPrivateKey>(
                 s_validOids,
                 source,
                 passwordBytes,
@@ -372,7 +372,7 @@ namespace System.Security.Cryptography
             ReadOnlyMemory<byte> source,
             out int bytesRead)
         {
-            KeyFormatHelper.ReadEncryptedPkcs8<DSAParameters, BigInteger>(
+            KeyFormatHelper.ReadEncryptedPkcs8<DSAParameters, DsaPrivateKey>(
                 s_validOids,
                 source,
                 password,
@@ -390,7 +390,7 @@ namespace System.Security.Cryptography
             ReadOnlyMemory<byte> source,
             out int bytesRead)
         {
-            KeyFormatHelper.ReadPkcs8<DSAParameters, BigInteger>(
+            KeyFormatHelper.ReadPkcs8<DSAParameters, DsaPrivateKey>(
                 s_validOids,
                 source,
                 ReadDsaPrivateKey, 
@@ -404,7 +404,7 @@ namespace System.Security.Cryptography
         }
 
         private void ReadDsaPrivateKey(
-            in BigInteger x,
+            in DsaPrivateKey key,
             in AlgorithmIdentifierAsn algId,
             out DSAParameters ret)
         {
@@ -423,6 +423,9 @@ namespace System.Security.Cryptography
             };
 
             ret.G = ExportMinimumSize(parms.G, ret.P.Length);
+
+            // Force a positive interpretation because Windows sometimes writes negative numbers.
+            BigInteger x = new BigInteger(key.X.Value.Span, isUnsigned: true, isBigEndian: true);
             ret.X = ExportMinimumSize(x, ret.Q.Length);
 
             // The public key is not contained within the format, calculate it.
@@ -493,5 +496,13 @@ namespace System.Security.Cryptography
         public BigInteger P;
         public BigInteger Q;
         public BigInteger G;
+    }
+
+    [Choice]
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct DsaPrivateKey
+    {
+        [Integer]
+        public ReadOnlyMemory<byte>? X;
     }
 }
