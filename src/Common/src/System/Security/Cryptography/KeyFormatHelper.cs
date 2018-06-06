@@ -37,8 +37,8 @@ namespace System.Security.Cryptography
             out int bytesRead)
         {
             // X.509 SubjectPublicKeyInfo is described as DER.
-            SubjectPublicKeyInfo spki =
-                AsnSerializer.Deserialize<SubjectPublicKeyInfo>(source, AsnEncodingRules.DER, out int read);
+            SubjectPublicKeyInfoAsn spki =
+                AsnSerializer.Deserialize<SubjectPublicKeyInfoAsn>(source, AsnEncodingRules.DER, out int read);
 
             if (Array.IndexOf(validOids, spki.Algorithm.Algorithm.Value) < 0)
             {
@@ -56,8 +56,8 @@ namespace System.Security.Cryptography
             out int bytesRead)
         {
             // X.509 SubjectPublicKeyInfo is described as DER.
-            SubjectPublicKeyInfo spki =
-                AsnSerializer.Deserialize<SubjectPublicKeyInfo>(source, AsnEncodingRules.DER, out int read);
+            SubjectPublicKeyInfoAsn spki =
+                AsnSerializer.Deserialize<SubjectPublicKeyInfoAsn>(source, AsnEncodingRules.DER, out int read);
 
             if (Array.IndexOf(validOids, spki.Algorithm.Algorithm.Value) < 0)
             {
@@ -77,8 +77,8 @@ namespace System.Security.Cryptography
             out TRet ret)
         {
             // X.509 SubjectPublicKeyInfo is described as DER.
-            SubjectPublicKeyInfo spki =
-                AsnSerializer.Deserialize<SubjectPublicKeyInfo>(source, AsnEncodingRules.DER, out int read);
+            SubjectPublicKeyInfoAsn spki =
+                AsnSerializer.Deserialize<SubjectPublicKeyInfoAsn>(source, AsnEncodingRules.DER, out int read);
 
             if (Array.IndexOf(validOids, spki.Algorithm.Algorithm.Value) < 0)
             {
@@ -675,19 +675,5 @@ namespace System.Security.Cryptography
                 ArrayPool<byte>.Shared.Return(decrypted.Array);
             }
         }
-    }
-
-    // https://tools.ietf.org/html/rfc3280#section-4.1
-    //
-    // SubjectPublicKeyInfo  ::=  SEQUENCE  {
-    //   algorithm            AlgorithmIdentifier,
-    //   subjectPublicKey     BIT STRING  }
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct SubjectPublicKeyInfo
-    {
-        internal AlgorithmIdentifierAsn Algorithm;
-
-        [BitString]
-        internal ReadOnlyMemory<byte> SubjectPublicKey;
     }
 }

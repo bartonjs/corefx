@@ -583,8 +583,8 @@ namespace System.Security.Cryptography
             {
                 using (MemoryManager<byte> manager = new PinnedSpanMemoryManager<byte>(ptr, source.Length))
                 {
-                    RSAPrivateKey key =
-                        AsnSerializer.Deserialize<RSAPrivateKey>(manager.Memory, AsnEncodingRules.BER, out int localRead);
+                    RSAPrivateKeyAsn key =
+                        AsnSerializer.Deserialize<RSAPrivateKeyAsn>(manager.Memory, AsnEncodingRules.BER, out int localRead);
 
                     AlgorithmIdentifierAsn ignored = default;
                     FromPkcs1PrivateKey(key, ignored, out RSAParameters rsaParameters);
@@ -619,7 +619,7 @@ namespace System.Security.Cryptography
             ReadOnlySpan<byte> source,
             out int bytesRead)
         {
-            KeyFormatHelper.ReadEncryptedPkcs8<RSAParameters, RSAPrivateKey>(
+            KeyFormatHelper.ReadEncryptedPkcs8<RSAParameters, RSAPrivateKeyAsn>(
                 s_validOids,
                 source,
                 passwordBytes,
@@ -638,7 +638,7 @@ namespace System.Security.Cryptography
             ReadOnlySpan<byte> source,
             out int bytesRead)
         {
-            KeyFormatHelper.ReadEncryptedPkcs8<RSAParameters, RSAPrivateKey>(
+            KeyFormatHelper.ReadEncryptedPkcs8<RSAParameters, RSAPrivateKeyAsn>(
                 s_validOids,
                 source,
                 password,
@@ -653,7 +653,7 @@ namespace System.Security.Cryptography
         }
 
         private static void FromPkcs1PrivateKey(
-            in RSAPrivateKey key,
+            in RSAPrivateKeyAsn key,
             in AlgorithmIdentifierAsn algId,
             out RSAParameters ret)
         {

@@ -44,7 +44,7 @@ namespace System.Security.Cryptography
             {
                 hasErrors = true;
             }
-            
+
             if (!hasErrors)
             {
                 if (Curve.IsExplicit)
@@ -262,7 +262,7 @@ namespace System.Security.Cryptography
             // write the SPKI structure manually.
 
             AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
-            
+
             // SubjectPublicKeyInfo
             writer.PushSequence();
 
@@ -387,7 +387,7 @@ namespace System.Security.Cryptography
 
                 // version 1
                 writer.WriteInteger(1);
-                
+
                 // privateKey
                 writer.WriteOctetString(D);
 
@@ -424,125 +424,5 @@ namespace System.Security.Cryptography
                 }
             }
         }
-    }
-
-    // https://www.secg.org/sec1-v2.pdf, C.4
-    //
-    // ECPrivateKey ::= SEQUENCE {
-    //   version INTEGER { ecPrivkeyVer1(1) } (ecPrivkeyVer1),
-    //   privateKey OCTET STRING,
-    //   parameters [0] ECDomainParameters {{ SECGCurveNames }} OPTIONAL,
-    //   publicKey [1] BIT STRING OPTIONAL
-    // }
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct ECPrivateKey
-    {
-        public byte Version;
-
-        [OctetString]
-        public ReadOnlyMemory<byte> PrivateKey;
-
-        [OptionalValue]
-        [ExpectedTag(0, ExplicitTag = true)]
-        public ECDomainParameters? Parameters;
-
-        [BitString, OptionalValue]
-        [ExpectedTag(1, ExplicitTag = true)]
-        public ReadOnlyMemory<byte>? PublicKey;
-    }
-
-    // https://www.secg.org/sec1-v2.pdf, C.2
-    //
-    // ECDomainParameters{ECDOMAIN:IOSet} ::= CHOICE {
-    //   specified SpecifiedECDomain,
-    //   named ECDOMAIN.&id({IOSet}),
-    //   implicitCA NULL
-    // }
-    [Choice]
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct ECDomainParameters
-    {
-        public SpecifiedECDomain? Specified;
-
-        [ObjectIdentifier(PopulateFriendlyName = true)]
-        public Oid Named;
-    }
-
-    // https://www.secg.org/sec1-v2.pdf, C.2
-    //
-    // SpecifiedECDomain ::= SEQUENCE {
-    //   version SpecifiedECDomainVersion(ecdpVer1 | ecdpVer2 | ecdpVer3, ...),
-    //   fieldID FieldID {{FieldTypes}},
-    //   curve Curve,
-    //   base ECPoint,
-    //   order INTEGER,
-    //   cofactor INTEGER OPTIONAL,
-    //   hash HashAlgorithm OPTIONAL,
-    //   ...
-    // }
-    //
-    // HashAlgorithm ::= AlgorithmIdentifier {{ HashFunctions }}
-    // ECPoint ::= OCTET STRING
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct SpecifiedECDomain
-    {
-        public byte Version;
-
-        public FieldID FieldID;
-
-        public Curve Curve;
-
-        [OctetString]
-        public ReadOnlyMemory<byte> Base;
-
-        [Integer]
-        public ReadOnlyMemory<byte> Order;
-
-        [Integer, OptionalValue]
-        public ReadOnlyMemory<byte>? Cofactor;
-
-        [OptionalValue]
-        [ObjectIdentifier(PopulateFriendlyName = true)]
-        public Oid Hash;
-    }
-
-    // https://www.secg.org/sec1-v2.pdf, C.1
-    //
-    // FieldID { FIELD-ID:IOSet } ::= SEQUENCE { -- Finite field
-    //   fieldType FIELD-ID.&id({IOSet}),
-    //   parameters FIELD-ID.&Type({IOSet}{@fieldType})
-    // }
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct FieldID
-    {
-        [ObjectIdentifier]
-        public string FieldType;
-
-        [AnyValue]
-        public ReadOnlyMemory<byte> Parameters;
-    }
-
-    // https://www.secg.org/sec1-v2.pdf, C.2
-    //
-    // Curve ::= SEQUENCE {
-    //   a FieldElement,
-    //   b FieldElement,
-    //   seed BIT STRING OPTIONAL
-    //   -- Shall be present if used in SpecifiedECDomain
-    //   -- with version equal to ecdpVer2 or ecdpVer3
-    // }
-    //
-    // FieldElement ::= OCTET STRING
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct Curve
-    {
-        [OctetString]
-        public ReadOnlyMemory<byte> A;
-
-        [OctetString]
-        public ReadOnlyMemory<byte> B;
-
-        [BitString, OptionalValue]
-        public ReadOnlyMemory<byte>? Seed;
     }
 }

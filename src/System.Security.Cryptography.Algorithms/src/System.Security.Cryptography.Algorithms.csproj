@@ -39,6 +39,15 @@
     <Compile Include="System\Security\Cryptography\AsymmetricKeyExchangeFormatter.cs" />
     <Compile Include="System\Security\Cryptography\AsymmetricSignatureDeformatter.cs" />
     <Compile Include="System\Security\Cryptography\AsymmetricSignatureFormatter.cs" />
+    <Compile Include="System\Security\Cryptography\Asn1\CurveAsn.cs" />
+    <Compile Include="System\Security\Cryptography\Asn1\DSSParms.cs" />
+    <Compile Include="System\Security\Cryptography\Asn1\DsaPrivateKeyAsn.cs" />
+    <Compile Include="System\Security\Cryptography\Asn1\ECDomainParameters.cs" />
+    <Compile Include="System\Security\Cryptography\Asn1\ECPrivateKey.cs" />
+    <Compile Include="System\Security\Cryptography\Asn1\FieldID.cs" />
+    <Compile Include="System\Security\Cryptography\Asn1\RSAPrivateKeyAsn.cs" />
+    <Compile Include="System\Security\Cryptography\Asn1\RSAPublicKeyAsn.cs" />
+    <Compile Include="System\Security\Cryptography\Asn1\SpecifiedECDomain.cs" />
     <Compile Include="System\Security\Cryptography\CryptoConfig.cs" />
     <Compile Include="System\Security\Cryptography\DeriveBytes.cs" />
     <Compile Include="System\Security\Cryptography\DES.cs" />
@@ -149,11 +158,26 @@
     <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\EncryptedPrivateKeyInfoAsn.cs">
       <Link>Common\System\Security\Cryptography\Asn1\EncryptedPrivateKeyInfoAsn.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\PBEParameter.cs">
+      <Link>Common\System\Security\Cryptography\Asn1\PBEParameter.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\PBES2Params.cs">
+      <Link>Common\System\Security\Cryptography\Asn1\PBES2Params.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\Pbkdf2Params.cs">
+      <Link>Common\System\Security\Cryptography\Asn1\Pbkdf2Params.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\Pbkdf2SaltChoice.cs">
+      <Link>Common\System\Security\Cryptography\Asn1\Pbkdf2SaltChoice.cs</Link>
+    </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\PrivateKeyInfoAsn.cs">
       <Link>Common\System\Security\Cryptography\Asn1\PrivateKeyInfoAsn.cs</Link>
     </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\Rc2CbcParameters.cs">
       <Link>Common\System\Security\Cryptography\Asn1\Rc2CbcParameters.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\SubjectPublicKeyInfoAsn.cs">
+      <Link>Common\System\Security\Cryptography\Asn1\SubjectPublicKeyInfoAsn.cs</Link>
     </Compile>
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetsWindows)' == 'true' and '$(IsPartialFacadeAssembly)' != 'true'">

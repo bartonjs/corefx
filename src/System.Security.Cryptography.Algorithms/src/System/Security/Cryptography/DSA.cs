@@ -353,7 +353,7 @@ namespace System.Security.Cryptography
             ReadOnlySpan<byte> source,
             out int bytesRead)
         {
-            KeyFormatHelper.ReadEncryptedPkcs8<DSAParameters, DsaPrivateKey>(
+            KeyFormatHelper.ReadEncryptedPkcs8<DSAParameters, DsaPrivateKeyAsn>(
                 s_validOids,
                 source,
                 passwordBytes,
@@ -372,7 +372,7 @@ namespace System.Security.Cryptography
             ReadOnlySpan<byte> source,
             out int bytesRead)
         {
-            KeyFormatHelper.ReadEncryptedPkcs8<DSAParameters, DsaPrivateKey>(
+            KeyFormatHelper.ReadEncryptedPkcs8<DSAParameters, DsaPrivateKeyAsn>(
                 s_validOids,
                 source,
                 password,
@@ -390,7 +390,7 @@ namespace System.Security.Cryptography
             ReadOnlySpan<byte> source,
             out int bytesRead)
         {
-            KeyFormatHelper.ReadPkcs8<DSAParameters, DsaPrivateKey>(
+            KeyFormatHelper.ReadPkcs8<DSAParameters, DsaPrivateKeyAsn>(
                 s_validOids,
                 source,
                 ReadDsaPrivateKey, 
@@ -404,7 +404,7 @@ namespace System.Security.Cryptography
         }
 
         private void ReadDsaPrivateKey(
-            in DsaPrivateKey key,
+            in DsaPrivateKeyAsn key,
             in AlgorithmIdentifierAsn algId,
             out DSAParameters ret)
         {
@@ -488,21 +488,5 @@ namespace System.Security.Cryptography
 
             throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
         }
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct DssParms
-    {
-        public BigInteger P;
-        public BigInteger Q;
-        public BigInteger G;
-    }
-
-    [Choice]
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct DsaPrivateKey
-    {
-        [Integer]
-        public ReadOnlyMemory<byte>? X;
     }
 }
