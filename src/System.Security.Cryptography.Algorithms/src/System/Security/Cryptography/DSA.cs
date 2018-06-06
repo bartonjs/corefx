@@ -4,11 +4,19 @@
 
 using System.Buffers;
 using System.IO;
+using System.Numerics;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography.Asn1;
 
 namespace System.Security.Cryptography
 {
     public abstract partial class DSA : AsymmetricAlgorithm
     {
+        private static readonly string[] s_validOids =
+        {
+            Oids.Dsa,
+        };
+
         public abstract DSAParameters ExportParameters(bool includePrivateParameters);
 
         public abstract void ImportParameters(DSAParameters parameters);
@@ -222,5 +230,279 @@ namespace System.Security.Cryptography
 
         internal static Exception HashAlgorithmNameNullOrEmpty() =>
             new ArgumentException(SR.Cryptography_HashAlgorithmNameNullOrEmpty, "hashAlgorithm");
+
+        public override bool TryExportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<byte> passwordBytes,
+            PbeParameters pbeParameters,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            using (AsnWriter pkcs8PrivateKey = WritePkcs8())
+            using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(
+                passwordBytes,
+                pkcs8PrivateKey,
+                pbeParameters))
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
+        }
+
+        public override bool TryExportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            PbeParameters pbeParameters,
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            using (AsnWriter pkcs8PrivateKey = WritePkcs8())
+            using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(
+                password,
+                pkcs8PrivateKey,
+                pbeParameters))
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
+        }
+
+        public override bool TryExportPkcs8PrivateKey(
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            using (AsnWriter writer = WritePkcs8())
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
+        }
+
+        public override bool TryExportSubjectPublicKeyInfo(
+            Span<byte> destination,
+            out int bytesWritten)
+        {
+            using (AsnWriter writer = WriteSubjectPublicKeyInfo())
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
+        }
+
+        private AsnWriter WritePkcs8()
+        {
+            DSAParameters dsaParameters = ExportParameters(true);
+
+            AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
+
+            writer.PushSequence();
+            writer.WriteInteger(0);
+            WriteAlgorithmId(writer, dsaParameters);
+            WriteKeyComponent(writer, dsaParameters.X, bitString: false);
+            writer.PopSequence();
+
+            CryptographicOperations.ZeroMemory(dsaParameters.X);
+
+            return writer;
+        }
+
+        private AsnWriter WriteSubjectPublicKeyInfo()
+        {
+            DSAParameters dsaParameters = ExportParameters(false);
+
+            AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
+
+            writer.PushSequence();
+            WriteAlgorithmId(writer, dsaParameters);
+            WriteKeyComponent(writer, dsaParameters.Y, bitString: true);
+            writer.PopSequence();
+
+            return writer;
+        }
+
+        private void WriteAlgorithmId(AsnWriter writer, in DSAParameters dsaParameters)
+        {
+            writer.PushSequence();
+            writer.WriteObjectIdentifier(Oids.Dsa);
+
+            // Dss-Parms ::= SEQUENCE {
+            //   p INTEGER,
+            //   q INTEGER,
+            //   g INTEGER  }
+            writer.PushSequence();
+            writer.WriteInteger(new BigInteger(dsaParameters.P, isUnsigned: true, isBigEndian: true));
+            writer.WriteInteger(new BigInteger(dsaParameters.Q, isUnsigned: true, isBigEndian: true));
+            writer.WriteInteger(new BigInteger(dsaParameters.G, isUnsigned: true, isBigEndian: true));
+            writer.PopSequence();
+            writer.PopSequence();
+        }
+
+        private void WriteKeyComponent(AsnWriter writer, byte[] component, bool bitString)
+        {
+            using (AsnWriter inner = new AsnWriter(AsnEncodingRules.DER))
+            {
+                inner.WriteInteger(new BigInteger(component, isUnsigned: true, isBigEndian: true));
+
+                if (bitString)
+                {
+                    writer.WriteBitString(inner.EncodeAsSpan());
+                }
+                else
+                {
+                    writer.WriteOctetString(inner.EncodeAsSpan());
+                }
+            }
+        }
+
+        public override void ImportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<byte> passwordBytes,
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            KeyFormatHelper.ReadEncryptedPkcs8<DSAParameters, DsaPrivateKey>(
+                s_validOids,
+                source,
+                passwordBytes,
+                ReadDsaPrivateKey,
+                out int localRead,
+                out DSAParameters ret);
+
+            ImportParameters(ret);
+            CryptographicOperations.ZeroMemory(ret.X);
+
+            bytesRead = localRead;
+        }
+
+        public override void ImportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<char> password,
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            KeyFormatHelper.ReadEncryptedPkcs8<DSAParameters, DsaPrivateKey>(
+                s_validOids,
+                source,
+                password,
+                ReadDsaPrivateKey, 
+                out int localRead,
+                out DSAParameters ret);
+
+            ImportParameters(ret);
+            CryptographicOperations.ZeroMemory(ret.X);
+
+            bytesRead = localRead;
+        }
+
+        public override void ImportPkcs8PrivateKey(
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            KeyFormatHelper.ReadPkcs8<DSAParameters, DsaPrivateKey>(
+                s_validOids,
+                source,
+                ReadDsaPrivateKey, 
+                out int localRead,
+                out DSAParameters key);
+
+            ImportParameters(key);
+            CryptographicOperations.ZeroMemory(key.X);
+
+            bytesRead = localRead;
+        }
+
+        private void ReadDsaPrivateKey(
+            in DsaPrivateKey key,
+            in AlgorithmIdentifierAsn algId,
+            out DSAParameters ret)
+        {
+            if (!algId.Parameters.HasValue)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            DssParms parms =
+                AsnSerializer.Deserialize<DssParms>(algId.Parameters.Value, AsnEncodingRules.BER);
+
+            ret = new DSAParameters
+            {
+                P = parms.P.ToByteArray(isUnsigned: true, isBigEndian: true),
+                Q = parms.Q.ToByteArray(isUnsigned: true, isBigEndian: true),
+            };
+
+            ret.G = ExportMinimumSize(parms.G, ret.P.Length);
+
+            // Force a positive interpretation because Windows sometimes writes negative numbers.
+            BigInteger x = new BigInteger(key.X.Value.Span, isUnsigned: true, isBigEndian: true);
+            ret.X = ExportMinimumSize(x, ret.Q.Length);
+
+            // The public key is not contained within the format, calculate it.
+            BigInteger y = BigInteger.ModPow(parms.G, x, parms.P);
+            ret.Y = ExportMinimumSize(y, ret.P.Length);
+        }
+
+        private void ReadDsaPublicKey(
+            in BigInteger y,
+            in AlgorithmIdentifierAsn algId,
+            out DSAParameters ret)
+        {
+            if (!algId.Parameters.HasValue)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            DssParms parms =
+                AsnSerializer.Deserialize<DssParms>(algId.Parameters.Value, AsnEncodingRules.BER);
+
+            ret = new DSAParameters
+            {
+                P = parms.P.ToByteArray(isUnsigned: true, isBigEndian: true),
+                Q = parms.Q.ToByteArray(isUnsigned: true, isBigEndian: true),
+            };
+
+            ret.G = ExportMinimumSize(parms.G, ret.P.Length);
+            ret.Y = ExportMinimumSize(y, ret.P.Length);
+        }
+
+        public override void ImportSubjectPublicKeyInfo(
+            ReadOnlyMemory<byte> source,
+            out int bytesRead)
+        {
+            KeyFormatHelper.ReadSubjectPublicKeyInfo<DSAParameters, BigInteger>(
+                s_validOids,
+                source,
+                ReadDsaPublicKey,
+                out int localRead,
+                out DSAParameters key);
+
+            ImportParameters(key);
+            bytesRead = localRead;
+        }
+
+        private static byte[] ExportMinimumSize(BigInteger value, int minimumLength)
+        {
+            byte[] target = new byte[minimumLength];
+
+            if (value.TryWriteBytes(target, out int bytesWritten, isUnsigned: true, isBigEndian: true))
+            {
+                if (bytesWritten < minimumLength)
+                {
+                    Buffer.BlockCopy(target, 0, target, minimumLength - bytesWritten, bytesWritten);
+                    target.AsSpan(0, minimumLength - bytesWritten).Clear();
+                }
+
+                return target;
+            }
+
+            throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct DssParms
+    {
+        public BigInteger P;
+        public BigInteger Q;
+        public BigInteger G;
+    }
+
+    [Choice]
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct DsaPrivateKey
+    {
+        [Integer]
+        public ReadOnlyMemory<byte>? X;
     }
 }
