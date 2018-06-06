@@ -10,12 +10,6 @@ namespace System.Security.Cryptography
     [StructLayout(LayoutKind.Sequential)]
     public struct RSAParameters
     {
-        private static readonly string[] s_validOids =
-        {
-            Oids.RsaEncryption,
-            // RSA-PSS, also?
-        };
-
         public byte[] D;
         public byte[] DP;
         public byte[] DQ;

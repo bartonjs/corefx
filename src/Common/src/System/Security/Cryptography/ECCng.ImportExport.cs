@@ -472,7 +472,7 @@ namespace System.Security.Cryptography
 
         internal static SafeNCryptKeyHandle ImportKeyBlob(
             string blobType,
-            ReadOnlyMemory<byte> keyBlob,
+            ReadOnlySpan<byte> keyBlob,
             string curveName,
             SafeNCryptProviderHandle provider)
         {
@@ -506,7 +506,7 @@ namespace System.Security.Cryptography
                         blobType,
                         descPtr,
                         out keyHandle,
-                        ref MemoryMarshal.GetReference(keyBlob.Span),
+                        ref MemoryMarshal.GetReference(keyBlob),
                         keyBlob.Length,
                         0);
                 }

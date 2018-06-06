@@ -34,7 +34,6 @@
     <Compile Include="EnvelopedCms\KeyTransRecipientInfoTests.cs" />
     <Compile Include="EnvelopedCms\StateTests.cs" />
     <Compile Include="EnvelopedCms\UnprotectedAttributeTests.cs" />
-    <Compile Include="ImportedCollection.cs" />
     <Compile Include="Oids.cs" />
     <Compile Include="Pkcs9AttributeTests.cs" />
     <Compile Include="RecipientInfoCollectionTests.cs" />
@@ -54,7 +53,6 @@
     <Compile Include="SignedCms\SignedCmsTests.netcoreapp.cs" />
     <Compile Include="SignedCms\SignerInfoTests.netcoreapp.cs" />
     <Compile Include="Pkcs8PrivateKeyInfoTests.cs" />
-    <Compile Include="PrivateKeyHelpers.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetsWindows)' == 'true' AND '$(TargetGroup)'=='netcoreapp'">
     <Compile Include="EnvelopedCms\DecryptTests.KeyPersistence.cs" />

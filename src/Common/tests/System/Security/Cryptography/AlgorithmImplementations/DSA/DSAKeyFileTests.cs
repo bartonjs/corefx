@@ -203,7 +203,7 @@ vAB5Wz646GeWztKawSR/9xIqHq8IECV1FXI=",
             ReadWriteKey(
                 base64EncPkcs8,
                 expected,
-                (DSA dsa, ReadOnlyMemory<byte> source, out int read) =>
+                (DSA dsa, ReadOnlySpan<byte> source, out int read) =>
                     dsa.ImportEncryptedPkcs8PrivateKey(password, source, out read),
                 dsa => dsa.ExportEncryptedPkcs8PrivateKey(password, pbeParameters),
                 (DSA dsa, Span<byte> destination, out int written) =>
@@ -220,7 +220,7 @@ vAB5Wz646GeWztKawSR/9xIqHq8IECV1FXI=",
             ReadWriteKey(
                 base64EncPkcs8,
                 expected,
-                (DSA dsa, ReadOnlyMemory<byte> source, out int read) =>
+                (DSA dsa, ReadOnlySpan<byte> source, out int read) =>
                     dsa.ImportEncryptedPkcs8PrivateKey(passwordBytes, source, out read),
                 dsa => dsa.ExportEncryptedPkcs8PrivateKey(passwordBytes, pbeParameters),
                 (DSA dsa, Span<byte> destination, out int written) =>
@@ -243,7 +243,7 @@ vAB5Wz646GeWztKawSR/9xIqHq8IECV1FXI=",
             ReadWriteKey(
                 base64SubjectPublicKeyInfo,
                 expectedPublic,
-                (DSA dsa, ReadOnlyMemory<byte> source, out int read) =>
+                (DSA dsa, ReadOnlySpan<byte> source, out int read) =>
                     dsa.ImportSubjectPublicKeyInfo(source, out read),
                 dsa => dsa.ExportSubjectPublicKeyInfo(),
                 (DSA dsa, Span<byte> destination, out int written) =>
@@ -255,7 +255,7 @@ vAB5Wz646GeWztKawSR/9xIqHq8IECV1FXI=",
             ReadWriteKey(
                 base64Pkcs8,
                 expected,
-                (DSA dsa, ReadOnlyMemory<byte> source, out int read) =>
+                (DSA dsa, ReadOnlySpan<byte> source, out int read) =>
                     dsa.ImportPkcs8PrivateKey(source, out read),
                 dsa => dsa.ExportPkcs8PrivateKey(),
                 (DSA dsa, Span<byte> destination, out int written) =>
@@ -301,10 +301,10 @@ vAB5Wz646GeWztKawSR/9xIqHq8IECV1FXI=",
             using (DSA dsa = DSAFactory.Create())
             {
                 Assert.ThrowsAny<CryptographicException>(
-                    () => readAction(dsa, arrayExport.AsMemory(1), out _));
+                    () => readAction(dsa, arrayExport.AsSpan(1), out _));
 
                 Assert.ThrowsAny<CryptographicException>(
-                    () => readAction(dsa, arrayExport.AsMemory(0, arrayExport.Length - 1), out _));
+                    () => readAction(dsa, arrayExport.AsSpan(0, arrayExport.Length - 1), out _));
 
                 readAction(dsa, arrayExport, out int bytesRead);
                 Assert.Equal(arrayExport.Length, bytesRead);
@@ -355,7 +355,7 @@ vAB5Wz646GeWztKawSR/9xIqHq8IECV1FXI=",
 
             using (DSA dsa = DSAFactory.Create())
             {
-                readAction(dsa, tooBig.AsMemory(WriteShift), out int bytesRead);
+                readAction(dsa, tooBig.AsSpan(WriteShift), out int bytesRead);
                 Assert.Equal(arrayExport.Length, bytesRead);
 
                 arrayExport.AsSpan().Fill(0xCA);
@@ -379,7 +379,7 @@ vAB5Wz646GeWztKawSR/9xIqHq8IECV1FXI=",
             }
         }
 
-        private delegate void ReadKeyAction(DSA dsa, ReadOnlyMemory<byte> source, out int bytesRead);
+        private delegate void ReadKeyAction(DSA dsa, ReadOnlySpan<byte> source, out int bytesRead);
         private delegate bool WriteKeyToSpanFunc(DSA dsa, Span<byte> destination, out int bytesWritten);
     }
 }

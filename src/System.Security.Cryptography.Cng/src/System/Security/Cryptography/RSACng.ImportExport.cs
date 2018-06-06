@@ -34,41 +34,9 @@ namespace System.Security.Cryptography
             Key = newKey;
         }
 
-        private void ImportPkcs8(ReadOnlyMemory<byte> pkcs8)
+        private void AcceptImport(CngPkcs8.Pkcs8Response response)
         {
-            ImportKeyBlob(pkcs8, s_pkcs8Blob);
-        }
-
-        private void ImportPkcs8(ReadOnlyMemory<byte> pkcs8, ReadOnlySpan<char> password)
-        {
-            ImportKeyBlob(
-                pkcs8,
-                s_pkcs8Blob,
-                true,
-                password);
-        }
-
-        private void ImportKeyBlob(
-            ReadOnlyMemory<byte> rsaBlob,
-            CngKeyBlobFormat blobFormat,
-            bool encrypted=false,
-            ReadOnlySpan<char> password=default)
-        {
-            CngKey newKey;
-
-            if (encrypted)
-            {
-                Debug.Assert(blobFormat.Format == Interop.NCrypt.NCRYPT_PKCS8_PRIVATE_KEY_BLOB);
-                newKey = CngKey.ImportEncryptedPkcs8(rsaBlob, password);
-            }
-            else
-            {
-                newKey = CngKey.Import(rsaBlob, blobFormat);
-            }
-
-            newKey.ExportPolicy |= CngExportPolicies.AllowPlaintextExport;
-
-            Key = newKey;
+            Key = response.Key;
         }
 
         private byte[] ExportKeyBlob(bool includePrivateParameters)

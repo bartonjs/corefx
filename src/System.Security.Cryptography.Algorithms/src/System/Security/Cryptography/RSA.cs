@@ -5,6 +5,7 @@
 using System.Buffers;
 using System.IO;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.Asn1;
 
 namespace System.Security.Cryptography
@@ -13,8 +14,7 @@ namespace System.Security.Cryptography
     {
         private static readonly string[] s_validOids =
         {
-            Oids.RsaEncryption,
-            // RSA-PSS, also?
+            Oids.Rsa,
         };
 
         public static new RSA Create(string algName)
@@ -471,7 +471,7 @@ namespace System.Security.Cryptography
             // -- When rsaEncryption is used in an AlgorithmIdentifier the
             // -- parameters MUST be present and MUST be NULL.
             // --
-            writer.WriteObjectIdentifier(Oids.RsaEncryption);
+            writer.WriteObjectIdentifier(Oids.Rsa);
             writer.WriteNull();
 
             writer.PopSequence();
@@ -538,60 +538,85 @@ namespace System.Security.Cryptography
             return writer;
         }
 
-        public override void ImportSubjectPublicKeyInfo(ReadOnlyMemory<byte> source, out int bytesRead)
+        public override unsafe void ImportSubjectPublicKeyInfo(ReadOnlySpan<byte> source, out int bytesRead)
         {
-            ReadOnlyMemory<byte> pkcs1 = KeyFormatHelper.ReadSubjectPublicKeyInfo(
-                s_validOids,
-                source,
-                out int localRead);
-
-            ImportRSAPublicKey(pkcs1, out _);
-            bytesRead = localRead;
-        }
-
-        public virtual void ImportRSAPublicKey(ReadOnlyMemory<byte> source, out int bytesRead)
-        {
-            RSAPublicKey key =
-                AsnSerializer.Deserialize<RSAPublicKey>(source, AsnEncodingRules.BER, out int localRead);
-
-            RSAParameters rsaParameters = new RSAParameters
+            fixed (byte* ptr = &MemoryMarshal.GetReference(source))
             {
-                Modulus = key.Modulus.ToByteArray(isUnsigned: true, isBigEndian: true),
-                Exponent = key.PublicExponent.ToByteArray(isUnsigned: true, isBigEndian: true),
-            };
+                using (MemoryManager<byte> manager = new PinnedSpanMemoryManager<byte>(ptr, source.Length))
+                {
+                    ReadOnlyMemory<byte> pkcs1 = KeyFormatHelper.ReadSubjectPublicKeyInfo(
+                        s_validOids,
+                        manager.Memory,
+                        out int localRead);
 
-            ImportParameters(rsaParameters);
-            bytesRead = localRead;
+                    ImportRSAPublicKey(pkcs1.Span, out _);
+                    bytesRead = localRead;
+                }
+            }
         }
 
-        public virtual void ImportRSAPrivateKey(ReadOnlyMemory<byte> source, out int bytesRead)
+        public virtual unsafe void ImportRSAPublicKey(ReadOnlySpan<byte> source, out int bytesRead)
         {
-            RSAPrivateKey key =
-                AsnSerializer.Deserialize<RSAPrivateKey>(source, AsnEncodingRules.BER, out int localRead);
+            fixed (byte* ptr = &MemoryMarshal.GetReference(source))
+            {
+                using (MemoryManager<byte> manager = new PinnedSpanMemoryManager<byte>(ptr, source.Length))
+                {
+                    RSAPublicKey key =
+                        AsnSerializer.Deserialize<RSAPublicKey>(manager.Memory, AsnEncodingRules.BER,
+                            out int localRead);
 
-            AlgorithmIdentifierAsn ignored = default;
-            FromPkcs1PrivateKey(key, ignored, out RSAParameters rsaParameters);
+                    RSAParameters rsaParameters = new RSAParameters
+                    {
+                        Modulus = key.Modulus.ToByteArray(isUnsigned: true, isBigEndian: true),
+                        Exponent = key.PublicExponent.ToByteArray(isUnsigned: true, isBigEndian: true),
+                    };
 
-            ImportParameters(rsaParameters);
-            ClearPrivateParameters(rsaParameters);
-
-            bytesRead = localRead;
+                    ImportParameters(rsaParameters);
+                    bytesRead = localRead;
+                }
+            }
         }
 
-        public override void ImportPkcs8PrivateKey(ReadOnlyMemory<byte> source, out int bytesRead)
+        public virtual unsafe void ImportRSAPrivateKey(ReadOnlySpan<byte> source, out int bytesRead)
         {
-            ReadOnlyMemory<byte> pkcs1 = KeyFormatHelper.ReadPkcs8(
-                s_validOids,
-                source,
-                out int localRead);
+            fixed (byte* ptr = &MemoryMarshal.GetReference(source))
+            {
+                using (MemoryManager<byte> manager = new PinnedSpanMemoryManager<byte>(ptr, source.Length))
+                {
+                    RSAPrivateKey key =
+                        AsnSerializer.Deserialize<RSAPrivateKey>(manager.Memory, AsnEncodingRules.BER, out int localRead);
 
-            ImportRSAPrivateKey(pkcs1, out _);
-            bytesRead = localRead;
+                    AlgorithmIdentifierAsn ignored = default;
+                    FromPkcs1PrivateKey(key, ignored, out RSAParameters rsaParameters);
+
+                    ImportParameters(rsaParameters);
+                    ClearPrivateParameters(rsaParameters);
+
+                    bytesRead = localRead;
+                }
+            }
         }
 
-        public override void ImportEncryptedPkcs8PrivateKey(
+        public override unsafe void ImportPkcs8PrivateKey(ReadOnlySpan<byte> source, out int bytesRead)
+        {
+            fixed (byte* ptr = &MemoryMarshal.GetReference(source))
+            {
+                using (MemoryManager<byte> manager = new PinnedSpanMemoryManager<byte>(ptr, source.Length))
+                {
+                    ReadOnlyMemory<byte> pkcs1 = KeyFormatHelper.ReadPkcs8(
+                        s_validOids,
+                        manager.Memory,
+                        out int localRead);
+
+                    ImportRSAPrivateKey(pkcs1.Span, out _);
+                    bytesRead = localRead;
+                }
+            }
+        }
+
+        public override unsafe void ImportEncryptedPkcs8PrivateKey(
             ReadOnlySpan<byte> passwordBytes,
-            ReadOnlyMemory<byte> source,
+            ReadOnlySpan<byte> source,
             out int bytesRead)
         {
             KeyFormatHelper.ReadEncryptedPkcs8<RSAParameters, RSAPrivateKey>(
@@ -608,9 +633,9 @@ namespace System.Security.Cryptography
             bytesRead = localRead;
         }
 
-        public override void ImportEncryptedPkcs8PrivateKey(
+        public override unsafe void ImportEncryptedPkcs8PrivateKey(
             ReadOnlySpan<char> password,
-            ReadOnlyMemory<byte> source,
+            ReadOnlySpan<byte> source,
             out int bytesRead)
         {
             KeyFormatHelper.ReadEncryptedPkcs8<RSAParameters, RSAPrivateKey>(

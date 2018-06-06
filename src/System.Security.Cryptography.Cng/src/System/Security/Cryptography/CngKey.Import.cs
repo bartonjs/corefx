@@ -19,7 +19,7 @@ namespace System.Security.Cryptography
         //
         // Import factory methods
         //
-        internal static CngKey Import(ReadOnlyMemory<byte> keyBlob, CngKeyBlobFormat format)
+        internal static CngKey Import(ReadOnlySpan<byte> keyBlob, CngKeyBlobFormat format)
         {
             return Import(keyBlob, null, format, CngProvider.MicrosoftSoftwareKeyStorageProvider);
         }
@@ -40,14 +40,14 @@ namespace System.Security.Cryptography
         }
 
         internal static CngKey ImportEncryptedPkcs8(
-            ReadOnlyMemory<byte> keyBlob,
+            ReadOnlySpan<byte> keyBlob,
             ReadOnlySpan<char> password)
         {
             return ImportEncryptedPkcs8(keyBlob, password, CngProvider.MicrosoftSoftwareKeyStorageProvider);
         }
 
         internal static unsafe CngKey ImportEncryptedPkcs8(
-            ReadOnlyMemory<byte> keyBlob,
+            ReadOnlySpan<byte> keyBlob,
             ReadOnlySpan<char> password,
             CngProvider provider)
         {
@@ -72,14 +72,13 @@ namespace System.Security.Cryptography
                     ulVersion = 0,
                 };
 
-
                 ErrorCode errorCode = Interop.NCrypt.NCryptImportKey(
                     providerHandle,
                     IntPtr.Zero,
                     Interop.NCrypt.NCRYPT_PKCS8_PRIVATE_KEY_BLOB,
                     ref desc,
                     out keyHandle,
-                    ref MemoryMarshal.GetReference(keyBlob.Span),
+                    ref MemoryMarshal.GetReference(keyBlob),
                     keyBlob.Length,
                     0);
 
@@ -104,11 +103,11 @@ namespace System.Security.Cryptography
             if (keyBlob == null)
                 throw new ArgumentNullException(nameof(keyBlob));
 
-            return Import(keyBlob.AsMemory(), curveName, format, provider);
+            return Import(keyBlob.AsSpan(), curveName, format, provider);
         }
 
         internal static CngKey Import(
-            ReadOnlyMemory<byte> keyBlob,
+            ReadOnlySpan<byte> keyBlob,
             string curveName,
             CngKeyBlobFormat format,
             CngProvider provider)
@@ -130,7 +129,7 @@ namespace System.Security.Cryptography
                     format.Format,
                     IntPtr.Zero,
                     out keyHandle,
-                    ref MemoryMarshal.GetReference(keyBlob.Span),
+                    ref MemoryMarshal.GetReference(keyBlob),
                     keyBlob.Length,
                     0);
 

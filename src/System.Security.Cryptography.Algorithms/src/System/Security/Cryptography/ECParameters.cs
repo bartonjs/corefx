@@ -67,15 +67,21 @@ namespace System.Security.Cryptography
             Curve.Validate();
         }
 
-        internal static ECParameters FromECPrivateKey(ReadOnlyMemory<byte> key, out int bytesRead)
+        internal static unsafe ECParameters FromECPrivateKey(ReadOnlySpan<byte> key, out int bytesRead)
         {
-            ECPrivateKey parsedKey =
-                AsnSerializer.Deserialize<ECPrivateKey>(key, AsnEncodingRules.BER, out bytesRead);
+            fixed (byte* ptr = &MemoryMarshal.GetReference(key))
+            {
+                using (MemoryManager<byte> manager = new PinnedSpanMemoryManager<byte>(ptr, key.Length))
+                {
+                    ECPrivateKey parsedKey =
+                        AsnSerializer.Deserialize<ECPrivateKey>(manager.Memory, AsnEncodingRules.BER, out bytesRead);
 
-            ECParameters ret;
-            AlgorithmIdentifierAsn algId = default;
-            FromECPrivateKey(parsedKey, algId, out ret);
-            return ret;
+                    ECParameters ret;
+                    AlgorithmIdentifierAsn algId = default;
+                    FromECPrivateKey(parsedKey, algId, out ret);
+                    return ret;
+                }
+            }
         }
 
         internal static void FromECPrivateKey(

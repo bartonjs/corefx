@@ -127,7 +127,7 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
             ReadWriteKey(
                 base64EncryptedPkcs8,
                 expected,
-                (ECDiffieHellman ecdh, ReadOnlyMemory<byte> source, out int read) =>
+                (ECDiffieHellman ecdh, ReadOnlySpan<byte> source, out int read) =>
                     ecdh.ImportEncryptedPkcs8PrivateKey(password, source, out read),
                 ecdh => ecdh.ExportEncryptedPkcs8PrivateKey(password, pbe),
                 (ECDiffieHellman ecdh, Span<byte> destination, out int bytesWritten) =>
@@ -144,7 +144,7 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
             ReadWriteKey(
                 base64EncryptedPkcs8,
                 expected,
-                (ECDiffieHellman ecdh, ReadOnlyMemory<byte> source, out int read) =>
+                (ECDiffieHellman ecdh, ReadOnlySpan<byte> source, out int read) =>
                     ecdh.ImportEncryptedPkcs8PrivateKey(passwordBytes, source, out read),
                 ecdh => ecdh.ExportEncryptedPkcs8PrivateKey(passwordBytes, pbe),
                 (ECDiffieHellman ecdh, Span<byte> destination, out int bytesWritten) =>
@@ -157,7 +157,7 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
             ReadWriteKey(
                 base64Pkcs8,
                 expected,
-                (ECDiffieHellman ecdh, ReadOnlyMemory<byte> source, out int read) =>
+                (ECDiffieHellman ecdh, ReadOnlySpan<byte> source, out int read) =>
                     ecdh.ImportECPrivateKey(source, out read),
                 ecdh => ecdh.ExportECPrivateKey(),
                 (ECDiffieHellman ecdh, Span<byte> destination, out int bytesWritten) =>
@@ -169,7 +169,7 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
             ReadWriteKey(
                 base64Pkcs8,
                 expected,
-                (ECDiffieHellman ecdh, ReadOnlyMemory<byte> source, out int read) =>
+                (ECDiffieHellman ecdh, ReadOnlySpan<byte> source, out int read) =>
                     ecdh.ImportPkcs8PrivateKey(source, out read),
                 ecdh => ecdh.ExportPkcs8PrivateKey(),
                 (ECDiffieHellman ecdh, Span<byte> destination, out int bytesWritten) =>
@@ -186,7 +186,7 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
             ReadWriteKey(
                 base64SubjectPublicKeyInfo,
                 expectedPublic,
-                (ECDiffieHellman ecdh, ReadOnlyMemory<byte> source, out int read) => 
+                (ECDiffieHellman ecdh, ReadOnlySpan<byte> source, out int read) => 
                     ecdh.ImportSubjectPublicKeyInfo(source, out read),
                 ecdh => ecdh.ExportSubjectPublicKeyInfo(),
                 (ECDiffieHellman ecdh, Span<byte> destination, out int written) =>
@@ -232,10 +232,10 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
             using (ECDiffieHellman ecdh = ECDiffieHellmanFactory.Create())
             {
                 Assert.ThrowsAny<CryptographicException>(
-                    () => readAction(ecdh, arrayExport.AsMemory(1), out _));
+                    () => readAction(ecdh, arrayExport.AsSpan(1), out _));
 
                 Assert.ThrowsAny<CryptographicException>(
-                    () => readAction(ecdh, arrayExport.AsMemory(0, arrayExport.Length - 1), out _));
+                    () => readAction(ecdh, arrayExport.AsSpan(0, arrayExport.Length - 1), out _));
 
                 readAction(ecdh, arrayExport, out int bytesRead);
                 Assert.Equal(arrayExport.Length, bytesRead);
@@ -286,7 +286,7 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
 
             using (ECDiffieHellman ecdh = ECDiffieHellmanFactory.Create())
             {
-                readAction(ecdh, tooBig.AsMemory(WriteShift), out int bytesRead);
+                readAction(ecdh, tooBig.AsSpan(WriteShift), out int bytesRead);
                 Assert.Equal(arrayExport.Length, bytesRead);
 
                 arrayExport.AsSpan().Fill(0xCA);
@@ -310,7 +310,7 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
             }
         }
 
-        private delegate void ReadKeyAction(ECDiffieHellman ecdh, ReadOnlyMemory<byte> source, out int bytesRead);
+        private delegate void ReadKeyAction(ECDiffieHellman ecdh, ReadOnlySpan<byte> source, out int bytesRead);
         private delegate bool WriteKeyToSpanFunc(ECDiffieHellman ecdh, Span<byte> destination, out int bytesWritten);
     }
 }

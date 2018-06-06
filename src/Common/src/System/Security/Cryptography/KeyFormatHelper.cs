@@ -14,26 +14,19 @@ namespace System.Security.Cryptography
     {
         internal delegate void KeyReader<TRet, TParsed>(in TParsed key, in AlgorithmIdentifierAsn algId, out TRet ret);
 
-        internal static void ReadSubjectPublicKeyInfo<TRet, TParsed>(
+        internal static unsafe void ReadSubjectPublicKeyInfo<TRet, TParsed>(
             string[] validOids,
             ReadOnlySpan<byte> source,
             KeyReader<TRet, TParsed> keyReader,
             out int bytesRead,
             out TRet ret)
         {
-            byte[] buf = ArrayPool<byte>.Shared.Rent(source.Length);
-            source.CopyTo(buf);
-            Memory<byte> rwTmp = buf.AsMemory(0, source.Length);
-            ReadOnlyMemory<byte> tmp = rwTmp;
-
-            try
+            fixed (byte* ptr = &MemoryMarshal.GetReference(source))
             {
-                ReadSubjectPublicKeyInfo(validOids, tmp, keyReader, out bytesRead, out ret);
-            }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(rwTmp.Span);
-                ArrayPool<byte>.Shared.Return(buf);
+                using (MemoryManager<byte> manager = new PinnedSpanMemoryManager<byte>(ptr, source.Length))
+                {
+                    ReadSubjectPublicKeyInfo(validOids, manager.Memory, keyReader, out bytesRead, out ret);
+                }
             }
         }
 
@@ -89,7 +82,6 @@ namespace System.Security.Cryptography
 
             if (Array.IndexOf(validOids, spki.Algorithm.Algorithm.Value) < 0)
             {
-                // TODO: Better message?
                 throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
             }
 
@@ -145,7 +137,6 @@ namespace System.Security.Cryptography
 
             if (Array.IndexOf(validOids, privateKeyInfo.PrivateKeyAlgorithm.Algorithm.Value) < 0)
             {
-                // TODO: Better message?
                 throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
             }
 
@@ -163,7 +154,6 @@ namespace System.Security.Cryptography
 
             if (Array.IndexOf(validOids, privateKeyInfo.PrivateKeyAlgorithm.Algorithm.Value) < 0)
             {
-                // TODO: Better message?
                 throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
             }
 
@@ -183,7 +173,6 @@ namespace System.Security.Cryptography
 
             if (Array.IndexOf(validOids, privateKeyInfo.PrivateKeyAlgorithm.Algorithm.Value) < 0)
             {
-                // TODO: Better message?
                 throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
             }
 
@@ -197,6 +186,40 @@ namespace System.Security.Cryptography
         }
 
         internal static unsafe void ReadEncryptedPkcs8<TRet, TParsed>(
+            string[] validOids,
+            ReadOnlySpan<byte> source,
+            ReadOnlySpan<char> password,
+            KeyReader<TRet, TParsed> keyReader,
+            out int bytesRead,
+            out TRet ret)
+        {
+            fixed (byte* ptr = &MemoryMarshal.GetReference(source))
+            {
+                using (MemoryManager<byte> manager = new PinnedSpanMemoryManager<byte>(ptr, source.Length))
+                {
+                    ReadEncryptedPkcs8(validOids, manager.Memory, password, keyReader, out bytesRead, out ret);
+                }
+            }
+        }
+
+        internal static unsafe void ReadEncryptedPkcs8<TRet, TParsed>(
+            string[] validOids,
+            ReadOnlySpan<byte> source,
+            ReadOnlySpan<byte> passwordBytes,
+            KeyReader<TRet, TParsed> keyReader,
+            out int bytesRead,
+            out TRet ret)
+        {
+            fixed (byte* ptr = &MemoryMarshal.GetReference(source))
+            {
+                using (MemoryManager<byte> manager = new PinnedSpanMemoryManager<byte>(ptr, source.Length))
+                {
+                    ReadEncryptedPkcs8(validOids, manager.Memory, passwordBytes, keyReader, out bytesRead, out ret);
+                }
+            }
+        }
+
+        internal static void ReadEncryptedPkcs8<TRet, TParsed>(
             string[] validOids,
             ReadOnlyMemory<byte> source,
             ReadOnlySpan<char> password,
@@ -475,7 +498,7 @@ namespace System.Security.Cryptography
                     isPkcs12,
                     encryptionAlgorithmOid,
                     salt,
-                    pbeParameters.KdfIterationCount,
+                    pbeParameters.IterationCount,
                     hmacOid,
                     iv);
 

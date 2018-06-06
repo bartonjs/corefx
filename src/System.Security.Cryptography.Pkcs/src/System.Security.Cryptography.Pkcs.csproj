@@ -87,7 +87,6 @@
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\OriginatorInfoAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\OriginatorPublicKeyAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\OtherKeyAttributeAsn.cs" />
-    <Compile Include="System\Security\Cryptography\Pkcs\Asn1\Rc2CbcParameters.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\RecipientEncryptedKeyAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\RecipientIdentifierAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\RecipientInfoAsn.cs" />
@@ -236,6 +235,9 @@
     <Reference Include="System.Security.Cryptography.Cng" />
   </ItemGroup>
   <ItemGroup Condition="'$(IsPartialFacadeAssembly)' != 'true'">
+    <Compile Include="$(CommonPath)\System\Memory\PinnedSpanMemoryManager.cs">
+      <Link>Common\System\Memory\PinnedSpanMemoryManager.cs</Link>
+    </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1V2.cs">
       <Link>Common\System\Security\Cryptography\Asn1V2.cs</Link>
     </Compile>
@@ -271,6 +273,9 @@
     </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\PrivateKeyInfoAsn.cs">
       <Link>Common\System\Security\Cryptography\Asn1\PrivateKeyInfoAsn.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\Rc2CbcParameters.cs">
+      <Link>Common\System\Security\Cryptography\Asn1\Rc2CbcParameters.cs</Link>
     </Compile>
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\CertificateChoiceAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\ContentInfoAsn.cs" />

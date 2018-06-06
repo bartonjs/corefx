@@ -61,6 +61,7 @@
     <Compile Include="System\Security\Cryptography\CngKeyHandleOpenOptions.cs" />
     <Compile Include="System\Security\Cryptography\CngKeyOpenOptions.cs" />
     <Compile Include="System\Security\Cryptography\CngKeyUsages.cs" />
+    <Compile Include="System\Security\Cryptography\CngPkcs8.cs" />
     <Compile Include="System\Security\Cryptography\CngProperty.cs" />
     <Compile Include="System\Security\Cryptography\CngPropertyCollection.cs" />
     <Compile Include="System\Security\Cryptography\CngPropertyOptions.cs" />
@@ -248,6 +249,9 @@
     <Compile Include="$(CommonPath)\Internal\Cryptography\UniversalCryptoDecryptor.cs">
       <Link>Internal\Cryptography\UniversalCryptoDecryptor.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\System\Memory\PinnedSpanMemoryManager.cs">
+      <Link>Common\System\Memory\PinnedSpanMemoryManager.cs</Link>
+    </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1V2.cs">
       <Link>Common\System\Security\Cryptography\Asn1V2.cs</Link>
     </Compile>
@@ -259,6 +263,9 @@
     </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\AsnWriter.cs">
       <Link>Common\System\Security\Cryptography\AsnWriter.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\CngPkcs8.cs">
+      <Link>Common\System\Security\Cryptography\CngPkcs8.cs</Link>
     </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\DSACng.cs">
       <Link>Common\System\Security\Cryptography\DSACng.cs</Link>
@@ -331,6 +338,9 @@
     </Compile>
     <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\PrivateKeyInfoAsn.cs">
       <Link>Common\System\Security\Cryptography\Asn1\PrivateKeyInfoAsn.cs</Link>
+    </Compile>
+    <Compile Include="$(CommonPath)\System\Security\Cryptography\Asn1\Rc2CbcParameters.cs">
+      <Link>Common\System\Security\Cryptography\Asn1\Rc2CbcParameters.cs</Link>
     </Compile>
   </ItemGroup>
   <ItemGroup Condition="'$(IsPartialFacadeAssembly)' == 'true'">

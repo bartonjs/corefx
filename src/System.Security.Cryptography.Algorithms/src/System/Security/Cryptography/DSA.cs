@@ -350,7 +350,7 @@ namespace System.Security.Cryptography
 
         public override void ImportEncryptedPkcs8PrivateKey(
             ReadOnlySpan<byte> passwordBytes,
-            ReadOnlyMemory<byte> source,
+            ReadOnlySpan<byte> source,
             out int bytesRead)
         {
             KeyFormatHelper.ReadEncryptedPkcs8<DSAParameters, DsaPrivateKey>(
@@ -369,7 +369,7 @@ namespace System.Security.Cryptography
 
         public override void ImportEncryptedPkcs8PrivateKey(
             ReadOnlySpan<char> password,
-            ReadOnlyMemory<byte> source,
+            ReadOnlySpan<byte> source,
             out int bytesRead)
         {
             KeyFormatHelper.ReadEncryptedPkcs8<DSAParameters, DsaPrivateKey>(
@@ -387,7 +387,7 @@ namespace System.Security.Cryptography
         }
 
         public override void ImportPkcs8PrivateKey(
-            ReadOnlyMemory<byte> source,
+            ReadOnlySpan<byte> source,
             out int bytesRead)
         {
             KeyFormatHelper.ReadPkcs8<DSAParameters, DsaPrivateKey>(
@@ -457,7 +457,7 @@ namespace System.Security.Cryptography
         }
 
         public override void ImportSubjectPublicKeyInfo(
-            ReadOnlyMemory<byte> source,
+            ReadOnlySpan<byte> source,
             out int bytesRead)
         {
             KeyFormatHelper.ReadSubjectPublicKeyInfo<DSAParameters, BigInteger>(

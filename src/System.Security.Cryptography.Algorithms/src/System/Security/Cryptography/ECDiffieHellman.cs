@@ -268,7 +268,7 @@ namespace System.Security.Cryptography
 
         public override unsafe void ImportEncryptedPkcs8PrivateKey(
             ReadOnlySpan<byte> passwordBytes,
-            ReadOnlyMemory<byte> source,
+            ReadOnlySpan<byte> source,
             out int bytesRead)
         {
             KeyFormatHelper.ReadEncryptedPkcs8<ECParameters, ECPrivateKey>(
@@ -295,7 +295,7 @@ namespace System.Security.Cryptography
 
         public override unsafe void ImportEncryptedPkcs8PrivateKey(
             ReadOnlySpan<char> password,
-            ReadOnlyMemory<byte> source,
+            ReadOnlySpan<byte> source,
             out int bytesRead)
         {
             KeyFormatHelper.ReadEncryptedPkcs8<ECParameters, ECPrivateKey>(
@@ -321,7 +321,7 @@ namespace System.Security.Cryptography
         }
 
         public override unsafe void ImportPkcs8PrivateKey(
-            ReadOnlyMemory<byte> source,
+            ReadOnlySpan<byte> source,
             out int bytesRead)
         {
             KeyFormatHelper.ReadPkcs8<ECParameters, ECPrivateKey>(
@@ -346,7 +346,7 @@ namespace System.Security.Cryptography
         }
 
         public override void ImportSubjectPublicKeyInfo(
-            ReadOnlyMemory<byte> source,
+            ReadOnlySpan<byte> source,
             out int bytesRead)
         {
             KeyFormatHelper.ReadSubjectPublicKeyInfo<ECParameters, ReadOnlyMemory<byte>>(
@@ -360,7 +360,7 @@ namespace System.Security.Cryptography
             bytesRead = localRead;
         }
 
-        public virtual unsafe void ImportECPrivateKey(ReadOnlyMemory<byte> source, out int bytesRead)
+        public virtual unsafe void ImportECPrivateKey(ReadOnlySpan<byte> source, out int bytesRead)
         {
             ECParameters ecParameters = ECParameters.FromECPrivateKey(source, out int localRead);
 

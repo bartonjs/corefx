@@ -797,7 +797,7 @@ pWre7nAO4O6sP1JzXvVmwrS5C/hw";
             ReadWriteKey(
                 base64EncPkcs8,
                 expected,
-                (RSA rsa, ReadOnlyMemory<byte> source, out int read) =>
+                (RSA rsa, ReadOnlySpan<byte> source, out int read) =>
                     rsa.ImportEncryptedPkcs8PrivateKey(password, source, out read),
                 rsa => rsa.ExportEncryptedPkcs8PrivateKey(password, pbeParameters),
                 (RSA rsa, Span<byte> destination, out int written) =>
@@ -814,7 +814,7 @@ pWre7nAO4O6sP1JzXvVmwrS5C/hw";
             ReadWriteKey(
                 base64EncPkcs8,
                 expected,
-                (RSA rsa, ReadOnlyMemory<byte> source, out int read) =>
+                (RSA rsa, ReadOnlySpan<byte> source, out int read) =>
                     rsa.ImportEncryptedPkcs8PrivateKey(passwordBytes, source, out read),
                 rsa => rsa.ExportEncryptedPkcs8PrivateKey(passwordBytes, pbeParameters),
                 (RSA rsa, Span<byte> destination, out int written) =>
@@ -835,7 +835,7 @@ pWre7nAO4O6sP1JzXvVmwrS5C/hw";
             ReadWriteKey(
                 base64PublicPkcs1,
                 expectedPublic,
-                (RSA rsa, ReadOnlyMemory<byte> source, out int read) =>
+                (RSA rsa, ReadOnlySpan<byte> source, out int read) =>
                     rsa.ImportRSAPublicKey(source, out read),
                 rsa => rsa.ExportRSAPublicKey(),
                 (RSA rsa, Span<byte> destination, out int written) =>
@@ -855,7 +855,7 @@ pWre7nAO4O6sP1JzXvVmwrS5C/hw";
             ReadWriteKey(
                 base64SubjectPublicKeyInfo,
                 expectedPublic,
-                (RSA rsa, ReadOnlyMemory<byte> source, out int read) =>
+                (RSA rsa, ReadOnlySpan<byte> source, out int read) =>
                     rsa.ImportSubjectPublicKeyInfo(source, out read),
                 rsa => rsa.ExportSubjectPublicKeyInfo(),
                 (RSA rsa, Span<byte> destination, out int written) =>
@@ -869,7 +869,7 @@ pWre7nAO4O6sP1JzXvVmwrS5C/hw";
             ReadWriteKey(
                 base64PrivatePkcs1,
                 expected,
-                (RSA rsa, ReadOnlyMemory<byte> source, out int read) =>
+                (RSA rsa, ReadOnlySpan<byte> source, out int read) =>
                     rsa.ImportRSAPrivateKey(source, out read),
                 rsa => rsa.ExportRSAPrivateKey(),
                 (RSA rsa, Span<byte> destination, out int written) =>
@@ -881,7 +881,7 @@ pWre7nAO4O6sP1JzXvVmwrS5C/hw";
             ReadWriteKey(
                 base64Pkcs8,
                 expected,
-                (RSA rsa, ReadOnlyMemory<byte> source, out int read) =>
+                (RSA rsa, ReadOnlySpan<byte> source, out int read) =>
                     rsa.ImportPkcs8PrivateKey(source, out read),
                 rsa => rsa.ExportPkcs8PrivateKey(),
                 (RSA rsa, Span<byte> destination, out int written) =>
@@ -927,10 +927,10 @@ pWre7nAO4O6sP1JzXvVmwrS5C/hw";
             using (RSA rsa = RSAFactory.Create())
             {
                 Assert.ThrowsAny<CryptographicException>(
-                    () => readAction(rsa, arrayExport.AsMemory(1), out _));
+                    () => readAction(rsa, arrayExport.AsSpan(1), out _));
 
                 Assert.ThrowsAny<CryptographicException>(
-                    () => readAction(rsa, arrayExport.AsMemory(0, arrayExport.Length - 1), out _));
+                    () => readAction(rsa, arrayExport.AsSpan(0, arrayExport.Length - 1), out _));
 
                 readAction(rsa, arrayExport, out int bytesRead);
                 Assert.Equal(arrayExport.Length, bytesRead);
@@ -981,7 +981,7 @@ pWre7nAO4O6sP1JzXvVmwrS5C/hw";
 
             using (RSA rsa = RSAFactory.Create())
             {
-                readAction(rsa, tooBig.AsMemory(WriteShift), out int bytesRead);
+                readAction(rsa, tooBig.AsSpan(WriteShift), out int bytesRead);
                 Assert.Equal(arrayExport.Length, bytesRead);
 
                 arrayExport.AsSpan().Fill(0xCA);
@@ -1005,7 +1005,7 @@ pWre7nAO4O6sP1JzXvVmwrS5C/hw";
             }
         }
 
-        private delegate void ReadKeyAction(RSA rsa, ReadOnlyMemory<byte> source, out int bytesRead);
+        private delegate void ReadKeyAction(RSA rsa, ReadOnlySpan<byte> source, out int bytesRead);
         private delegate bool WriteKeyToSpanFunc(RSA rsa, Span<byte> destination, out int bytesWritten);
     }
 }

@@ -18,7 +18,7 @@ namespace System.Security.Cryptography
     }
     public abstract partial class ECDiffieHellman : System.Security.Cryptography.AsymmetricAlgorithm
     {
-        public virtual void ImportECPrivateKey(ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
+        public virtual void ImportECPrivateKey(ReadOnlySpan<byte> source, out int bytesRead) => throw null;
         public virtual byte[] ExportECPrivateKey() => throw null;
         public virtual bool TryExportECPrivateKey(Span<byte> destination, out int bytesWritten) => throw null;
     }
@@ -29,7 +29,7 @@ namespace System.Security.Cryptography
         public virtual bool TrySignHash(ReadOnlySpan<byte> hash, Span<byte> destination, out int bytesWritten) { throw null; }
         public virtual bool VerifyData(ReadOnlySpan<byte> data, ReadOnlySpan<byte> signature, HashAlgorithmName hashAlgorithm) { throw null; }
         public virtual bool VerifyHash(ReadOnlySpan<byte> hash, ReadOnlySpan<byte> signature) { throw null; }
-        public virtual void ImportECPrivateKey(ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
+        public virtual void ImportECPrivateKey(ReadOnlySpan<byte> source, out int bytesRead) => throw null;
         public virtual byte[] ExportECPrivateKey() => throw null;
         public virtual bool TryExportECPrivateKey(Span<byte> destination, out int bytesWritten) => throw null;
     }
@@ -56,8 +56,8 @@ namespace System.Security.Cryptography
     }
     public abstract partial class RSA : System.Security.Cryptography.AsymmetricAlgorithm
     {
-        public virtual void ImportRSAPrivateKey(ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
-        public virtual void ImportRSAPublicKey(ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
+        public virtual void ImportRSAPrivateKey(ReadOnlySpan<byte> source, out int bytesRead) => throw null;
+        public virtual void ImportRSAPublicKey(ReadOnlySpan<byte> source, out int bytesRead) => throw null;
         public virtual byte[] ExportRSAPrivateKey() => throw null;
         public virtual byte[] ExportRSAPublicKey() => throw null;
         public virtual bool TryExportRSAPrivateKey(Span<byte> destination, out int bytesWritten) => throw null;

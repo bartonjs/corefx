@@ -4,6 +4,7 @@
 
 using System.Buffers;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.Asn1;
 
 namespace System.Security.Cryptography
@@ -18,24 +19,6 @@ namespace System.Security.Cryptography
                 HashAlgorithmName.SHA1,
                 10000);
 
-        internal static bool CanUsePasswordBytes(PbeEncryptionAlgorithm algorithm)
-        {
-            switch (algorithm)
-            {
-                case PbeEncryptionAlgorithm.Aes128Cbc:
-                case PbeEncryptionAlgorithm.Aes192Cbc:
-                case PbeEncryptionAlgorithm.Aes256Cbc:
-                    return true;
-                case PbeEncryptionAlgorithm.TripleDes3KeyPkcs12:
-                    return false;
-            }
-
-            Debug.Assert(
-                algorithm == PbeEncryptionAlgorithm.Unknown,
-                $"Unhandled algorithm '{algorithm}'");
-            return false;
-        }
-
         internal static bool IsPlatformScheme(PbeParameters pbeParameters)
         {
             Debug.Assert(pbeParameters != null);
@@ -49,6 +32,22 @@ namespace System.Security.Cryptography
             ReadOnlySpan<byte> passwordBytes,
             PbeParameters pbeParameters)
         {
+            if (pbeParameters == null)
+            {
+                throw new ArgumentNullException(nameof(pbeParameters));
+            }
+
+            PasswordBasedEncryption.ValidatePbeParameters(
+                pbeParameters,
+                ReadOnlySpan<char>.Empty,
+                passwordBytes);
+
+            if (passwordBytes.Length == 0)
+            {
+                // Switch to character-based, since that's the native input format.
+                return key.ExportEncryptedPkcs8PrivateKey(ReadOnlySpan<char>.Empty, pbeParameters);
+            }
+
             AsnWriter writer = RewriteEncryptedPkcs8PrivateKey(
                 key,
                 passwordBytes,
@@ -67,6 +66,17 @@ namespace System.Security.Cryptography
             Span<byte> destination,
             out int bytesWritten)
         {
+
+            if (passwordBytes.Length == 0)
+            {
+                // Switch to character-based, since that's the native input format.
+                return key.TryExportEncryptedPkcs8PrivateKey(
+                    ReadOnlySpan<char>.Empty,
+                    pbeParameters,
+                    destination,
+                    out bytesWritten);
+            }
+
             AsnWriter writer = RewriteEncryptedPkcs8PrivateKey(
                 key,
                 passwordBytes,
@@ -109,6 +119,110 @@ namespace System.Security.Cryptography
             using (writer)
             {
                 return writer.TryEncode(destination, out bytesWritten);
+            }
+        }
+
+        internal static unsafe Pkcs8Response ImportPkcs8PrivateKey(ReadOnlySpan<byte> source, out int bytesRead)
+        {
+            int len;
+
+            fixed (byte* ptr = &MemoryMarshal.GetReference(source))
+            {
+                using (MemoryManager<byte> manager = new PinnedSpanMemoryManager<byte>(ptr, source.Length))
+                {
+                    AsnReader reader = new AsnReader(manager.Memory, AsnEncodingRules.BER);
+                    len = reader.GetEncodedValue().Length;
+                }
+            }
+
+            bytesRead = len;
+            return ImportPkcs8(source.Slice(0, len));
+        }
+
+        internal static unsafe Pkcs8Response ImportEncryptedPkcs8PrivateKey(
+            ReadOnlySpan<byte> passwordBytes,
+            ReadOnlySpan<byte> source,
+            out int bytesRead)
+        {
+            fixed (byte* ptr = &MemoryMarshal.GetReference(source))
+            {
+                using (MemoryManager<byte> manager = new PinnedSpanMemoryManager<byte>(ptr, source.Length))
+                {
+                    // Since there's no bytes-based-password PKCS8 import in CNG, just do the decryption
+                    // here and call the unencrypted PKCS8 import.
+                    ArraySegment<byte> decrypted = KeyFormatHelper.DecryptPkcs8(
+                        passwordBytes,
+                        manager.Memory,
+                        out bytesRead);
+
+                    Span<byte> decryptedSpan = decrypted;
+
+                    try
+                    {
+                        return ImportPkcs8(decryptedSpan);
+                    }
+                    catch (CryptographicException e)
+                    {
+                        throw new CryptographicException(SR.Cryptography_Pkcs8_EncryptedReadFailed, e);
+                    }
+                    finally
+                    {
+                        CryptographicOperations.ZeroMemory(decryptedSpan);
+                        ArrayPool<byte>.Shared.Return(decrypted.Array);
+                    }
+                }
+            }
+        }
+
+        internal static unsafe Pkcs8Response ImportEncryptedPkcs8PrivateKey(
+           ReadOnlySpan<char> password,
+           ReadOnlySpan<byte> source,
+           out int bytesRead)
+        {
+            fixed (byte* ptr = &MemoryMarshal.GetReference(source))
+            {
+                using (MemoryManager<byte> manager = new PinnedSpanMemoryManager<byte>(ptr, source.Length))
+                {
+                    AsnReader reader = new AsnReader(manager.Memory, AsnEncodingRules.BER);
+                    int len = reader.GetEncodedValue().Length;
+                    source = source.Slice(0, len);
+
+                    try
+                    {
+                        bytesRead = len;
+                        return ImportPkcs8(source, password);
+                    }
+                    catch (CryptographicException)
+                    {
+                    }
+
+                    ArraySegment<byte> decrypted = KeyFormatHelper.DecryptPkcs8(
+                        password,
+                        manager.Memory.Slice(0, len),
+                        out int innerRead);
+
+                    Span<byte> decryptedSpan = decrypted;
+
+                    try
+                    {
+                        if (innerRead != len)
+                        {
+                            throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+                        }
+
+                        bytesRead = len;
+                        return ImportPkcs8(decryptedSpan);
+                    }
+                    catch (CryptographicException e)
+                    {
+                        throw new CryptographicException(SR.Cryptography_Pkcs8_EncryptedReadFailed, e);
+                    }
+                    finally
+                    {
+                        CryptographicOperations.ZeroMemory(decryptedSpan);
+                        ArrayPool<byte>.Shared.Return(decrypted.Array);
+                    }
+                }
             }
         }
 

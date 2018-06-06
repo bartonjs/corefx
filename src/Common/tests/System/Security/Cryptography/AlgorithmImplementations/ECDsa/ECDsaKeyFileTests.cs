@@ -126,7 +126,7 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
             ReadWriteKey(
                 base64EncryptedPkcs8,
                 expected,
-                (ECDsa ecdsa, ReadOnlyMemory<byte> source, out int read) =>
+                (ECDsa ecdsa, ReadOnlySpan<byte> source, out int read) =>
                     ecdsa.ImportEncryptedPkcs8PrivateKey(password, source, out read),
                 ecdsa => ecdsa.ExportEncryptedPkcs8PrivateKey(password, pbe),
                 (ECDsa ecdsa, Span<byte> destination, out int bytesWritten) =>
@@ -143,7 +143,7 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
             ReadWriteKey(
                 base64EncryptedPkcs8,
                 expected,
-                (ECDsa ecdsa, ReadOnlyMemory<byte> source, out int read) =>
+                (ECDsa ecdsa, ReadOnlySpan<byte> source, out int read) =>
                     ecdsa.ImportEncryptedPkcs8PrivateKey(passwordBytes, source, out read),
                 ecdsa => ecdsa.ExportEncryptedPkcs8PrivateKey(passwordBytes, pbe),
                 (ECDsa ecdsa, Span<byte> destination, out int bytesWritten) =>
@@ -156,7 +156,7 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
             ReadWriteKey(
                 base64Pkcs8,
                 expected,
-                (ECDsa ecdsa, ReadOnlyMemory<byte> source, out int read) =>
+                (ECDsa ecdsa, ReadOnlySpan<byte> source, out int read) =>
                     ecdsa.ImportECPrivateKey(source, out read),
                 ecdsa => ecdsa.ExportECPrivateKey(),
                 (ECDsa ecdsa, Span<byte> destination, out int bytesWritten) =>
@@ -168,7 +168,7 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
             ReadWriteKey(
                 base64Pkcs8,
                 expected,
-                (ECDsa ecdsa, ReadOnlyMemory<byte> source, out int read) =>
+                (ECDsa ecdsa, ReadOnlySpan<byte> source, out int read) =>
                     ecdsa.ImportPkcs8PrivateKey(source, out read),
                 ecdsa => ecdsa.ExportPkcs8PrivateKey(),
                 (ECDsa ecdsa, Span<byte> destination, out int bytesWritten) =>
@@ -185,7 +185,7 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
             ReadWriteKey(
                 base64SubjectPublicKeyInfo,
                 expectedPublic,
-                (ECDsa ecdsa, ReadOnlyMemory<byte> source, out int read) => 
+                (ECDsa ecdsa, ReadOnlySpan<byte> source, out int read) => 
                     ecdsa.ImportSubjectPublicKeyInfo(source, out read),
                 ecdsa => ecdsa.ExportSubjectPublicKeyInfo(),
                 (ECDsa ecdsa, Span<byte> destination, out int written) =>
@@ -231,10 +231,10 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
             using (ECDsa ecdsa = ECDsaFactory.Create())
             {
                 Assert.ThrowsAny<CryptographicException>(
-                    () => readAction(ecdsa, arrayExport.AsMemory(1), out _));
+                    () => readAction(ecdsa, arrayExport.AsSpan(1), out _));
 
                 Assert.ThrowsAny<CryptographicException>(
-                    () => readAction(ecdsa, arrayExport.AsMemory(0, arrayExport.Length - 1), out _));
+                    () => readAction(ecdsa, arrayExport.AsSpan(0, arrayExport.Length - 1), out _));
 
                 readAction(ecdsa, arrayExport, out int bytesRead);
                 Assert.Equal(arrayExport.Length, bytesRead);
@@ -285,7 +285,7 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
 
             using (ECDsa ecdsa = ECDsaFactory.Create())
             {
-                readAction(ecdsa, tooBig.AsMemory(WriteShift), out int bytesRead);
+                readAction(ecdsa, tooBig.AsSpan(WriteShift), out int bytesRead);
                 Assert.Equal(arrayExport.Length, bytesRead);
 
                 arrayExport.AsSpan().Fill(0xCA);
@@ -309,7 +309,7 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
             }
         }
 
-        private delegate void ReadKeyAction(ECDsa ecdsa, ReadOnlyMemory<byte> source, out int bytesRead);
+        private delegate void ReadKeyAction(ECDsa ecdsa, ReadOnlySpan<byte> source, out int bytesRead);
         private delegate bool WriteKeyToSpanFunc(ECDsa ecdsa, Span<byte> destination, out int bytesWritten);
     }
 }

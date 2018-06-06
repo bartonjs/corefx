@@ -16,10 +16,12 @@ namespace System.Security.Cryptography
         internal const string Aes256Cbc = "2.16.840.1.101.3.4.1.42";
 
         // Asymmetric encryption algorithms
+        internal const string Dsa = "1.2.840.10040.4.1";
         internal const string Rsa = "1.2.840.113549.1.1.1";
         internal const string RsaOaep = "1.2.840.113549.1.1.7";
         internal const string RsaPss = "1.2.840.113549.1.1.10";
         internal const string Esdh = "1.2.840.113549.1.9.16.3.5";
+        internal const string EcDiffieHellman = "1.3.132.1.12";
 
         // Cryptographic Attribute Types
         internal const string SigningTime = "1.2.840.113549.1.9.5";

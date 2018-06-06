@@ -18,6 +18,7 @@ namespace System.Security.Cryptography
     {
         internal static class KeyPropertyName
         {
+            internal const string Algorithm = "Algorithm Name";                 // NCRYPT_ALGORITHM_PROPERTY
             internal const string AlgorithmGroup = "Algorithm Group";           // NCRYPT_ALGORITHM_GROUP_PROPERTY
             internal const string ECCCurveName = "ECCCurveName";                // NCRYPT_ECC_CURVE_NAME
             internal const string ECCParameters = "ECCParameters";              // BCRYPT_ECC_PARAMETERS
@@ -31,13 +32,11 @@ namespace System.Security.Cryptography
 
         internal static unsafe SafeNCryptKeyHandle ImportKeyBlob(
             string blobType,
-            ReadOnlyMemory<byte> keyBlob,
+            ReadOnlySpan<byte> keyBlob,
             bool encrypted = false,
             ReadOnlySpan<char> password = default)
         {
             SafeNCryptKeyHandle keyHandle;
-            ReadOnlySpan<byte> keyBlobSpan = keyBlob.Span;
-
             ErrorCode errorCode;
 
             if (encrypted)
@@ -66,7 +65,7 @@ namespace System.Security.Cryptography
                         blobType,
                         ref desc,
                         out keyHandle,
-                        ref MemoryMarshal.GetReference(keyBlobSpan),
+                        ref MemoryMarshal.GetReference(keyBlob),
                         keyBlob.Length,
                         0);
                 }
@@ -79,7 +78,7 @@ namespace System.Security.Cryptography
                     blobType,
                     IntPtr.Zero,
                     out keyHandle,
-                    ref MemoryMarshal.GetReference(keyBlobSpan),
+                    ref MemoryMarshal.GetReference(keyBlob),
                     keyBlob.Length,
                     0);
             }

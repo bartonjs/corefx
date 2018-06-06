@@ -25,10 +25,10 @@ namespace System.Security.Cryptography
         protected virtual void Dispose(bool disposing) { }
         public virtual void FromXmlString(string xmlString) { }
         public virtual string ToXmlString(bool includePrivateParameters) { throw null; }
-        public virtual void ImportEncryptedPkcs8PrivateKey(ReadOnlySpan<byte> passwordBytes, ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
-        public virtual void ImportEncryptedPkcs8PrivateKey(ReadOnlySpan<char> password, ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
-        public virtual void ImportPkcs8PrivateKey(ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
-        public virtual void ImportSubjectPublicKeyInfo(ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
+        public virtual void ImportEncryptedPkcs8PrivateKey(ReadOnlySpan<byte> passwordBytes, ReadOnlySpan<byte> source, out int bytesRead) => throw null;
+        public virtual void ImportEncryptedPkcs8PrivateKey(ReadOnlySpan<char> password, ReadOnlySpan<byte> source, out int bytesRead) => throw null;
+        public virtual void ImportPkcs8PrivateKey(ReadOnlySpan<byte> source, out int bytesRead) => throw null;
+        public virtual void ImportSubjectPublicKeyInfo(ReadOnlySpan<byte> source, out int bytesRead) => throw null;
         public virtual byte[] ExportEncryptedPkcs8PrivateKey(ReadOnlySpan<byte> passwordBytes, PbeParameters pbeParameters) => throw null;
         public virtual byte[] ExportEncryptedPkcs8PrivateKey(ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public virtual byte[] ExportPkcs8PrivateKey() => throw null;
@@ -200,8 +200,8 @@ namespace System.Security.Cryptography
     {
         public PbeEncryptionAlgorithm EncryptionAlgorithm { get; }
         public HashAlgorithmName HashAlgorithm { get; }
-        public int KdfIterationCount { get; }
-        public PbeParameters(PbeEncryptionAlgorithm encryptionAlgorithm, HashAlgorithmName hashAlgorithm, int kdfIterationCount) { }
+        public int IterationCount { get; }
+        public PbeParameters(PbeEncryptionAlgorithm encryptionAlgorithm, HashAlgorithmName hashAlgorithm, int iterationCount) { }
     }
     public abstract partial class SymmetricAlgorithm : System.IDisposable
     {

@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Test.Cryptography;
 using Xunit;
@@ -14,15 +13,19 @@ namespace System.Security.Cryptography.Pkcs.Tests
         [Fact]
         public static void EnsureAttributesParse()
         {
-            var certData = (CertLoaderFromRawData)Certificates.ECDsaP256Win;
-            Pkcs12Info pkcs12Info = Pkcs12Info.Decode(certData.PfxData, out _);
-            ShroudedKeyBag bag = (ShroudedKeyBag)pkcs12Info.AuthenticatedSafe[0].GetBags().Single();
+            byte[] windowsEcdsaKey = Convert.FromBase64String(@"
+MIHJMBwGCiqGSIb3DQEMAQMwDgQI7BVCacWHggkCAgfQBIGoC6pK+GYOb6t7BQuO
+9gTPw3hlK1T+AF3Dx+LxLl78f+K7Dhs4KMr+dS/WTHygSvn7xaHzbjDX0pnFK/au
+ZbVLkkDMN8BOfgYzDCTpbRmme3AVpr9SwXL/6nGbkw2+MQ7rx1a9/y3yhG7pc6Zs
+Y/TpEwCD1kSHs1wZQemLArbVqSlyKTdCODxizK+5lurXGh310DgO//JbpgsjOjkh
+D9fVWpuVzYpEDfZm");
 
             Pkcs8PrivateKeyInfo pkcs8Info = Pkcs8PrivateKeyInfo.DecryptAndDecode(
-                certData.Password,
-                bag.EncryptedPkcs8PrivateKey,
-                out _);
+                "Test",
+                windowsEcdsaKey,
+                out int bytesRead);
 
+            Assert.Equal(windowsEcdsaKey.Length, bytesRead);
             Assert.Equal(1, pkcs8Info.Attributes.Count);
             Assert.Equal("2.5.29.15", pkcs8Info.Attributes[0].Oid.Value);
 

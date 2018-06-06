@@ -88,7 +88,7 @@ namespace System.Security.Cryptography
 
         public virtual void ImportEncryptedPkcs8PrivateKey(
             ReadOnlySpan<byte> passwordBytes,
-            ReadOnlyMemory<byte> source,
+            ReadOnlySpan<byte> source,
             out int bytesRead)
         {
             throw new NotImplementedException(SR.NotSupported_SubclassOverride);
@@ -96,16 +96,16 @@ namespace System.Security.Cryptography
 
         public virtual void ImportEncryptedPkcs8PrivateKey(
             ReadOnlySpan<char> password,
-            ReadOnlyMemory<byte> source,
+            ReadOnlySpan<byte> source,
             out int bytesRead)
         {
             throw new NotImplementedException(SR.NotSupported_SubclassOverride);
         }
 
-        public virtual void ImportPkcs8PrivateKey(ReadOnlyMemory<byte> source, out int bytesRead) =>
+        public virtual void ImportPkcs8PrivateKey(ReadOnlySpan<byte> source, out int bytesRead) =>
             throw new NotImplementedException(SR.NotSupported_SubclassOverride);
         
-        public virtual void ImportSubjectPublicKeyInfo(ReadOnlyMemory<byte> source, out int bytesRead) =>
+        public virtual void ImportSubjectPublicKeyInfo(ReadOnlySpan<byte> source, out int bytesRead) =>
             throw new NotImplementedException(SR.NotSupported_SubclassOverride);
 
         public virtual byte[] ExportEncryptedPkcs8PrivateKey(
@@ -242,32 +242,6 @@ namespace System.Security.Cryptography
                     bufSize = checked(bufSize * 2);
                 }
             }
-        }
-    }
-
-    public enum PbeEncryptionAlgorithm
-    {
-        Unknown = 0,
-        Aes128Cbc = 1,
-        Aes192Cbc = 2,
-        Aes256Cbc = 3,
-        TripleDes3KeyPkcs12 = 4,
-    }
-
-    public sealed class PbeParameters
-    {
-        public PbeEncryptionAlgorithm EncryptionAlgorithm { get; }
-        public HashAlgorithmName HashAlgorithm { get; }
-        public int KdfIterationCount { get; }
-
-        public PbeParameters(
-            PbeEncryptionAlgorithm encryptionAlgorithm,
-            HashAlgorithmName hashAlgorithm,
-            int kdfIterationCount)
-        {
-            EncryptionAlgorithm = encryptionAlgorithm;
-            HashAlgorithm = hashAlgorithm;
-            KdfIterationCount = kdfIterationCount;
         }
     }
 }

@@ -87,31 +87,18 @@ namespace System.Security.Cryptography
                     Interop.BCrypt.KeyBlobType.BCRYPT_PRIVATE_KEY_BLOB :
                     Interop.BCrypt.KeyBlobType.BCRYPT_PUBLIC_KEY_BLOB;
 
-                ImportKeyBlob(dsaBlob, blobType);
+                SafeNCryptKeyHandle keyHandle = CngKeyLite.ImportKeyBlob(blobType, dsaBlob);
+                SetKeyHandle(keyHandle);
             }
 
-            private void ImportPkcs8(ReadOnlyMemory<byte> pkcs8)
+            private void AcceptImport(CngPkcs8.Pkcs8Response response)
             {
-                ImportKeyBlob(pkcs8, Interop.NCrypt.NCRYPT_PKCS8_PRIVATE_KEY_BLOB);
+                SafeNCryptKeyHandle keyHandle = response.KeyHandle;
+                SetKeyHandle(keyHandle);
             }
 
-            private void ImportPkcs8(ReadOnlyMemory<byte> pkcs8, ReadOnlySpan<char> password)
+            private void SetKeyHandle(SafeNCryptKeyHandle keyHandle)
             {
-                ImportKeyBlob(
-                    pkcs8,
-                    Interop.NCrypt.NCRYPT_PKCS8_PRIVATE_KEY_BLOB,
-                    true,
-                    password);
-            }
-
-            private void ImportKeyBlob(
-                ReadOnlyMemory<byte> keyBlob,
-                string blobType,
-                bool encrypted = false,
-                ReadOnlySpan<char> password = default)
-            {
-                SafeNCryptKeyHandle keyHandle = CngKeyLite.ImportKeyBlob(blobType, keyBlob, encrypted, password);
-
                 Debug.Assert(!keyHandle.IsInvalid);
 
                 _keyHandle = keyHandle;
