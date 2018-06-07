@@ -57,7 +57,7 @@ qtlbnispri1a/EghiaPQ0po=";
                 new PbeParameters(
                     PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
                     HashAlgorithmName.SHA1,
-                    123321),
+                    12321),
                 EccTestData.GetNistP521Key2());
         }
 
@@ -81,7 +81,7 @@ qtlbnispri1a/EghiaPQ0po=";
                 new PbeParameters(
                     PbeEncryptionAlgorithm.Aes192Cbc,
                     HashAlgorithmName.SHA1,
-                    123321),
+                    12321),
                 EccTestData.GetNistP521Key2());
         }
 

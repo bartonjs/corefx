@@ -41,7 +41,7 @@ UCouQg==",
                 new PbeParameters(
                     PbeEncryptionAlgorithm.Aes128Cbc,
                     HashAlgorithmName.SHA256,
-                    123456), 
+                    12345), 
                 DSATestData.Dsa512Parameters);
         }
 
@@ -61,7 +61,7 @@ itsfZ16jNKxoJbAx3psVTGdzxnw8",
                 new PbeParameters(
                     PbeEncryptionAlgorithm.Aes128Cbc,
                     HashAlgorithmName.SHA256,
-                    123456),
+                    12345),
                 DSATestData.Dsa576Parameters);
         }
 
@@ -83,7 +83,7 @@ CU+l4wPQR0rRmYHIJJIvFh5OXk84pV0crsOrekw7tHeNU6DMzw==",
                 new PbeParameters(
                     PbeEncryptionAlgorithm.Aes192Cbc,
                     HashAlgorithmName.SHA256,
-                    123456),
+                    12345),
                 DSATestData.GetDSA1024Params());
         }
 
@@ -105,7 +105,7 @@ CU+l4wPQR0rRmYHIJJIvFh5OXk84pV0crsOrekw7tHeNU6DMzw==",
                 new PbeParameters(
                     PbeEncryptionAlgorithm.Aes192Cbc,
                     HashAlgorithmName.SHA256,
-                    123456),
+                    12345),
                 DSATestData.GetDSA1024Params());
         }
 
