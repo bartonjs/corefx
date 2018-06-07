@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -103,116 +104,27 @@ internal static partial class Interop
 
             if (tag == ConstructedSequence)
             {
-                return ReadEncryptedPkcs8Blob(ExportPassword, reader);
+                ArraySegment<byte> decrypted = KeyFormatHelper.DecryptPkcs8(
+                    ExportPassword,
+                    exportedData,
+                    out int bytesRead);
+
+                Debug.Assert(bytesRead == exportedData.Length);
+
+                try
+                {
+                    byte[] copy = decrypted.ToArray();
+                    return new DerSequenceReader(copy);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(decrypted);
+                    ArrayPool<byte>.Shared.Return(decrypted.Array);
+                }
             }
 
             Debug.Fail($"Data was neither PrivateKey or EncryptedPrivateKey: {tag:X2}");
             throw new CryptographicException();
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA5350", Justification = "3DES identified from payload by OID")]
-        private static DerSequenceReader ReadEncryptedPkcs8Blob(string passphrase, DerSequenceReader reader)
-        {
-            // EncryptedPrivateKeyInfo::= SEQUENCE {
-            //    encryptionAlgorithm EncryptionAlgorithmIdentifier,
-            //    encryptedData        EncryptedData }
-            //
-            // EncryptionAlgorithmIdentifier ::= AlgorithmIdentifier
-            //
-            // EncryptedData ::= OCTET STRING
-            DerSequenceReader algorithmIdentifier = reader.ReadSequence();
-            string algorithmOid = algorithmIdentifier.ReadOidAsString();
-
-            // PBES2 (Password-Based Encryption Scheme 2)
-            if (algorithmOid != OidPbes2)
-            {
-                Debug.Fail($"Expected PBES2 ({OidPbes2}), got {algorithmOid}");
-                throw new CryptographicException();
-            }
-
-            // PBES2-params ::= SEQUENCE {
-            //    keyDerivationFunc AlgorithmIdentifier { { PBES2 - KDFs} },
-            //    encryptionScheme AlgorithmIdentifier { { PBES2 - Encs} }
-            // }
-
-            DerSequenceReader pbes2Params = algorithmIdentifier.ReadSequence();
-            algorithmIdentifier = pbes2Params.ReadSequence();
-
-            string kdfOid = algorithmIdentifier.ReadOidAsString();
-
-            // PBKDF2 (Password-Based Key Derivation Function 2)
-            if (kdfOid != OidPbkdf2)
-            {
-                Debug.Fail($"Expected PBKDF2 ({OidPbkdf2}), got {kdfOid}");
-                throw new CryptographicException();
-            }
-
-            // PBKDF2-params ::= SEQUENCE {
-            //   salt CHOICE {
-            //     specified OCTET STRING,
-            //     otherSource AlgorithmIdentifier { { PBKDF2 - SaltSources} }
-            //   },
-            //   iterationCount INTEGER (1..MAX),
-            //   keyLength INTEGER(1..MAX) OPTIONAL,
-            //   prf AlgorithmIdentifier { { PBKDF2 - PRFs} }  DEFAULT algid - hmacWithSHA1
-            // }
-            DerSequenceReader pbkdf2Params = algorithmIdentifier.ReadSequence();
-
-            byte[] salt = pbkdf2Params.ReadOctetString();
-            int iterCount = pbkdf2Params.ReadInteger();
-            int keySize = -1;
-
-            if (pbkdf2Params.HasData && pbkdf2Params.PeekTag() == (byte)DerSequenceReader.DerTag.Integer)
-            {
-                keySize = pbkdf2Params.ReadInteger();
-            }
-
-            if (pbkdf2Params.HasData)
-            {
-                string prfOid = pbkdf2Params.ReadOidAsString();
-
-                // SHA-1 is the only hash algorithm our PBKDF2 supports.
-                if (prfOid != OidSha1)
-                {
-                    Debug.Fail($"Expected SHA1 ({OidSha1}), got {prfOid}");
-                    throw new CryptographicException();
-                }
-            }
-
-            DerSequenceReader encryptionScheme = pbes2Params.ReadSequence();
-            string cipherOid = encryptionScheme.ReadOidAsString();
-
-            // DES-EDE3-CBC (TripleDES in CBC mode)
-            if (cipherOid != OidTripleDesCbc)
-            {
-                Debug.Fail($"Expected DES-EDE3-CBC ({OidTripleDesCbc}), got {cipherOid}");
-                throw new CryptographicException();
-            }
-
-            byte[] decrypted;
-
-            using (TripleDES des3 = TripleDES.Create())
-            {
-                if (keySize == -1)
-                {
-                    foreach (KeySizes keySizes in des3.LegalKeySizes)
-                    {
-                        keySize = Math.Max(keySize, keySizes.MaxSize);
-                    }
-                }
-
-                byte[] iv = encryptionScheme.ReadOctetString();
-
-                using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(passphrase, salt, iterCount))
-                using (ICryptoTransform decryptor = des3.CreateDecryptor(pbkdf2.GetBytes(keySize / 8), iv))
-                {
-                    byte[] encrypted = reader.ReadOctetString();
-                    decrypted = decryptor.TransformFinalBlock(encrypted, 0, encrypted.Length);
-                }
-            }
-
-            DerSequenceReader pkcs8Reader = new DerSequenceReader(decrypted);
-            return pkcs8Reader;
         }
     }
 }
