@@ -246,6 +246,11 @@ namespace System.Security.Cryptography.Asn1
             WriteIntegerCore(Asn1Tag.Integer, value);
         }
 
+        public void WriteIntegerUnsigned(ReadOnlySpan<byte> value)
+        {
+            WriteIntegerUnsignedCore(Asn1Tag.Integer, value);
+        }
+
         public void WriteInteger(Asn1Tag tag, long value)
         {
             CheckUniversalTag(tag, UniversalTagNumber.Integer);
@@ -378,6 +383,43 @@ namespace System.Security.Cryptography.Asn1
             CheckUniversalTag(tag, UniversalTagNumber.Integer);
 
             WriteIntegerCore(tag.AsPrimitive(), value);
+        }
+
+        public void WriteIntegerUnsigned(Asn1Tag tag, ReadOnlySpan<byte> value)
+        {
+            CheckUniversalTag(tag, UniversalTagNumber.Integer);
+
+            WriteIntegerUnsignedCore(tag.AsPrimitive(), value);
+        }
+
+        private void WriteIntegerUnsignedCore(Asn1Tag tag, ReadOnlySpan<byte> value)
+        {
+            if (value.IsEmpty)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            // T-REC-X.690-201508 sec 8.3.2
+            if (value.Length > 1 && value[0] == 0 && value[1] < 0x80)
+            {
+                throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
+            }
+
+            Debug.Assert(!tag.IsConstructed);
+            WriteTag(tag);
+
+            if (value[0] >= 0x80)
+            {
+                WriteLength(checked(value.Length + 1));
+                _offset++;
+            }
+            else
+            {
+                WriteLength(value.Length);
+            }
+
+            value.CopyTo(_buffer.AsSpan(_offset));
+            _offset += value.Length;
         }
 
         private void WriteIntegerCore(Asn1Tag tag, ReadOnlySpan<byte> value)

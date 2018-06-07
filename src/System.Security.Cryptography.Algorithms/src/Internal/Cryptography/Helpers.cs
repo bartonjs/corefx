@@ -5,6 +5,7 @@
 using System;
 using System.Diagnostics;
 using System.Security.Cryptography;
+using System.Security.Cryptography.Asn1;
 
 namespace Internal.Cryptography
 {
@@ -128,6 +129,38 @@ namespace Internal.Cryptography
             dest[2] = (byte)((value & 0xFF00) >> 8);
             dest[3] = (byte)(value & 0xFF);
         }
+
+        internal static void WriteKeyParameterInteger(this AsnWriter writer, ReadOnlySpan<byte> integer)
+        {
+            Debug.Assert(!integer.IsEmpty);
+
+            if (integer[0] == 0)
+            {
+                int newStart = 1;
+
+                while (newStart < integer.Length)
+                {
+                    if (integer[newStart] >= 0x80)
+                    {
+                        newStart--;
+                        break;
+                    }
+
+                    if (newStart != 0)
+                    {
+                        break;
+                    }
+                }
+
+                if (newStart == integer.Length)
+                {
+                    newStart--;
+                }
+
+                integer = integer.Slice(newStart);
+            }
+
+            writer.WriteIntegerUnsigned(integer);
+        }
     }
 }
-

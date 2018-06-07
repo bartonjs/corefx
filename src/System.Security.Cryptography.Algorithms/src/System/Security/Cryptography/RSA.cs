@@ -7,6 +7,7 @@ using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.Asn1;
+using Internal.Cryptography;
 
 namespace System.Security.Cryptography
 {
@@ -486,13 +487,10 @@ namespace System.Security.Cryptography
                 throw new InvalidOperationException(SR.Cryptography_InvalidRsaParameters);
             }
 
-            BigInteger n = new BigInteger(rsaParameters.Modulus, isUnsigned: true, isBigEndian: true);
-            BigInteger e = new BigInteger(rsaParameters.Exponent, isUnsigned: true, isBigEndian: true);
-
             AsnWriter writer = new AsnWriter(AsnEncodingRules.DER);
             writer.PushSequence();
-            writer.WriteInteger(n);
-            writer.WriteInteger(e);
+            writer.WriteKeyParameterInteger(rsaParameters.Modulus);
+            writer.WriteKeyParameterInteger(rsaParameters.Exponent);
             writer.PopSequence();
 
             return writer;
@@ -523,14 +521,14 @@ namespace System.Security.Cryptography
 
             // Format version 0
             writer.WriteInteger(0);
-            writer.WriteInteger(new BigInteger(rsaParameters.Modulus, isUnsigned: true, isBigEndian: true));
-            writer.WriteInteger(new BigInteger(rsaParameters.Exponent, isUnsigned: true, isBigEndian: true));
-            writer.WriteInteger(new BigInteger(rsaParameters.D, isUnsigned: true, isBigEndian: true));
-            writer.WriteInteger(new BigInteger(rsaParameters.P, isUnsigned: true, isBigEndian: true));
-            writer.WriteInteger(new BigInteger(rsaParameters.Q, isUnsigned: true, isBigEndian: true));
-            writer.WriteInteger(new BigInteger(rsaParameters.DP, isUnsigned: true, isBigEndian: true));
-            writer.WriteInteger(new BigInteger(rsaParameters.DQ, isUnsigned: true, isBigEndian: true));
-            writer.WriteInteger(new BigInteger(rsaParameters.InverseQ, isUnsigned: true, isBigEndian: true));
+            writer.WriteKeyParameterInteger(rsaParameters.Modulus);
+            writer.WriteKeyParameterInteger(rsaParameters.Exponent);
+            writer.WriteKeyParameterInteger(rsaParameters.D);
+            writer.WriteKeyParameterInteger(rsaParameters.P);
+            writer.WriteKeyParameterInteger(rsaParameters.Q);
+            writer.WriteKeyParameterInteger(rsaParameters.DP);
+            writer.WriteKeyParameterInteger(rsaParameters.DQ);
+            writer.WriteKeyParameterInteger(rsaParameters.InverseQ);
             
             ClearPrivateParameters(rsaParameters);
 

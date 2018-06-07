@@ -7,6 +7,7 @@ using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.Asn1;
+using Internal.Cryptography;
 
 namespace System.Security.Cryptography
 {
@@ -324,9 +325,9 @@ namespace System.Security.Cryptography
             //   q INTEGER,
             //   g INTEGER  }
             writer.PushSequence();
-            writer.WriteInteger(new BigInteger(dsaParameters.P, isUnsigned: true, isBigEndian: true));
-            writer.WriteInteger(new BigInteger(dsaParameters.Q, isUnsigned: true, isBigEndian: true));
-            writer.WriteInteger(new BigInteger(dsaParameters.G, isUnsigned: true, isBigEndian: true));
+            writer.WriteKeyParameterInteger(dsaParameters.P);
+            writer.WriteKeyParameterInteger(dsaParameters.Q);
+            writer.WriteKeyParameterInteger(dsaParameters.G);
             writer.PopSequence();
             writer.PopSequence();
         }
@@ -335,7 +336,7 @@ namespace System.Security.Cryptography
         {
             using (AsnWriter inner = new AsnWriter(AsnEncodingRules.DER))
             {
-                inner.WriteInteger(new BigInteger(component, isUnsigned: true, isBigEndian: true));
+                inner.WriteKeyParameterInteger(component);
 
                 if (bitString)
                 {
