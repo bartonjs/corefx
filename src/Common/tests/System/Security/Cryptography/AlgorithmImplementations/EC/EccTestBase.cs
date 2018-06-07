@@ -4,6 +4,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.Tests;
 using Test.Cryptography;
 using Xunit;
@@ -203,7 +204,15 @@ namespace System.Security.Cryptography.Tests
             if (c1.IsNamed)
             {
                 Assert.True(c2.IsNamed);
-                Assert.Equal(c1.Oid.FriendlyName, c2.Oid.FriendlyName);
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    Assert.Equal(c1.Oid.FriendlyName, c2.Oid.FriendlyName);
+                }
+                else
+                {
+                    Assert.Equal(c1.Oid.Value, c2.Oid.Value);
+                }
             }
             else if (c1.IsExplicit)
             {
