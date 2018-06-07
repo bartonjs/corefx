@@ -130,6 +130,19 @@ RwIFAgAABEE=",
         [Fact]
         public static void ReadWriteRsa16384SubjectPublicKeyInfo()
         {
+            try
+            {
+                using (RSA rsa = RSAFactory.Create())
+                {
+                    rsa.ImportParameters(TestData.RSA16384Params);
+                }
+            }
+            catch (CryptographicException)
+            {
+                // The key is too big for this platform.
+                return;
+            }
+
             ReadWriteBase64SubjectPublicKeyInfo(
                 @"
 MIIIIjANBgkqhkiG9w0BAQEFAAOCCA8AMIIICgKCCAEAmyxwX6kQNx+LSMao1StC
@@ -182,6 +195,19 @@ rAigcwt6noH/hX5ZO5X869SV1WvLOvhCt4Ru7LOzqUULk+Y3+gSNHX34/+Jw+VCq
         [Fact]
         public static void ReadWrite16384Pkcs8()
         {
+            try
+            {
+                using (RSA rsa = RSAFactory.Create())
+                {
+                    rsa.ImportParameters(TestData.RSA16384Params);
+                }
+            }
+            catch (CryptographicException)
+            {
+                // The key is too big for this platform.
+                return;
+            }
+
             ReadWriteBase64Pkcs8(
                 @"
 MIIkQgIBADANBgkqhkiG9w0BAQEFAASCJCwwgiQoAgEAAoIIAQCbLHBfqRA3H4tI
