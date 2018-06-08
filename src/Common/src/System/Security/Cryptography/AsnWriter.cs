@@ -411,6 +411,7 @@ namespace System.Security.Cryptography.Asn1
             if (value[0] >= 0x80)
             {
                 WriteLength(checked(value.Length + 1));
+                _buffer[_offset] = 0;
                 _offset++;
             }
             else
