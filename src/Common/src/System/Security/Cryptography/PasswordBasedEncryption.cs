@@ -17,8 +17,7 @@ namespace System.Security.Cryptography
 
         private static CryptographicException AlgorithmKdfRequiresChars(string algId)
         {
-            throw new CryptographicException(
-                $"The KDF for algorithm '{algId}' requires a char-based password input.");
+            throw new CryptographicException(SR.Cryptography_AlgKdfRequiresChars, algId);
         }
 
         internal static void ValidatePbeParameters(
@@ -29,13 +28,8 @@ namespace System.Security.Cryptography
             // Leave the ArgumentNullException in the public entrypoints.
             Debug.Assert(pbeParameters != null);
 
-            if (pbeParameters.IterationCount < 1)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(pbeParameters.IterationCount),
-                    pbeParameters.IterationCount,
-                    SR.ArgumentOutOfRange_NeedPosNum);
-            }
+            // Constructor promise.
+            Debug.Assert(pbeParameters.IterationCount > 0);
 
             PbeEncryptionAlgorithm encryptionAlgorithm = pbeParameters.EncryptionAlgorithm;
 
@@ -150,10 +144,8 @@ namespace System.Security.Cryptography
             {
                 if (pkcs12)
                 {
-                    if (passwordBytes.Length > 0 && password.Length == 0)
-                    {
-                        throw AlgorithmKdfRequiresChars(algorithmIdentifier.Algorithm.Value);
-                    }
+                    // Verified by ValidatePbeParameters, which should be called at entrypoints.
+                    Debug.Assert(password.Length > 0 || passwordBytes.IsEmpty);
 
                     return Pkcs12PbeDecrypt(
                         algorithmIdentifier,
@@ -225,6 +217,7 @@ namespace System.Security.Cryptography
             }
         }
 
+        [SuppressMessage("Microsoft.Security", "CA5350", Justification = "3DES used when specified by the input data")]
         internal static void InitiateEncryption(
             PbeParameters pbeParameters,
             out SymmetricAlgorithm cipher,
@@ -252,9 +245,7 @@ namespace System.Security.Cryptography
                     encryptionAlgorithmOid = Oids.Aes256Cbc;
                     break;
                 case PbeEncryptionAlgorithm.TripleDes3KeyPkcs12:
-#pragma warning disable CA5350 // Do Not Use Weak Cryptographic Algorithms
                     cipher = TripleDES.Create();
-#pragma warning restore CA5350 // Do Not Use Weak Cryptographic Algorithms
                     cipher.KeySize = 192;
                     encryptionAlgorithmOid = Oids.Pkcs12PbeWithShaAnd3Key3Des;
                     isPkcs12 = true;
@@ -319,6 +310,9 @@ namespace System.Security.Cryptography
             {
                 if (isPkcs12)
                 {
+                    // Verified by ValidatePbeParameters, which should be called at entrypoints.
+                    Debug.Assert(password.Length > 0 || passwordBytes.IsEmpty);
+
                     derivedKey = new byte[keySizeBytes];
                     uint iterationCountU = checked((uint)iterationCount);
 
@@ -492,6 +486,7 @@ namespace System.Security.Cryptography
             }
         }
 
+        [SuppressMessage("Microsoft.Security", "CA5350", Justification = "3DES used when specified by the input data")]
         [SuppressMessage("Microsoft.Security", "CA5351", Justification = "DES used when specified by the input data")]
         private static SymmetricAlgorithm OpenCipher(
             AlgorithmIdentifierAsn encryptionScheme,
@@ -551,9 +546,7 @@ namespace System.Security.Cryptography
                 // The parameters field associated with this OID ... shall have type
                 // OCTET STRING (SIZE(8)) specifying the initialization vector ...
                 ReadIvParameter(encryptionScheme.Parameters, 8, ref iv);
-#pragma warning disable CA5350 // Input requested 3DES.
                 return TripleDES.Create();
-#pragma warning restore CA5350
             }
 
             if (algId == Oids.Rc2Cbc)
@@ -841,7 +834,7 @@ namespace System.Security.Cryptography
             ReadOnlySpan<byte> encryptedData,
             Span<byte> destination)
         {
-            // TODO: Make some Span-based symmetric API, and use it.
+            // When we define a Span-based decryption API this should be changed to use it.
             byte[] tmpKey = new byte[key.Length];
             byte[] tmpIv = new byte[iv.Length];
             byte[] rentedEncryptedData = ArrayPool.Rent(encryptedData.Length);

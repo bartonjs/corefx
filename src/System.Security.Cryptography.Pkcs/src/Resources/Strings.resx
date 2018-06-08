@@ -79,6 +79,9 @@
   <data name="ArgumentOutOfRange_NeedPosNum" xml:space="preserve">
     <value>Positive number required.</value>
   </data>
+  <data name="Cryptography_AlgKdfRequiresChars" xml:space="preserve">
+    <value>The KDF for algorithm '{0}' requires a char-based password input.</value>
+  </data>
   <data name="Cryptography_Asn_EnumeratedValueRequiresNonFlagsEnum" xml:space="preserve">
     <value>ASN.1 Enumerated values only apply to enum types without the [Flags] attribute.</value>
   </data>
