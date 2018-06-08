@@ -66,7 +66,6 @@ namespace System.Security.Cryptography
             Span<byte> destination,
             out int bytesWritten)
         {
-
             if (passwordBytes.Length == 0)
             {
                 // Switch to character-based, since that's the native input format.

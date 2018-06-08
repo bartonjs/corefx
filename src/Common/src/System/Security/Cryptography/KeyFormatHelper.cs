@@ -30,26 +30,6 @@ namespace System.Security.Cryptography
             }
         }
 
-        internal static void ReadSubjectPublicKeyInfo(
-            string[] validOids,
-            ReadOnlyMemory<byte> source,
-            Action<AlgorithmIdentifierAsn, ReadOnlyMemory<byte>> reader,
-            out int bytesRead)
-        {
-            // X.509 SubjectPublicKeyInfo is described as DER.
-            SubjectPublicKeyInfoAsn spki =
-                AsnSerializer.Deserialize<SubjectPublicKeyInfoAsn>(source, AsnEncodingRules.DER, out int read);
-
-            if (Array.IndexOf(validOids, spki.Algorithm.Algorithm.Value) < 0)
-            {
-                // TODO: Better message?
-                throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
-            }
-
-            reader(spki.Algorithm, spki.SubjectPublicKey);
-            bytesRead = read;
-        }
-
         internal static ReadOnlyMemory<byte> ReadSubjectPublicKeyInfo(
             string[] validOids,
             ReadOnlyMemory<byte> source,
@@ -61,7 +41,6 @@ namespace System.Security.Cryptography
 
             if (Array.IndexOf(validOids, spki.Algorithm.Algorithm.Value) < 0)
             {
-                // TODO: Better message?
                 throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
             }
 
@@ -69,7 +48,7 @@ namespace System.Security.Cryptography
             return spki.SubjectPublicKey;
         }
 
-        internal static void ReadSubjectPublicKeyInfo<TRet, TParsed>(
+        private static void ReadSubjectPublicKeyInfo<TRet, TParsed>(
             string[] validOids,
             ReadOnlyMemory<byte> source,
             KeyReader<TRet, TParsed> keyReader,
@@ -94,6 +73,7 @@ namespace System.Security.Cryptography
             }
             else
             {
+                // Fails if there are unconsumed bytes.
                 parsed = AsnSerializer.Deserialize<TParsed>(
                     spki.SubjectPublicKey,
                     AsnEncodingRules.DER);
@@ -103,45 +83,20 @@ namespace System.Security.Cryptography
             bytesRead = read;
         }
 
-        internal static void ReadPkcs8<TRet, TParsed>(
+        internal static unsafe void ReadPkcs8<TRet, TParsed>(
             string[] validOids,
             ReadOnlySpan<byte> source,
             KeyReader<TRet, TParsed> keyReader,
             out int bytesRead,
             out TRet ret)
         {
-            byte[] buf = ArrayPool<byte>.Shared.Rent(source.Length);
-            source.CopyTo(buf);
-            Memory<byte> rwTmp = buf.AsMemory(0, source.Length);
-            ReadOnlyMemory<byte> tmp = rwTmp;
-
-            try
+            fixed (byte* ptr = &MemoryMarshal.GetReference(source))
             {
-                ReadPkcs8(validOids, tmp, keyReader, out bytesRead, out ret);
+                using (MemoryManager<byte> manager = new PinnedSpanMemoryManager<byte>(ptr, source.Length))
+                {
+                    ReadPkcs8(validOids, manager.Memory, keyReader, out bytesRead, out ret);
+                }
             }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(rwTmp.Span);
-                ArrayPool<byte>.Shared.Return(buf);
-            }
-        }
-
-        internal static void ReadPkcs8(
-            string[] validOids,
-            ReadOnlyMemory<byte> source,
-            Action<AlgorithmIdentifierAsn, ReadOnlyMemory<byte>> reader,
-            out int bytesRead)
-        {
-            PrivateKeyInfoAsn privateKeyInfo =
-                AsnSerializer.Deserialize<PrivateKeyInfoAsn>(source, AsnEncodingRules.BER, out int read);
-
-            if (Array.IndexOf(validOids, privateKeyInfo.PrivateKeyAlgorithm.Algorithm.Value) < 0)
-            {
-                throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
-            }
-
-            reader(privateKeyInfo.PrivateKeyAlgorithm, privateKeyInfo.PrivateKey);
-            bytesRead = read;
         }
 
         internal static ReadOnlyMemory<byte> ReadPkcs8(
@@ -161,7 +116,7 @@ namespace System.Security.Cryptography
             return privateKeyInfo.PrivateKey;
         }
 
-        internal static void ReadPkcs8<TRet, TParsed>(
+        private static void ReadPkcs8<TRet, TParsed>(
             string[] validOids,
             ReadOnlyMemory<byte> source,
             KeyReader<TRet, TParsed> keyReader,
@@ -219,7 +174,7 @@ namespace System.Security.Cryptography
             }
         }
 
-        internal static void ReadEncryptedPkcs8<TRet, TParsed>(
+        private static void ReadEncryptedPkcs8<TRet, TParsed>(
             string[] validOids,
             ReadOnlyMemory<byte> source,
             ReadOnlySpan<char> password,
@@ -237,7 +192,7 @@ namespace System.Security.Cryptography
                 out ret);
         }
 
-        internal static void ReadEncryptedPkcs8<TRet, TParsed>(
+        private static void ReadEncryptedPkcs8<TRet, TParsed>(
             string[] validOids,
             ReadOnlyMemory<byte> source,
             ReadOnlySpan<byte> passwordBytes,
@@ -255,7 +210,7 @@ namespace System.Security.Cryptography
                 out ret);
         }
 
-        private static void ReadEncryptedPkcs8<TRet, TParsed>(
+        private static unsafe void ReadEncryptedPkcs8<TRet, TParsed>(
             string[] validOids,
             ReadOnlySpan<byte> source,
             ReadOnlySpan<char> password,
@@ -264,26 +219,19 @@ namespace System.Security.Cryptography
             out int bytesRead,
             out TRet ret)
         {
-            byte[] buf = ArrayPool<byte>.Shared.Rent(source.Length);
-            source.CopyTo(buf);
-            Memory<byte> rwTmp = buf.AsMemory(0, source.Length);
-            ReadOnlyMemory<byte> tmp = rwTmp;
-
-            try
+            fixed (byte* ptr = &MemoryMarshal.GetReference(source))
             {
-                ReadEncryptedPkcs8(
-                    validOids,
-                    tmp,
-                    password,
-                    passwordBytes,
-                    keyReader,
-                    out bytesRead,
-                    out ret);
-            }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(rwTmp.Span);
-                ArrayPool<byte>.Shared.Return(buf);
+                using (MemoryManager<byte> manager = new PinnedSpanMemoryManager<byte>(ptr, source.Length))
+                {
+                    ReadEncryptedPkcs8(
+                        validOids,
+                        manager.Memory,
+                        password,
+                        passwordBytes,
+                        keyReader,
+                        out bytesRead,
+                        out ret);
+                }
             }
         }
 
@@ -521,21 +469,14 @@ namespace System.Security.Cryptography
             }
         }
 
-        private static void WriteEncodedSpan(AsnWriter writer, ReadOnlySpan<byte> encodedValue)
+        private static unsafe void WriteEncodedSpan(AsnWriter writer, ReadOnlySpan<byte> encodedValue)
         {
-            byte[] rented = ArrayPool<byte>.Shared.Rent(encodedValue.Length);
-            Memory<byte> encodedMemory = rented.AsMemory(0, encodedValue.Length);
-
-            try
+            fixed (byte* ptr = &MemoryMarshal.GetReference(encodedValue))
             {
-                encodedValue.CopyTo(encodedMemory.Span);
-
-                writer.WriteEncodedValue(encodedMemory);
-            }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(encodedMemory.Span);
-                ArrayPool<byte>.Shared.Return(rented);
+                using (MemoryManager<byte> manager = new PinnedSpanMemoryManager<byte>(ptr, encodedValue.Length))
+                {
+                    writer.WriteEncodedValue(manager.Memory);
+                }
             }
         }
 
