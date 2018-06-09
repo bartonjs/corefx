@@ -22,6 +22,9 @@ namespace System.Security.Cryptography.Pkcs
             ReadOnlyMemory<byte> privateKey,
             bool skipCopies = false)
         {
+            if (algorithmId == null)
+                throw new ArgumentNullException(nameof(algorithmId));
+
             AlgorithmId = algorithmId;
             AlgorithmParameters = skipCopies ? algorithmParameters : algorithmParameters?.ToArray();
             PrivateKeyBytes = skipCopies ? privateKey : privateKey.ToArray();
@@ -34,6 +37,8 @@ namespace System.Security.Cryptography.Pkcs
             ReadOnlyMemory<byte> privateKey,
             CryptographicAttributeObjectCollection attributes)
         {
+            Debug.Assert(algorithmId != null);
+
             AlgorithmId = algorithmId;
             AlgorithmParameters = algorithmParameters;
             PrivateKeyBytes = privateKey;

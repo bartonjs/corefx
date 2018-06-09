@@ -423,15 +423,15 @@ namespace System.Security.Cryptography
                 Q = parms.Q.ToByteArray(isUnsigned: true, isBigEndian: true),
             };
 
-            ret.G = ExportMinimumSize(parms.G, ret.P.Length);
+            ret.G = parms.G.ExportKeyParameter(ret.P.Length);
 
             // Force a positive interpretation because Windows sometimes writes negative numbers.
             BigInteger x = new BigInteger(key.X.Value.Span, isUnsigned: true, isBigEndian: true);
-            ret.X = ExportMinimumSize(x, ret.Q.Length);
+            ret.X = x.ExportKeyParameter(ret.Q.Length);
 
             // The public key is not contained within the format, calculate it.
             BigInteger y = BigInteger.ModPow(parms.G, x, parms.P);
-            ret.Y = ExportMinimumSize(y, ret.P.Length);
+            ret.Y = y.ExportKeyParameter(ret.P.Length);
         }
 
         private void ReadDsaPublicKey(
@@ -453,8 +453,8 @@ namespace System.Security.Cryptography
                 Q = parms.Q.ToByteArray(isUnsigned: true, isBigEndian: true),
             };
 
-            ret.G = ExportMinimumSize(parms.G, ret.P.Length);
-            ret.Y = ExportMinimumSize(y, ret.P.Length);
+            ret.G = parms.G.ExportKeyParameter(ret.P.Length);
+            ret.Y = y.ExportKeyParameter(ret.P.Length);
         }
 
         public override void ImportSubjectPublicKeyInfo(
@@ -470,24 +470,6 @@ namespace System.Security.Cryptography
 
             ImportParameters(key);
             bytesRead = localRead;
-        }
-
-        private static byte[] ExportMinimumSize(BigInteger value, int minimumLength)
-        {
-            byte[] target = new byte[minimumLength];
-
-            if (value.TryWriteBytes(target, out int bytesWritten, isUnsigned: true, isBigEndian: true))
-            {
-                if (bytesWritten < minimumLength)
-                {
-                    Buffer.BlockCopy(target, 0, target, minimumLength - bytesWritten, bytesWritten);
-                    target.AsSpan(0, minimumLength - bytesWritten).Clear();
-                }
-
-                return target;
-            }
-
-            throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
         }
     }
 }

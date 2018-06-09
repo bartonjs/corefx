@@ -4,6 +4,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Asn1;
 
@@ -128,6 +129,24 @@ namespace Internal.Cryptography
             dest[1] = (byte)((value & 0xFF0000) >> 16);
             dest[2] = (byte)((value & 0xFF00) >> 8);
             dest[3] = (byte)(value & 0xFF);
+        }
+
+        internal static byte[] ExportKeyParameter(this BigInteger value, int length)
+        {
+            byte[] target = new byte[length];
+
+            if (value.TryWriteBytes(target, out int bytesWritten, isUnsigned: true, isBigEndian: true))
+            {
+                if (bytesWritten < length)
+                {
+                    Buffer.BlockCopy(target, 0, target, length - bytesWritten, bytesWritten);
+                    target.AsSpan(0, length - bytesWritten).Clear();
+                }
+
+                return target;
+            }
+
+            throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
         }
 
         internal static void WriteKeyParameterInteger(this AsnWriter writer, ReadOnlySpan<byte> integer)

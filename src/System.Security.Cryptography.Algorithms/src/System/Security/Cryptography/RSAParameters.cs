@@ -2,12 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Numerics;
-using System.Runtime.InteropServices;
+using System;
+using System.Diagnostics;
+using System.Security.Cryptography;
 
 namespace System.Security.Cryptography
 {
-    [StructLayout(LayoutKind.Sequential)]
+    [System.Runtime.InteropServices.StructLayoutAttribute(System.Runtime.InteropServices.LayoutKind.Sequential)]
     public struct RSAParameters
     {
         public byte[] D;

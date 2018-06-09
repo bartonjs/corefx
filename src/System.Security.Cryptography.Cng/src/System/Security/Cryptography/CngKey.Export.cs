@@ -125,7 +125,8 @@ namespace System.Security.Cryptography
                 out _);
         }
 
-        private static readonly byte[] s_oidBytes =
+        // The Windows APIs for OID strings are ASCII-only
+        private static readonly byte[] s_pkcs12TripleDesOidBytes =
             System.Text.Encoding.ASCII.GetBytes("1.2.840.113549.1.12.1.3\0");
 
         internal static unsafe bool ExportPkcs8KeyBlob(
@@ -139,7 +140,7 @@ namespace System.Security.Cryptography
         {
             using (SafeUnicodeStringHandle stringHandle = new SafeUnicodeStringHandle(password))
             {
-                fixed (byte* oidPtr = s_oidBytes)
+                fixed (byte* oidPtr = s_pkcs12TripleDesOidBytes)
                 {
                     Interop.NCrypt.NCryptBuffer* buffers = stackalloc Interop.NCrypt.NCryptBuffer[3];
 
@@ -159,7 +160,7 @@ namespace System.Security.Cryptography
                     buffers[1] = new Interop.NCrypt.NCryptBuffer
                     {
                         BufferType = Interop.NCrypt.BufferType.PkcsAlgOid,
-                        cbBuffer = s_oidBytes.Length,
+                        cbBuffer = s_pkcs12TripleDesOidBytes.Length,
                         pvBuffer = (IntPtr)oidPtr,
                     };
 

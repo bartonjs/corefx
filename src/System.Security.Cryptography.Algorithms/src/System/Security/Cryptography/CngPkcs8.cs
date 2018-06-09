@@ -45,7 +45,7 @@ namespace System.Security.Cryptography
             SafeNCryptKeyHandle handle = CngKeyLite.ImportKeyBlob(
                 Interop.NCrypt.NCRYPT_PKCS8_PRIVATE_KEY_BLOB,
                 keyBlob,
-                true,
+                encrypted: true,
                 password);
 
             return new Pkcs8Response

@@ -559,9 +559,10 @@ namespace System.Security.Cryptography
             {
                 using (MemoryManager<byte> manager = new PinnedSpanMemoryManager<byte>(ptr, source.Length))
                 {
-                    RSAPublicKey key =
-                        AsnSerializer.Deserialize<RSAPublicKey>(manager.Memory, AsnEncodingRules.BER,
-                            out int localRead);
+                    RSAPublicKey key = AsnSerializer.Deserialize<RSAPublicKey>(
+                        manager.Memory,
+                        AsnEncodingRules.BER,
+                        out int localRead);
 
                     RSAParameters rsaParameters = new RSAParameters
                     {
@@ -582,7 +583,10 @@ namespace System.Security.Cryptography
                 using (MemoryManager<byte> manager = new PinnedSpanMemoryManager<byte>(ptr, source.Length))
                 {
                     RSAPrivateKeyAsn key =
-                        AsnSerializer.Deserialize<RSAPrivateKeyAsn>(manager.Memory, AsnEncodingRules.BER, out int localRead);
+                        AsnSerializer.Deserialize<RSAPrivateKeyAsn>(
+                            manager.Memory,
+                            AsnEncodingRules.BER,
+                            out int localRead);
 
                     AlgorithmIdentifierAsn ignored = default;
                     FromPkcs1PrivateKey(key, ignored, out RSAParameters rsaParameters);
@@ -674,33 +678,14 @@ namespace System.Security.Cryptography
             {
                 Modulus = n,
                 Exponent = key.PublicExponent.ToByteArray(isUnsigned: true, isBigEndian: true),
-                D = ExportMinimumSize(key.PrivateExponent, n.Length),
-                P = ExportMinimumSize(key.Prime1, halfModulusLength),
-                Q = ExportMinimumSize(key.Prime2, halfModulusLength),
-                DP = ExportMinimumSize(key.Exponent1, halfModulusLength),
-                DQ = ExportMinimumSize(key.Exponent2, halfModulusLength),
-                InverseQ = ExportMinimumSize(key.Coefficient, halfModulusLength),
+                D = key.PrivateExponent.ExportKeyParameter(n.Length),
+                P = key.Prime1.ExportKeyParameter(halfModulusLength),
+                Q = key.Prime2.ExportKeyParameter(halfModulusLength),
+                DP = key.Exponent1.ExportKeyParameter(halfModulusLength),
+                DQ = key.Exponent2.ExportKeyParameter(halfModulusLength),
+                InverseQ = key.Coefficient.ExportKeyParameter(halfModulusLength),
             };
         }
-
-        private static byte[] ExportMinimumSize(BigInteger value, int minimumLength)
-        {
-            byte[] target = new byte[minimumLength];
-
-            if (value.TryWriteBytes(target, out int bytesWritten, isUnsigned: true, isBigEndian: true))
-            {
-                if (bytesWritten < minimumLength)
-                {
-                    Buffer.BlockCopy(target, 0, target, minimumLength - bytesWritten, bytesWritten);
-                    target.AsSpan(0, minimumLength - bytesWritten).Clear();
-                }
-
-                return target;
-            }
-
-            throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
-        }
-
         private static void ClearPrivateParameters(in RSAParameters rsaParameters)
         {
             CryptographicOperations.ZeroMemory(rsaParameters.D);

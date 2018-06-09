@@ -339,8 +339,4 @@ namespace System.Security.Cryptography
 #if INTERNAL_ASYMMETRIC_IMPLEMENTATIONS
     }
 #endif
-
-    internal static partial class CngPkcs8
-    {
-    }
 }

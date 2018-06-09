@@ -55,18 +55,6 @@ namespace System.Security.Cryptography
                 }
             }
 
-            public override bool TryExportPkcs8PrivateKey(Span<byte> destination, out int bytesWritten)
-            {
-                using (SafeNCryptKeyHandle keyHandle = GetDuplicatedKeyHandle())
-                {
-                    return CngKeyLite.TryExportKeyBlob(
-                        keyHandle,
-                        Interop.NCrypt.NCRYPT_PKCS8_PRIVATE_KEY_BLOB,
-                        destination,
-                        out bytesWritten);
-                }
-            }
-
             private byte[] ExportEncryptedPkcs8(ReadOnlySpan<char> pkcs8Password, int kdfCount)
             {
                 using (SafeNCryptKeyHandle keyHandle = GetDuplicatedKeyHandle())

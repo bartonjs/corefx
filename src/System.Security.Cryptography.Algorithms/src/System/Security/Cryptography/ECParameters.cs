@@ -235,13 +235,13 @@ namespace System.Security.Cryptography
             switch (curveOid.Value)
             {
                 case Oids.secp256r1:
-                    curveOid = new Oid(Oids.secp256r1, "nistP256");
+                    curveOid = new Oid(Oids.secp256r1, nameof(ECCurve.NamedCurves.nistP256));
                     break;
                 case Oids.secp384r1:
-                    curveOid = new Oid(Oids.secp384r1, "nistP384");
+                    curveOid = new Oid(Oids.secp384r1, nameof(ECCurve.NamedCurves.nistP384));
                     break;
                 case Oids.secp521r1:
-                    curveOid = new Oid(Oids.secp521r1, "nistP521");
+                    curveOid = new Oid(Oids.secp521r1, nameof(ECCurve.NamedCurves.nistP521));
                     break;
             }
 
@@ -252,7 +252,7 @@ namespace System.Security.Cryptography
         {
             Validate();
 
-            // Temporary limitation (WriteEcParameters).
+            // TODO: Temporary limitation (WriteEcParameters).
             if (!Curve.IsNamed)
             {
                 throw new CryptographicException(SR.Cryptography_ECC_NamedCurvesOnly);
@@ -302,7 +302,7 @@ namespace System.Security.Cryptography
                 throw new CryptographicException(SR.Cryptography_CSP_NoPrivateKey);
             }
 
-            // Temporary limitation (WriteEcParameters).
+            // TODO: Temporary limitation (WriteEcParameters).
             if (!Curve.IsNamed)
             {
                 throw new CryptographicException(SR.Cryptography_ECC_NamedCurvesOnly);
@@ -322,6 +322,7 @@ namespace System.Security.Cryptography
             {
                 Oid oid = Curve.Oid;
 
+                // On Windows the FriendlyName is populated in places where the Value mightn't be.
                 if (string.IsNullOrEmpty(oid.Value))
                 {
                     oid = Oid.FromFriendlyName(oid.FriendlyName, OidGroup.All);
