@@ -109,9 +109,11 @@ namespace System.Security.Cryptography
                 throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
             }
 
+            // Implementation limitation
+            // 04 (Uncompressed ECPoint) is almost always used.
             if (publicKeyBytes[0] != 0x04)
             {
-                throw new CryptographicException("Uncompressed point format required");
+                throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
             }
 
             // https://www.secg.org/sec1-v2.pdf, 2.3.4, #3 (M has length 2 * CEIL(log2(q)/8) + 1)
@@ -164,9 +166,11 @@ namespace System.Security.Cryptography
                 throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
             }
 
+            // Implementation limitation.
+            // 04 (Uncompressed ECPoint) is almost always used.
             if (publicKeyBytes[0] != 0x04)
             {
-                throw new CryptographicException("Uncompressed point format required");
+                throw new CryptographicException(SR.Cryptography_NotValidPublicOrPrivateKey);
             }
 
             // https://www.secg.org/sec1-v2.pdf, 2.3.4, #3 (M has length 2 * CEIL(log2(q)/8) + 1)
@@ -227,7 +231,7 @@ namespace System.Security.Cryptography
         {
             if (domainParameters.Named == null)
             {
-                throw new NotImplementedException("Only wrote named");
+                throw new CryptographicException(SR.Cryptography_ECC_NamedCurvesOnly);
             }
 
             Oid curveOid = domainParameters.Named;
@@ -252,7 +256,6 @@ namespace System.Security.Cryptography
         {
             Validate();
 
-            // TODO: Temporary limitation (WriteEcParameters).
             if (!Curve.IsNamed)
             {
                 throw new CryptographicException(SR.Cryptography_ECC_NamedCurvesOnly);
@@ -302,7 +305,6 @@ namespace System.Security.Cryptography
                 throw new CryptographicException(SR.Cryptography_CSP_NoPrivateKey);
             }
 
-            // TODO: Temporary limitation (WriteEcParameters).
             if (!Curve.IsNamed)
             {
                 throw new CryptographicException(SR.Cryptography_ECC_NamedCurvesOnly);
