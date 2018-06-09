@@ -2,11 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using Internal.Cryptography;
-using Microsoft.Win32.SafeHandles;
-
 namespace System.Security.Cryptography
 {
     public sealed partial class RSACng : RSA
@@ -20,9 +15,6 @@ namespace System.Security.Cryptography
 
         private static readonly CngKeyBlobFormat s_rsaPublicBlob =
             new CngKeyBlobFormat(Interop.BCrypt.KeyBlobType.BCRYPT_RSAPUBLIC_KEY_BLOB);
-
-        private static readonly CngKeyBlobFormat s_pkcs8Blob =
-            new CngKeyBlobFormat(Interop.NCrypt.NCRYPT_PKCS8_PRIVATE_KEY_BLOB);
 
         private void ImportKeyBlob(byte[] rsaBlob, bool includePrivate)
         {
