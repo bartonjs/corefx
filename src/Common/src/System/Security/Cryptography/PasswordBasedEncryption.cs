@@ -225,6 +225,8 @@ namespace System.Security.Cryptography
             out string encryptionAlgorithmOid,
             out bool isPkcs12)
         {
+            Debug.Assert(pbeParameters != null);
+
             isPkcs12 = false;
 
             switch (pbeParameters.EncryptionAlgorithm)
@@ -312,6 +314,7 @@ namespace System.Security.Cryptography
                 {
                     // Verified by ValidatePbeParameters, which should be called at entrypoints.
                     Debug.Assert(password.Length > 0 || passwordBytes.IsEmpty);
+                    Debug.Assert(pbeParameters.HashAlgorithm == HashAlgorithmName.SHA1);
 
                     derivedKey = new byte[keySizeBytes];
                     uint iterationCountU = checked((uint)iterationCount);

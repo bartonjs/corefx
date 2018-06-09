@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.Tests;
 using System.Text;
 using Test.Cryptography;
@@ -121,6 +122,62 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
                 EccTestData.GetNistP521ReferenceKey());
         }
 
+        [Fact]
+        public static void ReadNistP256Explicit()
+        {
+            byte[] explicitSPKI = Convert.FromBase64String(@"
+MIIBSzCCAQMGByqGSM49AgEwgfcCAQEwLAYHKoZIzj0BAQIhAP////8AAAABAAAA
+AAAAAAAAAAAA////////////////MFsEIP////8AAAABAAAAAAAAAAAAAAAA////
+///////////8BCBaxjXYqjqT57PrvVV2mIa8ZR0GsMxTsPY7zjw+J9JgSwMVAMSd
+NgiG5wSTamZ44ROdJreBn36QBEEEaxfR8uEsQkf4vOblY6RA8ncDfYEt6zOg9KE5
+RdiYwpZP40Li/hp/m47n60p8D54WK84zV2sxXs7LtkBoN79R9QIhAP////8AAAAA
+//////////+85vqtpxeehPO5ysL8YyVRAgEBA0IABIEB7OR0ZKbq1wz2mm4r09iG
+kaMmLSLLpPdjXq/yZoCo2KErph1ZkjX2fZy01Y8Xg9PKQ+ePClq6piQHmTbAw6k=");
+
+            byte[] explicitECPrivateKey = Convert.FromBase64String(@"
+MIIBaAIBAQQgcKEsLbFoRe1W/2jPwhpHKz8E19aFG/Y0ny19WzRSs4qggfowgfcC
+AQEwLAYHKoZIzj0BAQIhAP////8AAAABAAAAAAAAAAAAAAAA////////////////
+MFsEIP////8AAAABAAAAAAAAAAAAAAAA///////////////8BCBaxjXYqjqT57Pr
+vVV2mIa8ZR0GsMxTsPY7zjw+J9JgSwMVAMSdNgiG5wSTamZ44ROdJreBn36QBEEE
+axfR8uEsQkf4vOblY6RA8ncDfYEt6zOg9KE5RdiYwpZP40Li/hp/m47n60p8D54W
+K84zV2sxXs7LtkBoN79R9QIhAP////8AAAAA//////////+85vqtpxeehPO5ysL8
+YyVRAgEBoUQDQgAEgQHs5HRkpurXDPaabivT2IaRoyYtIsuk92Ner/JmgKjYoSum
+HVmSNfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==");
+
+            byte[] explicitPkcs8 = Convert.FromBase64String(@"
+MIIBeQIBADCCAQMGByqGSM49AgEwgfcCAQEwLAYHKoZIzj0BAQIhAP////8AAAAB
+AAAAAAAAAAAAAAAA////////////////MFsEIP////8AAAABAAAAAAAAAAAAAAAA
+///////////////8BCBaxjXYqjqT57PrvVV2mIa8ZR0GsMxTsPY7zjw+J9JgSwMV
+AMSdNgiG5wSTamZ44ROdJreBn36QBEEEaxfR8uEsQkf4vOblY6RA8ncDfYEt6zOg
+9KE5RdiYwpZP40Li/hp/m47n60p8D54WK84zV2sxXs7LtkBoN79R9QIhAP////8A
+AAAA//////////+85vqtpxeehPO5ysL8YyVRAgEBBG0wawIBAQQgcKEsLbFoRe1W
+/2jPwhpHKz8E19aFG/Y0ny19WzRSs4qhRANCAASBAezkdGSm6tcM9ppuK9PYhpGj
+Ji0iy6T3Y16v8maAqNihK6YdWZI19n2ctNWPF4PTykPnjwpauqYkB5k2wMOp");
+
+            using (ECDiffieHellman ecdh = ECDiffieHellmanFactory.Create())
+            {
+                Assert.ThrowsAny<CryptographicException>(
+                    () => ecdh.ImportSubjectPublicKeyInfo(explicitSPKI, out _));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => ecdh.ImportECPrivateKey(explicitECPrivateKey, out _));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => ecdh.ImportPkcs8PrivateKey(explicitPkcs8, out _));
+
+                Pkcs8PrivateKeyInfo builder = Pkcs8PrivateKeyInfo.Decode(explicitPkcs8, out _, skipCopy: true);
+                byte[] explicitEncryptedPkcs8 = builder.Encrypt(
+                    "asdf",
+                    new PbeParameters(
+                        PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
+                        HashAlgorithmName.SHA1,
+                        2048));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => ecdh.ImportEncryptedPkcs8PrivateKey("asdf", explicitEncryptedPkcs8, out _));
+            }
+        }
+
         [ConditionalFact(nameof(SupportsBrainpool))]
         public static void ReadWriteBrainpoolKey1ECPrivateKey()
         {
@@ -166,6 +223,282 @@ HiDaMtpw7yT5+32Vkxv5C2jvqNPpicmEFpf2wJ8yVLQtMOKAF2sOwxN/",
 MEIwFAYHKoZIzj0CAQYJKyQDAwIIAQEBAyoABI5ijwk5x2KSdsrb/pnAHDZQk1Ti
 ctLI7vH2zDIF0AV+ud5sqeMQUJY=",
                 EccTestData.BrainpoolP160r1Key1);
+        }
+
+        [Fact]
+        public static void NoFuzzySubjectPublicKeyInfo()
+        {
+            using (ECDiffieHellman key = ECDiffieHellmanFactory.Create())
+            {
+                int bytesRead = -1;
+                byte[] ecPriv = key.ExportECPrivateKey();
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ImportSubjectPublicKeyInfo(ecPriv, out bytesRead));
+
+                Assert.Equal(-1, bytesRead);
+
+                byte[] pkcs8 = key.ExportPkcs8PrivateKey();
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ImportSubjectPublicKeyInfo(pkcs8, out bytesRead));
+
+                Assert.Equal(-1, bytesRead);
+
+                ReadOnlySpan<byte> passwordBytes = ecPriv.AsSpan(0, 15);
+
+                byte[] encryptedPkcs8 = key.ExportEncryptedPkcs8PrivateKey(
+                    passwordBytes,
+                    new PbeParameters(
+                        PbeEncryptionAlgorithm.Aes256Cbc,
+                        HashAlgorithmName.SHA512,
+                        123));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ImportSubjectPublicKeyInfo(encryptedPkcs8, out bytesRead));
+
+                Assert.Equal(-1, bytesRead);
+            }
+        }
+
+        [Fact]
+        public static void NoFuzzyECPrivateKey()
+        {
+            using (ECDiffieHellman key = ECDiffieHellmanFactory.Create())
+            {
+                int bytesRead = -1;
+                byte[] spki = key.ExportSubjectPublicKeyInfo();
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ImportECPrivateKey(spki, out bytesRead));
+
+                Assert.Equal(-1, bytesRead);
+
+                byte[] pkcs8 = key.ExportPkcs8PrivateKey();
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ImportECPrivateKey(pkcs8, out bytesRead));
+
+                Assert.Equal(-1, bytesRead);
+
+                ReadOnlySpan<byte> passwordBytes = spki.AsSpan(0, 15);
+
+                byte[] encryptedPkcs8 = key.ExportEncryptedPkcs8PrivateKey(
+                    passwordBytes,
+                    new PbeParameters(
+                        PbeEncryptionAlgorithm.Aes256Cbc,
+                        HashAlgorithmName.SHA512,
+                        123));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ImportECPrivateKey(encryptedPkcs8, out bytesRead));
+
+                Assert.Equal(-1, bytesRead);
+            }
+        }
+
+        [Fact]
+        public static void NoFuzzyPkcs8()
+        {
+            using (ECDiffieHellman key = ECDiffieHellmanFactory.Create())
+            {
+                int bytesRead = -1;
+                byte[] spki = key.ExportSubjectPublicKeyInfo();
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ImportPkcs8PrivateKey(spki, out bytesRead));
+
+                Assert.Equal(-1, bytesRead);
+
+                byte[] ecPriv = key.ExportECPrivateKey();
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ImportPkcs8PrivateKey(ecPriv, out bytesRead));
+
+                Assert.Equal(-1, bytesRead);
+
+                ReadOnlySpan<byte> passwordBytes = spki.AsSpan(0, 15);
+
+                byte[] encryptedPkcs8 = key.ExportEncryptedPkcs8PrivateKey(
+                    passwordBytes,
+                    new PbeParameters(
+                        PbeEncryptionAlgorithm.Aes256Cbc,
+                        HashAlgorithmName.SHA512,
+                        123));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ImportPkcs8PrivateKey(encryptedPkcs8, out bytesRead));
+
+                Assert.Equal(-1, bytesRead);
+            }
+        }
+
+        [Fact]
+        public static void NoFuzzyEncryptedPkcs8()
+        {
+            using (ECDiffieHellman key = ECDiffieHellmanFactory.Create())
+            {
+                int bytesRead = -1;
+                byte[] spki = key.ExportSubjectPublicKeyInfo();
+                byte[] empty = Array.Empty<byte>();
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ImportEncryptedPkcs8PrivateKey(empty, spki, out bytesRead));
+
+                Assert.Equal(-1, bytesRead);
+
+                byte[] ecPriv = key.ExportECPrivateKey();
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ImportEncryptedPkcs8PrivateKey(empty, ecPriv, out bytesRead));
+
+                Assert.Equal(-1, bytesRead);
+
+                byte[] pkcs8 = key.ExportPkcs8PrivateKey();
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ImportEncryptedPkcs8PrivateKey(empty, pkcs8, out bytesRead));
+
+                Assert.Equal(-1, bytesRead);
+            }
+        }
+
+        [Fact]
+        public static void NoPrivKeyFromPublicOnly()
+        {
+            using (ECDiffieHellman key = ECDiffieHellmanFactory.Create())
+            {
+                ECParameters parameters = EccTestData.GetNistP521Key2();
+                parameters.D = null;
+                key.ImportParameters(parameters);
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ExportECPrivateKey());
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.TryExportECPrivateKey(Span<byte>.Empty, out _));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ExportPkcs8PrivateKey());
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.TryExportPkcs8PrivateKey(Span<byte>.Empty, out _));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ExportEncryptedPkcs8PrivateKey(
+                        ReadOnlySpan<byte>.Empty,
+                        new PbeParameters(PbeEncryptionAlgorithm.Aes192Cbc, HashAlgorithmName.SHA256, 72)));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.TryExportEncryptedPkcs8PrivateKey(
+                        ReadOnlySpan<byte>.Empty,
+                        new PbeParameters(PbeEncryptionAlgorithm.Aes192Cbc, HashAlgorithmName.SHA256, 72),
+                        Span<byte>.Empty,
+                        out _));
+            }
+        }
+
+        [Fact]
+        public static void BadPbeParameters()
+        {
+            using (ECDiffieHellman key = ECDiffieHellmanFactory.Create())
+            {
+                Assert.ThrowsAny<ArgumentNullException>(
+                    () => key.ExportEncryptedPkcs8PrivateKey(
+                        ReadOnlySpan<byte>.Empty,
+                        null));
+
+                // PKCS12 requires SHA-1
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ExportEncryptedPkcs8PrivateKey(
+                        ReadOnlySpan<byte>.Empty,
+                        new PbeParameters(PbeEncryptionAlgorithm.TripleDes3KeyPkcs12, HashAlgorithmName.SHA256, 72)));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.TryExportEncryptedPkcs8PrivateKey(
+                        ReadOnlySpan<byte>.Empty,
+                        new PbeParameters(PbeEncryptionAlgorithm.TripleDes3KeyPkcs12, HashAlgorithmName.SHA256, 72),
+                        Span<byte>.Empty,
+                        out _));
+
+                // PKCS12 requires SHA-1
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ExportEncryptedPkcs8PrivateKey(
+                        ReadOnlySpan<byte>.Empty,
+                        new PbeParameters(PbeEncryptionAlgorithm.TripleDes3KeyPkcs12, HashAlgorithmName.MD5, 72)));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.TryExportEncryptedPkcs8PrivateKey(
+                        ReadOnlySpan<byte>.Empty,
+                        new PbeParameters(PbeEncryptionAlgorithm.TripleDes3KeyPkcs12, HashAlgorithmName.MD5, 72),
+                        Span<byte>.Empty,
+                        out _));
+
+                // PKCS12 requires a char-based password
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ExportEncryptedPkcs8PrivateKey(
+                        new byte[3],
+                        new PbeParameters(PbeEncryptionAlgorithm.TripleDes3KeyPkcs12, HashAlgorithmName.SHA1, 72)));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.TryExportEncryptedPkcs8PrivateKey(
+                        new byte[3],
+                        new PbeParameters(PbeEncryptionAlgorithm.TripleDes3KeyPkcs12, HashAlgorithmName.SHA1, 72),
+                        Span<byte>.Empty,
+                        out _));
+
+                // Unknown encryption algorithm
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ExportEncryptedPkcs8PrivateKey(
+                        new byte[3],
+                        new PbeParameters(0, HashAlgorithmName.SHA1, 72)));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.TryExportEncryptedPkcs8PrivateKey(
+                        new byte[3],
+                        new PbeParameters(0, HashAlgorithmName.SHA1, 72),
+                        Span<byte>.Empty,
+                        out _));
+
+                // Unknown encryption algorithm (negative enum value)
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ExportEncryptedPkcs8PrivateKey(
+                        new byte[3],
+                        new PbeParameters((PbeEncryptionAlgorithm)(-5), HashAlgorithmName.SHA1, 72)));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.TryExportEncryptedPkcs8PrivateKey(
+                        new byte[3],
+                        new PbeParameters((PbeEncryptionAlgorithm)(-5), HashAlgorithmName.SHA1, 72),
+                        Span<byte>.Empty,
+                        out _));
+
+                // Unknown encryption algorithm (overly-large enum value)
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ExportEncryptedPkcs8PrivateKey(
+                        new byte[3],
+                        new PbeParameters((PbeEncryptionAlgorithm)15, HashAlgorithmName.SHA1, 72)));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.TryExportEncryptedPkcs8PrivateKey(
+                        new byte[3],
+                        new PbeParameters((PbeEncryptionAlgorithm)15, HashAlgorithmName.SHA1, 72),
+                        Span<byte>.Empty,
+                        out _));
+
+                // Unknown hash algorithm
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ExportEncryptedPkcs8PrivateKey(
+                        new byte[3],
+                        new PbeParameters(PbeEncryptionAlgorithm.Aes192Cbc, new HashAlgorithmName("Potato"), 72)));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.TryExportEncryptedPkcs8PrivateKey(
+                        new byte[3],
+                        new PbeParameters(PbeEncryptionAlgorithm.Aes192Cbc, new HashAlgorithmName("Potato"), 72),
+                        Span<byte>.Empty,
+                        out _));
+            }
         }
 
         private static void ReadWriteBase64EncryptedPkcs8(

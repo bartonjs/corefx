@@ -182,6 +182,14 @@ namespace System.Security.Cryptography
             Span<byte> destination,
             out int bytesWritten)
         {
+            if (pbeParameters == null)
+                throw new ArgumentNullException(nameof(pbeParameters));
+
+            PasswordBasedEncryption.ValidatePbeParameters(
+                pbeParameters,
+                ReadOnlySpan<char>.Empty,
+                passwordBytes);
+
             ECParameters ecParameters = ExportParameters(true);
 
             fixed (byte* privPtr = ecParameters.D)
@@ -210,6 +218,14 @@ namespace System.Security.Cryptography
             Span<byte> destination,
             out int bytesWritten)
         {
+            if (pbeParameters == null)
+                throw new ArgumentNullException(nameof(pbeParameters));
+
+            PasswordBasedEncryption.ValidatePbeParameters(
+                pbeParameters,
+                password,
+                ReadOnlySpan<byte>.Empty);
+
             ECParameters ecParameters = ExportParameters(true);
 
             fixed (byte* privPtr = ecParameters.D)
