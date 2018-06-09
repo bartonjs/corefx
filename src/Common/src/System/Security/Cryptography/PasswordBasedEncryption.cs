@@ -13,6 +13,8 @@ namespace System.Security.Cryptography
 {
     internal static class PasswordBasedEncryption
     {
+        internal const int IterationLimit = 600000;
+
         private static ArrayPool<byte> ArrayPool => ArrayPool<byte>.Shared;
 
         private static CryptographicException AlgorithmKdfRequiresChars(string algId)
@@ -317,19 +319,18 @@ namespace System.Security.Cryptography
                     Debug.Assert(pbeParameters.HashAlgorithm == HashAlgorithmName.SHA1);
 
                     derivedKey = new byte[keySizeBytes];
-                    uint iterationCountU = checked((uint)iterationCount);
 
                     Pkcs12Kdf.DeriveCipherKey(
                         password,
                         prf,
-                        iterationCountU,
+                        iterationCount,
                         salt,
                         derivedKey);
 
                     Pkcs12Kdf.DeriveIV(
                         password,
                         prf,
-                        iterationCountU,
+                        iterationCount,
                         salt,
                         iv);
 
@@ -687,6 +688,7 @@ namespace System.Security.Cryptography
                 throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
             }
 
+            int iterationCount = ClampIterationCount(pbkdf2Params.IterationCount);
             ReadOnlyMemory<byte> saltMemory = pbkdf2Params.Salt.Specified.Value;
 
             byte[] tmpPassword = new byte[password.Length];
@@ -705,18 +707,13 @@ namespace System.Security.Cryptography
                     return new Rfc2898DeriveBytes(
                         tmpPassword,
                         tmpSalt,
-                        checked((int)pbkdf2Params.IterationCount),
+                        iterationCount,
                         prf);
                 }
                 catch (ArgumentException e)
                 {
                     // Salt too small is the most likely candidate.
                     throw new CryptographicException(SR.Argument_InvalidValue, e);
-                }
-                catch (OverflowException)
-                {
-                    // Bad iteration count
-                    throw new CryptographicException(SR.Argument_InvalidValue);
                 }
                 finally
                 {
@@ -755,12 +752,14 @@ namespace System.Security.Cryptography
                 throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
             }
 
+            int iterationCount = ClampIterationCount(pbeParameters.IterationCount);
+
             // 2. Apply PBKDF1<hash>(P, S, c, 16) to produce a derived key DK of length 16 octets
             Span<byte> dk = stackalloc byte[16];
 
             try
             {
-                Pbkdf1(hasher, password, pbeParameters.Salt.Span, pbeParameters.IterationCount, dk);
+                Pbkdf1(hasher, password, pbeParameters.Salt.Span, iterationCount, dk);
 
                 // 3. Separate the derived key DK into an encryption key K consisting of the
                 // first eight octets of DK and an initialization vector IV consisting of the
@@ -806,6 +805,7 @@ namespace System.Security.Cryptography
                 algorithmIdentifier.Parameters.Value,
                 AsnEncodingRules.BER);
 
+            int iterationCount = ClampIterationCount(pbeParameters.IterationCount);
             Span<byte> iv = stackalloc byte[cipher.BlockSize / 8];
             Span<byte> key = stackalloc byte[cipher.KeySize / 8];
             ReadOnlySpan<byte> saltSpan = pbeParameters.Salt.Span;
@@ -815,14 +815,14 @@ namespace System.Security.Cryptography
                 Pkcs12Kdf.DeriveIV(
                     password,
                     hashAlgorithm,
-                    pbeParameters.IterationCount,
+                    iterationCount,
                     saltSpan,
                     iv);
 
                 Pkcs12Kdf.DeriveCipherKey(
                     password,
                     hashAlgorithm,
-                    pbeParameters.IterationCount,
+                    iterationCount,
                     saltSpan,
                     key);
 
@@ -903,7 +903,7 @@ namespace System.Security.Cryptography
             IncrementalHash hasher,
             ReadOnlySpan<byte> password,
             ReadOnlySpan<byte> salt,
-            uint iterationCount,
+            int iterationCount,
             Span<byte> dk)
         {
             // The only two hashes that will call into this implementation are
@@ -925,7 +925,7 @@ namespace System.Security.Cryptography
             t = t.Slice(0, tLength);
 
             // T_i = H(T_(i-1))
-            for (uint i = 1; i < iterationCount; i++)
+            for (int i = 1; i < iterationCount; i++)
             {
                 hasher.AppendData(t);
 
@@ -1012,6 +1012,16 @@ namespace System.Security.Cryptography
             }
 
             writer.PopSequence();
+        }
+
+        private static int ClampIterationCount(uint iterationCount)
+        {
+            if (iterationCount == 0 || iterationCount > IterationLimit)
+            {
+                throw new CryptographicException(SR.Argument_InvalidValue);
+            }
+
+            return (int)iterationCount;
         }
     }
 }

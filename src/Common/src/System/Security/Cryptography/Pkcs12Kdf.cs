@@ -30,7 +30,7 @@ namespace System.Security.Cryptography.Pkcs
         internal static void DeriveCipherKey(
             ReadOnlySpan<char> password,
             HashAlgorithmName hashAlgorithm,
-            uint iterationCount,
+            int iterationCount,
             ReadOnlySpan<byte> salt,
             Span<byte> destination)
         {
@@ -46,7 +46,7 @@ namespace System.Security.Cryptography.Pkcs
         internal static void DeriveIV(
             ReadOnlySpan<char> password,
             HashAlgorithmName hashAlgorithm,
-            uint iterationCount,
+            int iterationCount,
             ReadOnlySpan<byte> salt,
             Span<byte> destination)
         {
@@ -62,7 +62,7 @@ namespace System.Security.Cryptography.Pkcs
         internal static void DeriveMacKey(
             ReadOnlySpan<char> password,
             HashAlgorithmName hashAlgorithm,
-            uint iterationCount,
+            int iterationCount,
             ReadOnlySpan<byte> salt,
             Span<byte> destination)
         {
@@ -78,12 +78,13 @@ namespace System.Security.Cryptography.Pkcs
         private static void Derive(
             ReadOnlySpan<char> password,
             HashAlgorithmName hashAlgorithm,
-            uint iterationCount,
+            int iterationCount,
             byte id,
             ReadOnlySpan<byte> salt,
             Span<byte> destination)
         {
             // https://tools.ietf.org/html/rfc7292#appendix-B.2
+            Debug.Assert(iterationCount >= 1);
 
             if (!s_uvLookup.TryGetValue(hashAlgorithm, out Tuple<int, int> uv))
             {
@@ -150,7 +151,7 @@ namespace System.Security.Cryptography.Pkcs
                     hash.AppendData(D);
                     hash.AppendData(I);
 
-                    for (uint j = iterationCount; j > 0; j--)
+                    for (int j = iterationCount; j > 0; j--)
                     {
                         if (!hash.TryGetHashAndReset(hashBuf, out int bytesWritten) || bytesWritten != hashBuf.Length)
                         {
