@@ -205,7 +205,8 @@ namespace System.Security.Cryptography.Tests
             {
                 Assert.True(c2.IsNamed);
 
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ||
+                    string.IsNullOrEmpty(c1.Oid.Value))
                 {
                     Assert.Equal(c1.Oid.FriendlyName, c2.Oid.FriendlyName);
                 }

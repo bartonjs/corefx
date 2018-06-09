@@ -216,6 +216,18 @@ namespace System.Security.Cryptography.Tests
                 D = "70A12C2DB16845ED56FF68CFC21A472B3F04D7D6851BF6349F2D7D5B3452B38A".HexToByteArray(),
             };
         }
+
+        internal static readonly ECParameters BrainpoolP160r1Key1 =
+            new ECParameters
+            {
+                Curve = ECCurve.NamedCurves.brainpoolP160r1,
+                Q =
+                {
+                    X = "8E628F0939C7629276CADBFE99C01C36509354E2".HexToByteArray(),
+                    Y = "72D2C8EEF1F6CC3205D0057EB9DE6CA9E3105096".HexToByteArray(),
+                },
+                D = "C5D944547DE115DB2588DC6FDEBA3B473E9C4D96".HexToByteArray(),
+            };
 #endif // netcoreapp
     }
 }

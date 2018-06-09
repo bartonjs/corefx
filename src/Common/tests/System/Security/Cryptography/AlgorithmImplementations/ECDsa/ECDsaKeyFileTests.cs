@@ -11,6 +11,9 @@ namespace System.Security.Cryptography.EcDsa.Tests
 {
     public static class ECDsaKeyFileTests
     {
+        public static bool SupportsBrainpool { get; } =
+            ECDsaFactory.IsCurveValid(ECCurve.NamedCurves.brainpoolP160r1.Oid);
+
         [Fact]
         public static void ReadWriteNistP521Pkcs8()
         {
@@ -115,6 +118,53 @@ NfZ9nLTVjxeD08pD548KWrqmJAeZNsDDqQ==";
             ReadWriteBase64ECPrivateKey(
                 base64,
                 EccTestData.GetNistP521ReferenceKey());
+        }
+
+        [ConditionalFact(nameof(SupportsBrainpool))]
+        public static void ReadWriteBrainpoolKey1ECPrivateKey()
+        {
+            ReadWriteBase64ECPrivateKey(
+                @"
+MFQCAQEEFMXZRFR94RXbJYjcb966O0c+nE2WoAsGCSskAwMCCAEBAaEsAyoABI5i
+jwk5x2KSdsrb/pnAHDZQk1TictLI7vH2zDIF0AV+ud5sqeMQUJY=",
+                EccTestData.BrainpoolP160r1Key1);
+        }
+
+        [ConditionalFact(nameof(SupportsBrainpool))]
+        public static void ReadWriteBrainpoolKey1Pkcs8()
+        {
+            ReadWriteBase64Pkcs8(
+                @"
+MGQCAQAwFAYHKoZIzj0CAQYJKyQDAwIIAQEBBEkwRwIBAQQUxdlEVH3hFdsliNxv
+3ro7Rz6cTZahLAMqAASOYo8JOcdiknbK2/6ZwBw2UJNU4nLSyO7x9swyBdAFfrne
+bKnjEFCW",
+                EccTestData.BrainpoolP160r1Key1);
+        }
+
+        [ConditionalFact(nameof(SupportsBrainpool))]
+        public static void ReadWriteBrainpoolKey1EncryptedPkcs8()
+        {
+            ReadWriteBase64EncryptedPkcs8(
+                @"
+MIGHMBsGCSqGSIb3DQEFAzAOBAhSgCZvbsatLQICCAAEaKGDyoSVej1yNPCn7K6q
+ooI857+joe6NZjR+w1xuH4JfrQZGvelWZ2AWtQezuz4UzPLnL3Nyf6jjPPuKarpk
+HiDaMtpw7yT5+32Vkxv5C2jvqNPpicmEFpf2wJ8yVLQtMOKAF2sOwxN/",
+                "12345",
+                new PbeParameters(
+                    PbeEncryptionAlgorithm.Aes192Cbc,
+                    HashAlgorithmName.SHA384,
+                    4096),
+                EccTestData.BrainpoolP160r1Key1);
+        }
+
+        [ConditionalFact(nameof(SupportsBrainpool))]
+        public static void ReadWriteBrainpoolKey1SubjectPublicKeyInfo()
+        {
+            ReadWriteBase64SubjectPublicKeyInfo(
+                @"
+MEIwFAYHKoZIzj0CAQYJKyQDAwIIAQEBAyoABI5ijwk5x2KSdsrb/pnAHDZQk1Ti
+ctLI7vH2zDIF0AV+ud5sqeMQUJY=",
+                EccTestData.BrainpoolP160r1Key1);
         }
 
         private static void ReadWriteBase64EncryptedPkcs8(
