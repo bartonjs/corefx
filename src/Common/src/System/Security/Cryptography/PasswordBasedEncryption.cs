@@ -713,6 +713,11 @@ namespace System.Security.Cryptography
                     // Salt too small is the most likely candidate.
                     throw new CryptographicException(SR.Argument_InvalidValue, e);
                 }
+                catch (OverflowException)
+                {
+                    // Bad iteration count
+                    throw new CryptographicException(SR.Argument_InvalidValue);
+                }
                 finally
                 {
                     CryptographicOperations.ZeroMemory(tmpPassword);
