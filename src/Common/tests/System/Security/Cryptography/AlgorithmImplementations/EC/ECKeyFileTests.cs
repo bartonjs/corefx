@@ -20,6 +20,8 @@ namespace System.Security.Cryptography.Tests
 
         public static bool SupportsBrainpool { get; } = IsCurveSupported(ECCurve.NamedCurves.brainpoolP160r1.Oid);
 
+        public static bool SupportsSect283k1 { get; } = IsCurveSupported(EccTestData.Sect283k1Key1.Curve.Oid);
+
         private static bool IsCurveSupported(Oid oid)
         {
             return EcDiffieHellman.Tests.ECDiffieHellmanFactory.IsCurveValid(oid);
@@ -187,17 +189,18 @@ Ji0iy6T3Y16v8maAqNihK6YdWZI19n2ctNWPF4PTykPnjwpauqYkB5k2wMOp");
             }
         }
 
-        [ConditionalFact(nameof(SupportsBrainpool))]
+        [Fact]
         public void ReadWriteBrainpoolKey1ECPrivateKey()
         {
             ReadWriteBase64ECPrivateKey(
                 @"
 MFQCAQEEFMXZRFR94RXbJYjcb966O0c+nE2WoAsGCSskAwMCCAEBAaEsAyoABI5i
 jwk5x2KSdsrb/pnAHDZQk1TictLI7vH2zDIF0AV+ud5sqeMQUJY=",
-                EccTestData.BrainpoolP160r1Key1);
+                EccTestData.BrainpoolP160r1Key1,
+                SupportsBrainpool);
         }
 
-        [ConditionalFact(nameof(SupportsBrainpool))]
+        [Fact]
         public void ReadWriteBrainpoolKey1Pkcs8()
         {
             ReadWriteBase64Pkcs8(
@@ -205,10 +208,11 @@ jwk5x2KSdsrb/pnAHDZQk1TictLI7vH2zDIF0AV+ud5sqeMQUJY=",
 MGQCAQAwFAYHKoZIzj0CAQYJKyQDAwIIAQEBBEkwRwIBAQQUxdlEVH3hFdsliNxv
 3ro7Rz6cTZahLAMqAASOYo8JOcdiknbK2/6ZwBw2UJNU4nLSyO7x9swyBdAFfrne
 bKnjEFCW",
-                EccTestData.BrainpoolP160r1Key1);
+                EccTestData.BrainpoolP160r1Key1,
+                SupportsBrainpool);
         }
 
-        [ConditionalFact(nameof(SupportsBrainpool))]
+        [Fact]
         public void ReadWriteBrainpoolKey1EncryptedPkcs8()
         {
             ReadWriteBase64EncryptedPkcs8(
@@ -224,14 +228,69 @@ HiDaMtpw7yT5+32Vkxv5C2jvqNPpicmEFpf2wJ8yVLQtMOKAF2sOwxN/",
                 EccTestData.BrainpoolP160r1Key1);
         }
 
-        [ConditionalFact(nameof(SupportsBrainpool))]
+        [Fact]
         public void ReadWriteBrainpoolKey1SubjectPublicKeyInfo()
         {
             ReadWriteBase64SubjectPublicKeyInfo(
                 @"
 MEIwFAYHKoZIzj0CAQYJKyQDAwIIAQEBAyoABI5ijwk5x2KSdsrb/pnAHDZQk1Ti
 ctLI7vH2zDIF0AV+ud5sqeMQUJY=",
-                EccTestData.BrainpoolP160r1Key1);
+                EccTestData.BrainpoolP160r1Key1,
+                SupportsBrainpool);
+        }
+
+        [Fact]
+        public void ReadWriteSect283k1Key1ECPrivateKey()
+        {
+            ReadWriteBase64ECPrivateKey(
+                @"
+MIGAAgEBBCQAtPGuHn/c1LDoIFPAipCIUrJiMebAFnD8xsPqLF0/7UDt8DegBwYF
+K4EEABChTANKAAQHUncL0z5qbuIJbLaxIOdJe0e2wHehR8tX2vaTkJ2EBxbup6oE
+fbmZXDVgPF5rL4zf8Otx03rjQxughJ66sTpMkAPHlp9VzZA=",
+                EccTestData.Sect283k1Key1,
+                SupportsSect283k1);
+        }
+
+        [Fact]
+        public void ReadWriteSect283k1Key1Pkcs8()
+        {
+            ReadWriteBase64Pkcs8(
+                @"
+MIGQAgEAMBAGByqGSM49AgEGBSuBBAAQBHkwdwIBAQQkALTxrh5/3NSw6CBTwIqQ
+iFKyYjHmwBZw/MbD6ixdP+1A7fA3oUwDSgAEB1J3C9M+am7iCWy2sSDnSXtHtsB3
+oUfLV9r2k5CdhAcW7qeqBH25mVw1YDxeay+M3/DrcdN640MboISeurE6TJADx5af
+Vc2Q",
+                EccTestData.Sect283k1Key1,
+                SupportsSect283k1);
+        }
+
+        [Fact]
+        public void ReadWriteSect283k1Key1EncryptedPkcs8()
+        {
+            ReadWriteBase64EncryptedPkcs8(
+                @"
+MIG4MBsGCSqGSIb3DQEFAzAOBAhf/Ix8WHVvxQICCAAEgZheT2iB2sBmNjV2qIgI
+DsNyPY+0rwbWR8MHZcRN0zAL9Q3kawaZyWeKe4j3m3Y39YWURVymYeLAm70syrEw
+057W6kNVXxR/hEq4MlHJZxZdS+R6LGpEvWFEWiuN0wBtmhO24+KmqPMH8XhGszBv
+nTvuaAMG/xvXzKoigakX+1D60cmftPsC7t23SF+xMdzfZNlJGrxXFYX1Gg==",
+                "12345",
+                new PbeParameters(
+                    PbeEncryptionAlgorithm.Aes192Cbc,
+                    HashAlgorithmName.SHA384,
+                    4096),
+                EccTestData.Sect283k1Key1,
+                SupportsSect283k1);
+        }
+
+        [Fact]
+        public void ReadWriteSect283k1Key1SubjectPublicKeyInfo()
+        {
+            ReadWriteBase64SubjectPublicKeyInfo(
+                @"
+MF4wEAYHKoZIzj0CAQYFK4EEABADSgAEB1J3C9M+am7iCWy2sSDnSXtHtsB3oUfL
+V9r2k5CdhAcW7qeqBH25mVw1YDxeay+M3/DrcdN640MboISeurE6TJADx5afVc2Q",
+                EccTestData.Sect283k1Key1,
+                SupportsSect283k1);
         }
 
         [Fact]
@@ -514,75 +573,181 @@ ctLI7vH2zDIF0AV+ud5sqeMQUJY=",
             string base64EncryptedPkcs8,
             string password,
             PbeParameters pbe,
-            in ECParameters expected)
+            in ECParameters expected,
+            bool isCurveSupported=true)
         {
-            ReadWriteKey(
-                base64EncryptedPkcs8,
-                expected,
-                (T key, ReadOnlySpan<byte> source, out int read) =>
-                    key.ImportEncryptedPkcs8PrivateKey(password, source, out read),
-                key => key.ExportEncryptedPkcs8PrivateKey(password, pbe),
-                (T key, Span<byte> destination, out int bytesWritten) =>
-                    key.TryExportEncryptedPkcs8PrivateKey(password, pbe, destination, out bytesWritten),
-                isEncrypted: true);
+            if (isCurveSupported)
+            {
+                ReadWriteKey(
+                    base64EncryptedPkcs8,
+                    expected,
+                    (T key, ReadOnlySpan<byte> source, out int read) =>
+                        key.ImportEncryptedPkcs8PrivateKey(password, source, out read),
+                    key => key.ExportEncryptedPkcs8PrivateKey(password, pbe),
+                    (T key, Span<byte> destination, out int bytesWritten) =>
+                        key.TryExportEncryptedPkcs8PrivateKey(password, pbe, destination, out bytesWritten),
+                    isEncrypted: true);
+            }
+            else
+            {
+                byte[] encrypted = Convert.FromBase64String(base64EncryptedPkcs8);
+
+                using (T key = CreateKey())
+                {
+                    // Wrong password
+                    Assert.ThrowsAny<CryptographicException>(
+                        () => key.ImportEncryptedPkcs8PrivateKey(encrypted.AsSpan(1, 14), encrypted, out _));
+
+                    Assert.ThrowsAny<CryptographicException>(
+                        () => key.ImportEncryptedPkcs8PrivateKey(password + password, encrypted, out _));
+
+                    int bytesRead = -1;
+
+                    Exception e = Assert.ThrowsAny<Exception>(
+                        () => key.ImportEncryptedPkcs8PrivateKey(password, encrypted, out bytesRead));
+
+                    Assert.True(
+                        e is PlatformNotSupportedException || e is CryptographicException,
+                        "e is PlatformNotSupportedException || e is CryptographicException");
+
+                    Assert.Equal(-1, bytesRead);
+                }
+            }
         }
 
         private void ReadWriteBase64EncryptedPkcs8(
             string base64EncryptedPkcs8,
             byte[] passwordBytes,
             PbeParameters pbe,
-            in ECParameters expected)
+            in ECParameters expected,
+            bool isCurveSupported=true)
         {
-            ReadWriteKey(
-                base64EncryptedPkcs8,
-                expected,
-                (T key, ReadOnlySpan<byte> source, out int read) =>
-                    key.ImportEncryptedPkcs8PrivateKey(passwordBytes, source, out read),
-                key => key.ExportEncryptedPkcs8PrivateKey(passwordBytes, pbe),
-                (T key, Span<byte> destination, out int bytesWritten) =>
-                    key.TryExportEncryptedPkcs8PrivateKey(passwordBytes, pbe, destination, out bytesWritten),
-                isEncrypted: true);
+            if (isCurveSupported)
+            {
+                ReadWriteKey(
+                    base64EncryptedPkcs8,
+                    expected,
+                    (T key, ReadOnlySpan<byte> source, out int read) =>
+                        key.ImportEncryptedPkcs8PrivateKey(passwordBytes, source, out read),
+                    key => key.ExportEncryptedPkcs8PrivateKey(passwordBytes, pbe),
+                    (T key, Span<byte> destination, out int bytesWritten) =>
+                        key.TryExportEncryptedPkcs8PrivateKey(passwordBytes, pbe, destination, out bytesWritten),
+                    isEncrypted: true);
+            }
+            else
+            {
+                byte[] encrypted = Convert.FromBase64String(base64EncryptedPkcs8);
+                byte[] wrongPassword = new byte[passwordBytes.Length + 2];
+                RandomNumberGenerator.Fill(wrongPassword);
+
+                using (T key = CreateKey())
+                {
+                    // Wrong password
+                    Assert.ThrowsAny<CryptographicException>(
+                        () => key.ImportEncryptedPkcs8PrivateKey(wrongPassword, encrypted, out _));
+
+                    Assert.ThrowsAny<CryptographicException>(
+                        () => key.ImportEncryptedPkcs8PrivateKey("ThisBetterNotBeThePassword!", encrypted, out _));
+
+                    int bytesRead = -1;
+
+                    Exception e = Assert.ThrowsAny<Exception>(
+                        () => key.ImportEncryptedPkcs8PrivateKey(passwordBytes, encrypted, out bytesRead));
+
+                    Assert.True(
+                        e is PlatformNotSupportedException || e is CryptographicException,
+                        "e is PlatformNotSupportedException || e is CryptographicException");
+
+                    Assert.Equal(-1, bytesRead);
+                }
+            }
         }
 
-        private void ReadWriteBase64ECPrivateKey(string base64Pkcs8, in ECParameters expected)
+        private void ReadWriteBase64ECPrivateKey(string base64Pkcs8, in ECParameters expected, bool isCurveSupported=true)
         {
-            ReadWriteKey(
-                base64Pkcs8,
-                expected,
-                (T key, ReadOnlySpan<byte> source, out int read) =>
-                    ImportECPrivateKey(key, source, out read),
-                key => ExportECPrivateKey(key),
-                (T key, Span<byte> destination, out int bytesWritten) =>
-                    TryExportECPrivateKey(key, destination, out bytesWritten));
+            if (isCurveSupported)
+            {
+                ReadWriteKey(
+                    base64Pkcs8,
+                    expected,
+                    (T key, ReadOnlySpan<byte> source, out int read) =>
+                        ImportECPrivateKey(key, source, out read),
+                    key => ExportECPrivateKey(key),
+                    (T key, Span<byte> destination, out int bytesWritten) =>
+                        TryExportECPrivateKey(key, destination, out bytesWritten));
+            }
+            else
+            {
+                using (T key = CreateKey())
+                {
+                    Exception e = Assert.ThrowsAny<Exception>(
+                        () => ImportECPrivateKey(key, Convert.FromBase64String(base64Pkcs8), out _));
+
+                    Assert.True(
+                        e is PlatformNotSupportedException || e is CryptographicException,
+                        "e is PlatformNotSupportedException || e is CryptographicException");
+                }
+            }
         }
 
-        private void ReadWriteBase64Pkcs8(string base64Pkcs8, in ECParameters expected)
+        private void ReadWriteBase64Pkcs8(string base64Pkcs8, in ECParameters expected, bool isCurveSupported=true)
         {
-            ReadWriteKey(
-                base64Pkcs8,
-                expected,
-                (T key, ReadOnlySpan<byte> source, out int read) =>
-                    key.ImportPkcs8PrivateKey(source, out read),
-                key => key.ExportPkcs8PrivateKey(),
-                (T key, Span<byte> destination, out int bytesWritten) =>
-                    key.TryExportPkcs8PrivateKey(destination, out bytesWritten));
+            if (isCurveSupported)
+            {
+                ReadWriteKey(
+                    base64Pkcs8,
+                    expected,
+                    (T key, ReadOnlySpan<byte> source, out int read) =>
+                        key.ImportPkcs8PrivateKey(source, out read),
+                    key => key.ExportPkcs8PrivateKey(),
+                    (T key, Span<byte> destination, out int bytesWritten) =>
+                        key.TryExportPkcs8PrivateKey(destination, out bytesWritten));
+            }
+            else
+            {
+                using (T key = CreateKey())
+                {
+                    Exception e = Assert.ThrowsAny<Exception>(
+                        () => key.ImportPkcs8PrivateKey(Convert.FromBase64String(base64Pkcs8), out _));
+
+                    Assert.True(
+                        e is PlatformNotSupportedException || e is CryptographicException,
+                        "e is PlatformNotSupportedException || e is CryptographicException");
+                }
+            }
         }
 
         private void ReadWriteBase64SubjectPublicKeyInfo(
             string base64SubjectPublicKeyInfo,
-            in ECParameters expected)
+            in ECParameters expected,
+            bool isCurveSupported = true)
         {
-            ECParameters expectedPublic = expected;
-            expectedPublic.D = null;
+            if (isCurveSupported)
+            {
+                ECParameters expectedPublic = expected;
+                expectedPublic.D = null;
 
-            ReadWriteKey(
-                base64SubjectPublicKeyInfo,
-                expectedPublic,
-                (T key, ReadOnlySpan<byte> source, out int read) => 
-                    key.ImportSubjectPublicKeyInfo(source, out read),
-                key => key.ExportSubjectPublicKeyInfo(),
-                (T key, Span<byte> destination, out int written) =>
-                    key.TryExportSubjectPublicKeyInfo(destination, out written));
+                ReadWriteKey(
+                    base64SubjectPublicKeyInfo,
+                    expectedPublic,
+                    (T key, ReadOnlySpan<byte> source, out int read) =>
+                        key.ImportSubjectPublicKeyInfo(source, out read),
+                    key => key.ExportSubjectPublicKeyInfo(),
+                    (T key, Span<byte> destination, out int written) =>
+                        key.TryExportSubjectPublicKeyInfo(destination, out written));
+            }
+            else
+            {
+                using (T key = CreateKey())
+                {
+                    Exception e = Assert.ThrowsAny<Exception>(
+                        () => key.ImportSubjectPublicKeyInfo(Convert.FromBase64String(base64SubjectPublicKeyInfo), out _));
+
+                    Assert.True(
+                        e is PlatformNotSupportedException || e is CryptographicException,
+                        "e is PlatformNotSupportedException || e is CryptographicException");
+                }
+            }
         }
 
         private void ReadWriteKey(

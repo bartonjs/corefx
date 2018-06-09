@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using Test.Cryptography;
 
 namespace System.Security.Cryptography.Tests
@@ -227,6 +226,18 @@ namespace System.Security.Cryptography.Tests
                     Y = "72D2C8EEF1F6CC3205D0057EB9DE6CA9E3105096".HexToByteArray(),
                 },
                 D = "C5D944547DE115DB2588DC6FDEBA3B473E9C4D96".HexToByteArray(),
+            };
+
+        internal static readonly ECParameters Sect283k1Key1 =
+            new ECParameters
+            {
+                Curve = ECCurve.CreateFromValue("1.3.132.0.16"),
+                Q =
+                {
+                    X = "0752770BD33E6A6EE2096CB6B120E7497B47B6C077A147CB57DAF693909D840716EEA7AA".HexToByteArray(),
+                    Y = "047DB9995C35603C5E6B2F8CDFF0EB71D37AE3431BA0849EBAB13A4C9003C7969F55CD90".HexToByteArray(),
+                },
+                D = "00B4F1AE1E7FDCD4B0E82053C08A908852B26231E6C01670FCC6C3EA2C5D3FED40EDF037".HexToByteArray(),
             };
 #endif // netcoreapp
     }
