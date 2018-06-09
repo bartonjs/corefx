@@ -42,6 +42,22 @@ oA==";
         }
 
         [Fact]
+        public void ReadWriteNistP521Pkcs8_ECDH()
+        {
+            const string base64 = @"
+MIHsAgEAMA4GBSuBBAEMBgUrgQQAIwSB1jCB0wIBAQRCAaVfh4Wlcwuu4daz0wEG
+n3/WTYsEzOpX79WWHmjzP6tDVFFmymVTzTj/cT0SicaYvX0Ia1XgG1vV7SfjYwN2
+sRZmoYGJA4GGAAQAdR8mMkxzzvXUXrsyk34wYONRlgpXWUrQPrHKDF6nRxITNmup
+kdJEBnF/hv3v3ghuCblUpX3A9elFl1bWDCqubeABqN27PwLIwjUkcp9Ui34jMlIz
+72fdMHUrkk8pdFnjwuEq6Nj0/kRU44R8GLJVys71lze5GOHeQPlen/5PV7eRU6A=";
+
+            ReadWriteBase64Pkcs8(
+                base64,
+                EccTestData.GetNistP521Key2(),
+                isSupported: false);
+        }
+
+        [Fact]
         public void ReadWriteNistP521SubjectPublicKeyInfo()
         {
             const string base64 = @"
@@ -51,6 +67,21 @@ PwLIwjUkcp9Ui34jMlIz72fdMHUrkk8pdFnjwuEq6Nj0/kRU44R8GLJVys71lze5
 GOHeQPlen/5PV7eRU6A=";
 
             ReadWriteBase64SubjectPublicKeyInfo(base64, EccTestData.GetNistP521Key2());
+        }
+
+        [Fact]
+        public void ReadWriteNistP521SubjectPublicKeyInfo_ECDH()
+        {
+            const string base64 = @"
+MIGZMA4GBSuBBAEMBgUrgQQAIwOBhgAEAHUfJjJMc8711F67MpN+MGDjUZYKV1lK
+0D6xygxep0cSEzZrqZHSRAZxf4b9794Ibgm5VKV9wPXpRZdW1gwqrm3gAajduz8C
+yMI1JHKfVIt+IzJSM+9n3TB1K5JPKXRZ48LhKujY9P5EVOOEfBiyVcrO9Zc3uRjh
+3kD5Xp/+T1e3kVOg";
+
+            ReadWriteBase64SubjectPublicKeyInfo(
+                base64,
+                EccTestData.GetNistP521Key2(),
+                isSupported: false);
         }
 
         [Fact]
@@ -225,7 +256,8 @@ HiDaMtpw7yT5+32Vkxv5C2jvqNPpicmEFpf2wJ8yVLQtMOKAF2sOwxN/",
                     PbeEncryptionAlgorithm.Aes192Cbc,
                     HashAlgorithmName.SHA384,
                     4096),
-                EccTestData.BrainpoolP160r1Key1);
+                EccTestData.BrainpoolP160r1Key1,
+                SupportsBrainpool);
         }
 
         [Fact]
@@ -574,9 +606,9 @@ V9r2k5CdhAcW7qeqBH25mVw1YDxeay+M3/DrcdN640MboISeurE6TJADx5afVc2Q",
             string password,
             PbeParameters pbe,
             in ECParameters expected,
-            bool isCurveSupported=true)
+            bool isSupported=true)
         {
-            if (isCurveSupported)
+            if (isSupported)
             {
                 ReadWriteKey(
                     base64EncryptedPkcs8,
@@ -620,9 +652,9 @@ V9r2k5CdhAcW7qeqBH25mVw1YDxeay+M3/DrcdN640MboISeurE6TJADx5afVc2Q",
             byte[] passwordBytes,
             PbeParameters pbe,
             in ECParameters expected,
-            bool isCurveSupported=true)
+            bool isSupported=true)
         {
-            if (isCurveSupported)
+            if (isSupported)
             {
                 ReadWriteKey(
                     base64EncryptedPkcs8,
@@ -663,9 +695,9 @@ V9r2k5CdhAcW7qeqBH25mVw1YDxeay+M3/DrcdN640MboISeurE6TJADx5afVc2Q",
             }
         }
 
-        private void ReadWriteBase64ECPrivateKey(string base64Pkcs8, in ECParameters expected, bool isCurveSupported=true)
+        private void ReadWriteBase64ECPrivateKey(string base64Pkcs8, in ECParameters expected, bool isSupported=true)
         {
-            if (isCurveSupported)
+            if (isSupported)
             {
                 ReadWriteKey(
                     base64Pkcs8,
@@ -690,9 +722,9 @@ V9r2k5CdhAcW7qeqBH25mVw1YDxeay+M3/DrcdN640MboISeurE6TJADx5afVc2Q",
             }
         }
 
-        private void ReadWriteBase64Pkcs8(string base64Pkcs8, in ECParameters expected, bool isCurveSupported=true)
+        private void ReadWriteBase64Pkcs8(string base64Pkcs8, in ECParameters expected, bool isSupported=true)
         {
-            if (isCurveSupported)
+            if (isSupported)
             {
                 ReadWriteKey(
                     base64Pkcs8,
@@ -720,9 +752,9 @@ V9r2k5CdhAcW7qeqBH25mVw1YDxeay+M3/DrcdN640MboISeurE6TJADx5afVc2Q",
         private void ReadWriteBase64SubjectPublicKeyInfo(
             string base64SubjectPublicKeyInfo,
             in ECParameters expected,
-            bool isCurveSupported = true)
+            bool isSupported = true)
         {
-            if (isCurveSupported)
+            if (isSupported)
             {
                 ECParameters expectedPublic = expected;
                 expectedPublic.D = null;

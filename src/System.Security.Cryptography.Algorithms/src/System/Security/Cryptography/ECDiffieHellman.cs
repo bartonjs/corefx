@@ -14,7 +14,7 @@ namespace System.Security.Cryptography
         private static readonly string[] s_validOids =
         {
             Oids.EcPublicKey,
-            Oids.EcDiffieHellman,
+            // Neither Windows nor OpenSSL seem to read id-ecDH Pkcs8/SPKI.
             // ECMQV is not valid in this context.
         };
 
