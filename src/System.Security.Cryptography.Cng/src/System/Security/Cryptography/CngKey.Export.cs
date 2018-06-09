@@ -43,12 +43,6 @@ namespace System.Security.Cryptography
             Span<byte> destination,
             out int bytesWritten)
         {
-            if (destination.IsEmpty)
-            {
-                bytesWritten = 0;
-                return false;
-            }
-
             // Sanity check the current bounds
             Span<byte> empty = default;
 
