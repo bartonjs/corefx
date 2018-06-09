@@ -6,90 +6,23 @@ using Xunit;
 
 namespace System.Security.Cryptography.Cng.Tests
 {
-    public static class RSACngPkcs8Tests
+    public class RSACngPkcs8Tests : CngPkcs8Tests<RSACng>
     {
-        [Fact]
-        public static void NoPlaintextExportFailsPkcs8()
+        protected override RSACng CreateKey(out CngKey cngKey)
         {
-            using (RSACng rsa = new RSACng())
-            {
-                rsa.Key.SetExportPolicy(CngExportPolicies.AllowExport);
-
-                Assert.ThrowsAny<CryptographicException>(
-                    () => rsa.ExportPkcs8PrivateKey());
-
-                Assert.ThrowsAny<CryptographicException>(
-                    () => rsa.TryExportPkcs8PrivateKey(new byte[1], out _));
-            }
+            RSACng rsa = new RSACng();
+            cngKey = rsa.Key;
+            return rsa;
         }
 
-        [Theory]
-        [InlineData(PbeEncryptionAlgorithm.Aes256Cbc)]
-        [InlineData(PbeEncryptionAlgorithm.TripleDes3KeyPkcs12)]
-        public static void NoPlaintextExportAllowsEncryptedPkcs8(PbeEncryptionAlgorithm algorithm)
+        protected override void VerifyMatch(RSACng exported, RSACng imported)
         {
-            PbeParameters pbeParameters = new PbeParameters(
-                algorithm,
-                HashAlgorithmName.SHA1,
-                2048);
+            byte[] data = { 8, 4, 1, 2, 11 };
+            HashAlgorithmName hashAlgorithm = HashAlgorithmName.SHA256;
+            RSASignaturePadding padding = RSASignaturePadding.Pss;
 
-            using (RSACng rsa = new RSACng())
-            {
-                rsa.Key.SetExportPolicy(CngExportPolicies.AllowExport);
-
-                byte[] data = rsa.ExportEncryptedPkcs8PrivateKey(
-                    nameof(NoPlaintextExportAllowsEncryptedPkcs8),
-                    pbeParameters);
-
-                Assert.False(
-                    rsa.TryExportEncryptedPkcs8PrivateKey(
-                        nameof(NoPlaintextExportAllowsEncryptedPkcs8),
-                        pbeParameters,
-                        data.AsSpan(0, data.Length - 1),
-                        out int bytesWritten));
-
-                Assert.Equal(0, bytesWritten);
-
-                Assert.True(
-                    rsa.TryExportEncryptedPkcs8PrivateKey(
-                        nameof(NoPlaintextExportAllowsEncryptedPkcs8),
-                        pbeParameters,
-                        data.AsSpan(),
-                        out bytesWritten));
-
-                Assert.Equal(data.Length, bytesWritten);
-
-                using (RSACng rsa2 = new RSACng())
-                {
-                    rsa2.ImportEncryptedPkcs8PrivateKey(
-                        nameof(NoPlaintextExportAllowsEncryptedPkcs8),
-                        data,
-                        out int bytesRead);
-
-                    Assert.Equal(data.Length, bytesRead);
-
-                    HashAlgorithmName hashAlgorithm = HashAlgorithmName.SHA256;
-                    RSASignaturePadding signaturePadding = RSASignaturePadding.Pss;
-
-                    byte[] signature = rsa2.SignData(
-                        data,
-                        hashAlgorithm,
-                        signaturePadding);
-
-                    Assert.True(
-                        rsa.VerifyData(data, signature, hashAlgorithm, signaturePadding),
-                        "Imported value has original private key");
-                }
-            }
-        }
-
-        internal static void SetExportPolicy(this CngKey key, CngExportPolicies policy)
-        {
-            key.SetProperty(
-                new CngProperty(
-                    "Export Policy",
-                    BitConverter.GetBytes((int)policy),
-                    CngPropertyOptions.Persist));
+            byte[] signature = imported.SignData(data, hashAlgorithm, padding);
+            Assert.True(exported.VerifyData(data, signature, hashAlgorithm, padding));
         }
     }
 }
