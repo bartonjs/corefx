@@ -834,6 +834,8 @@ namespace System.Security.Cryptography.Asn1
         {
             if (oid == null)
                 throw new ArgumentNullException(nameof(oid));
+            if (oid.Value == null)
+                throw new CryptographicException(SR.Argument_InvalidOidValue);
 
             WriteObjectIdentifier(oid.Value);
         }
@@ -855,6 +857,8 @@ namespace System.Security.Cryptography.Asn1
         {
             if (oid == null)
                 throw new ArgumentNullException(nameof(oid));
+            if (oid.Value == null)
+                throw new CryptographicException(SR.Argument_InvalidOidValue);
 
             WriteObjectIdentifier(tag, oid.Value);
         }
@@ -958,7 +962,7 @@ namespace System.Security.Cryptography.Asn1
             {
                 endIndex = oidValue.Length;
             }
-            else if (endIndex == oidValue.Length - 1)
+            else if (endIndex == 0 || endIndex == oidValue.Length - 1)
             {
                 throw new CryptographicException(SR.Argument_InvalidOidValue);
             }
