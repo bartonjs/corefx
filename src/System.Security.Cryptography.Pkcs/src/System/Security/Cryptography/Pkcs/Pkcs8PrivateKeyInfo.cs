@@ -47,6 +47,9 @@ namespace System.Security.Cryptography.Pkcs
 
         public static Pkcs8PrivateKeyInfo Create(AsymmetricAlgorithm privateKey)
         {
+            if (privateKey == null)
+                throw new ArgumentNullException(nameof(privateKey));
+
             byte[] pkcs8 = privateKey.ExportPkcs8PrivateKey();
             return Decode(pkcs8, out _, skipCopy: true);
         }
@@ -82,6 +85,14 @@ namespace System.Security.Cryptography.Pkcs
 
         public byte[] Encrypt(ReadOnlySpan<char> password, PbeParameters pbeParameters)
         {
+            if (pbeParameters == null)
+                throw new ArgumentNullException(nameof(pbeParameters));
+
+            PasswordBasedEncryption.ValidatePbeParameters(
+                pbeParameters,
+                password,
+                ReadOnlySpan<byte>.Empty);
+
             using (AsnWriter pkcs8 = WritePkcs8())
             using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(password, pkcs8, pbeParameters))
             {
@@ -91,6 +102,14 @@ namespace System.Security.Cryptography.Pkcs
 
         public byte[] Encrypt(ReadOnlySpan<byte> passwordBytes, PbeParameters pbeParameters)
         {
+            if (pbeParameters == null)
+                throw new ArgumentNullException(nameof(pbeParameters));
+
+            PasswordBasedEncryption.ValidatePbeParameters(
+                pbeParameters,
+                ReadOnlySpan<char>.Empty,
+                passwordBytes);
+
             using (AsnWriter pkcs8 = WritePkcs8())
             using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(passwordBytes, pkcs8, pbeParameters))
             {
@@ -112,6 +131,14 @@ namespace System.Security.Cryptography.Pkcs
             Span<byte> destination,
             out int bytesWritten)
         {
+            if (pbeParameters == null)
+                throw new ArgumentNullException(nameof(pbeParameters));
+
+            PasswordBasedEncryption.ValidatePbeParameters(
+                pbeParameters,
+                password,
+                ReadOnlySpan<byte>.Empty);
+
             using (AsnWriter pkcs8 = WritePkcs8())
             using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(password, pkcs8, pbeParameters))
             {
@@ -125,6 +152,14 @@ namespace System.Security.Cryptography.Pkcs
             Span<byte> destination,
             out int bytesWritten)
         {
+            if (pbeParameters == null)
+                throw new ArgumentNullException(nameof(pbeParameters));
+
+            PasswordBasedEncryption.ValidatePbeParameters(
+                pbeParameters,
+                ReadOnlySpan<char>.Empty,
+                passwordBytes);
+
             using (AsnWriter pkcs8 = WritePkcs8())
             using (AsnWriter writer = KeyFormatHelper.WriteEncryptedPkcs8(passwordBytes, pkcs8, pbeParameters))
             {
