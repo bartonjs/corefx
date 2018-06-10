@@ -1060,6 +1060,25 @@ pWre7nAO4O6sP1JzXvVmwrS5C/hw";
                         ReadOnlySpan<byte>.Empty,
                         null));
 
+                Assert.ThrowsAny<ArgumentNullException>(
+                    () => key.ExportEncryptedPkcs8PrivateKey(
+                        ReadOnlySpan<char>.Empty,
+                        null));
+
+                Assert.ThrowsAny<ArgumentNullException>(
+                    () => key.TryExportEncryptedPkcs8PrivateKey(
+                        ReadOnlySpan<byte>.Empty,
+                        null,
+                        Span<byte>.Empty,
+                        out _));
+
+                Assert.ThrowsAny<ArgumentNullException>(
+                    () => key.TryExportEncryptedPkcs8PrivateKey(
+                        ReadOnlySpan<char>.Empty,
+                        null,
+                        Span<byte>.Empty,
+                        out _));
+
                 // PKCS12 requires SHA-1
                 Assert.ThrowsAny<CryptographicException>(
                     () => key.ExportEncryptedPkcs8PrivateKey(
