@@ -620,6 +620,26 @@ V9r2k5CdhAcW7qeqBH25mVw1YDxeay+M3/DrcdN640MboISeurE6TJADx5afVc2Q",
             }
         }
 
+        [Fact]
+        public void DecryptPkcs12WithBytes()
+        {
+            using (T key = CreateKey())
+            {
+                string charBased = "hello";
+                byte[] byteBased = Encoding.UTF8.GetBytes(charBased);
+
+                byte[] encrypted = key.ExportEncryptedPkcs8PrivateKey(
+                    charBased,
+                    new PbeParameters(
+                        PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
+                        HashAlgorithmName.SHA1,
+                        123));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ImportEncryptedPkcs8PrivateKey(byteBased, encrypted, out _));
+            }
+        }
+
         private void ReadWriteBase64EncryptedPkcs8(
             string base64EncryptedPkcs8,
             string password,

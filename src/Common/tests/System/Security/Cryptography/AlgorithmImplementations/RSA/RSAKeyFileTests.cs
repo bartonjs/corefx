@@ -1172,6 +1172,26 @@ pWre7nAO4O6sP1JzXvVmwrS5C/hw";
             }
         }
 
+        [Fact]
+        public static void DecryptPkcs12WithBytes()
+        {
+            using (RSA key = RSAFactory.Create())
+            {
+                string charBased = "hello";
+                byte[] byteBased = Encoding.UTF8.GetBytes(charBased);
+
+                byte[] encrypted = key.ExportEncryptedPkcs8PrivateKey(
+                    charBased,
+                    new PbeParameters(
+                        PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
+                        HashAlgorithmName.SHA1,
+                        123));
+
+                Assert.ThrowsAny<CryptographicException>(
+                    () => key.ImportEncryptedPkcs8PrivateKey(byteBased, encrypted, out _));
+            }
+        }
+
         private static void ReadBase64EncryptedPkcs8(
             string base64EncPkcs8,
             string password,
