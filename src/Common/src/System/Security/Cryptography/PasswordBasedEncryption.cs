@@ -146,8 +146,10 @@ namespace System.Security.Cryptography
             {
                 if (pkcs12)
                 {
-                    // Verified by ValidatePbeParameters, which should be called at entrypoints.
-                    Debug.Assert(password.Length > 0 || passwordBytes.IsEmpty);
+                    if (password.IsEmpty && passwordBytes.Length > 0)
+                    {
+                        throw AlgorithmKdfRequiresChars(algorithmIdentifier.Algorithm.Value);
+                    }
 
                     return Pkcs12PbeDecrypt(
                         algorithmIdentifier,
