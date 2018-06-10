@@ -311,5 +311,55 @@ D9fVWpuVzYpEDfZm");
                 Assert.Equal(secret.ByteArrayToHex(), decrypted.ByteArrayToHex());
             }
         }
+
+        [Fact]
+        public static void CreateNull()
+        {
+            AssertExtensions.Throws<ArgumentNullException>(
+                "privateKey",
+                () => Pkcs8PrivateKeyInfo.Create(null));
+        }
+
+        [Fact]
+        public static void NullAlgorithm()
+        {
+            AssertExtensions.Throws<ArgumentNullException>(
+                "algorithmId",
+                () => new Pkcs8PrivateKeyInfo(null, null, ReadOnlyMemory<byte>.Empty));
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("00.0")]
+        [InlineData("0....0")]
+        [InlineData("0.0...0")]
+        [InlineData("potato")]
+        public static void InvalidAlgorithmId(string oidValue)
+        {
+            Pkcs8PrivateKeyInfo info = new Pkcs8PrivateKeyInfo(
+                new Oid(oidValue, "friendly name"),
+                null,
+                ReadOnlyMemory<byte>.Empty);
+
+            Assert.ThrowsAny<CryptographicException>(() => info.Encode());
+
+            Assert.ThrowsAny<CryptographicException>(
+                () => info.TryEncode(Span<byte>.Empty, out _));
+
+            PbeParameters pbeParameters = new PbeParameters(
+                PbeEncryptionAlgorithm.Aes128Cbc,
+                HashAlgorithmName.SHA256,
+                1024);
+
+            Assert.ThrowsAny<CryptographicException>(() => info.Encrypt("hi", pbeParameters));
+            Assert.ThrowsAny<CryptographicException>(() => info.Encrypt(new byte[3], pbeParameters));
+
+            Assert.ThrowsAny<CryptographicException>(
+                () => info.TryEncrypt("hello", pbeParameters, Span<byte>.Empty, out _));
+
+            Assert.ThrowsAny<CryptographicException>(
+                () => info.TryEncrypt(new byte[3], pbeParameters, Span<byte>.Empty, out _));
+        }
     }
 }
