@@ -680,10 +680,15 @@ namespace System.Security.Cryptography
                 throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
             }
 
-            if (key.Version != 0)
+            const int MaxSupportedVersion = 0;
+
+            if (key.Version > MaxSupportedVersion)
             {
                 throw new CryptographicException(
-                    SR.Format(SR.Cryptography_RSAPrivateKey_V0Only, key.Version));
+                    SR.Format(
+                        SR.Cryptography_RSAPrivateKey_VersionTooNew,
+                        key.Version,
+                        MaxSupportedVersion));
             }
 
             // The modulus size determines the encoded output size of the CRT parameters.

@@ -319,8 +319,8 @@
   <data name="Cryptography_RSA_DecryptWrongSize" xml:space="preserve">
     <value>The length of the data to decrypt is not valid for the size of this key.</value>
   </data>
-  <data name="Cryptography_RSAPrivateKey_V0Only" xml:space="preserve">
-    <value>The provided RSAPrivateKey value has version '{0}', but only version 0 is supported.</value>
+  <data name="Cryptography_RSAPrivateKey_VersionTooNew" xml:space="preserve">
+    <value>The provided RSAPrivateKey value has version '{0}', but version '{1}' is the maximum supported.</value>
   </data>
   <data name="Cryptography_SignHash_WrongSize" xml:space="preserve">
     <value>The provided hash value is not the expected size for the specified hash algorithm.</value>
