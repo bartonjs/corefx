@@ -439,6 +439,8 @@ vAB5Wz646GeWztKawSR/9xIqHq8IECV1FXI=",
         {
             using (DSA key = DSAFactory.Create())
             {
+                key.ImportParameters(DSATestData.GetDSA1024Params());
+
                 string charBased = "hello";
                 byte[] byteBased = Encoding.UTF8.GetBytes(charBased);
 
