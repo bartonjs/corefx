@@ -47,13 +47,17 @@
   <ItemGroup Condition="'$(TargetGroup)' == 'netcoreapp'">
     <Compile Include="EnvelopedCms\DecryptTestsUsingExplicitPrivateKey.cs" />
     <Compile Include="EnvelopedCms\SubjectIdentifierTests.cs" />
+    <Compile Include="Pkcs12\SimpleRead.cs" />
+    <Compile Include="Pkcs12\WriteToWindows.cs" />
     <Compile Include="Rfc3161\TimestampRequestTests.cs" />
     <Compile Include="Rfc3161\TimestampTokenInfoTests.cs" />
     <Compile Include="Rfc3161\TimestampTokenTestData.cs" />
     <Compile Include="Rfc3161\TimestampTokenTests.cs" />
     <Compile Include="SignedCms\SignedCmsTests.netcoreapp.cs" />
     <Compile Include="SignedCms\SignerInfoTests.netcoreapp.cs" />
+    <Compile Include="ImportedCollection.cs" />
     <Compile Include="Pkcs8PrivateKeyInfoTests.cs" />
+    <Compile Include="PrivateKeyHelpers.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetsWindows)' == 'true' AND '$(TargetGroup)'=='netcoreapp'">
     <Compile Include="EnvelopedCms\DecryptTests.KeyPersistence.cs" />
