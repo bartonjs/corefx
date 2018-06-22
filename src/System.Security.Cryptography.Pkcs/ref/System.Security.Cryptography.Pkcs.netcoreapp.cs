@@ -20,12 +20,6 @@ namespace System.Security.Cryptography.Pkcs
         public X509Certificate2 GetCertificate() => throw null;
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
     }
-    public sealed partial class CrlBag : Pkcs12SafeBag
-    {
-        private CrlBag() : base(null) { }
-        public ReadOnlyMemory<byte> RawData { get; }
-        protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
-    }
     public sealed partial class KeyBag : Pkcs12SafeBag
     {
         private KeyBag() : base(null) { }
