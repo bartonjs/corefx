@@ -102,16 +102,15 @@ namespace System.Security.Cryptography.Pkcs
 
         public static Pkcs12Info Decode(
             ReadOnlyMemory<byte> encodedBytes,
-            out int bytesConsumed)
+            out int bytesConsumed,
+            bool skipCopy = false)
         {
             AsnReader reader = new AsnReader(encodedBytes, AsnEncodingRules.BER);
             // Trim it to the first value
             encodedBytes = reader.PeekEncodedValue();
 
-            // Copy the data
-            byte[] copy = encodedBytes.ToArray();
-
-            PfxAsn pfx = AsnSerializer.Deserialize<PfxAsn>(copy, AsnEncodingRules.BER);
+            ReadOnlyMemory<byte> maybeCopy = skipCopy ? encodedBytes : encodedBytes.ToArray();
+            PfxAsn pfx = AsnSerializer.Deserialize<PfxAsn>(maybeCopy, AsnEncodingRules.BER);
 
             // https://tools.ietf.org/html/rfc7292#section-4 only defines version 3.
             if (pfx.Version != 3)
