@@ -6,7 +6,7 @@ namespace System.Security.Cryptography.Pkcs
 {
     public sealed class SecretBag : Pkcs12SafeBag
     {
-        public ReadOnlyMemory<byte> RawData { get; }
+        public ReadOnlyMemory<byte> SecretValue { get; }
 
         private SecretBag()
             : base(Oids.Pkcs12SecretBag)

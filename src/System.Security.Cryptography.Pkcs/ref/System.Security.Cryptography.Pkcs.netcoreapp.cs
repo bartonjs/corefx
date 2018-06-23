@@ -168,7 +168,7 @@ namespace System.Security.Cryptography.Pkcs
     {
         private SecretBag() : base(null) { }
         public Oid GetSecretType() => throw null;
-        public ReadOnlyMemory<byte> RawData { get; }
+        public ReadOnlyMemory<byte> SecretValue { get; }
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
     }
     public sealed partial class ShroudedKeyBag : Pkcs12SafeBag
