@@ -76,12 +76,22 @@ namespace System.Security.Cryptography
         internal const string TstInfo = "1.2.840.113549.1.9.16.1.4";
         internal const string TimeStampingPurpose = "1.3.6.1.5.5.7.3.8";
 
+        // PKCS#12
         private const string Pkcs12Prefix = "1.2.840.113549.1.12.";
         private const string Pkcs12PbePrefix = Pkcs12Prefix + "1.";
         internal const string Pkcs12PbeWithShaAnd3Key3Des = Pkcs12PbePrefix + "3";
         internal const string Pkcs12PbeWithShaAnd2Key3Des = Pkcs12PbePrefix + "4";
         internal const string Pkcs12PbeWithShaAnd128BitRC2 = Pkcs12PbePrefix + "5";
         internal const string Pkcs12PbeWithShaAnd40BitRC2 = Pkcs12PbePrefix + "6";
+        private const string Pkcs12BagTypesPrefix = Pkcs12Prefix + "10.1.";
+        internal const string Pkcs12KeyBag = Pkcs12BagTypesPrefix + "1";
+        internal const string Pkcs12ShroudedKeyBag = Pkcs12BagTypesPrefix + "2";
+        internal const string Pkcs12CertBag = Pkcs12BagTypesPrefix + "3";
+        internal const string Pkcs12CrlBag = Pkcs12BagTypesPrefix + "4";
+        internal const string Pkcs12SecretBag = Pkcs12BagTypesPrefix + "5";
+        internal const string Pkcs12SafeContentsBag = Pkcs12BagTypesPrefix + "6";
+        internal const string Pkcs12X509CertBagType = "1.2.840.113549.1.9.22.1";
+        internal const string Pkcs12SdsiCertBagType = "1.2.840.113549.1.9.22.1";
 
         // PKCS#5
         private const string Pkcs5Prefix = "1.2.840.113549.1.5.";

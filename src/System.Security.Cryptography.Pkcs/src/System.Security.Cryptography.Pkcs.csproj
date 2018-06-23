@@ -317,6 +317,12 @@
     <Compile Include="$(CommonPath)\System\Security\Cryptography\Pkcs12Kdf.cs">
       <Link>Common\System\Security\Cryptography\Pkcs12Kdf.cs</Link>
     </Compile>
+    <Compile Include="System\Security\Cryptography\Pkcs\Asn1\CertBagAsn.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Asn1\DigestInfoAsn.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Asn1\EncryptedDataAsn.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Asn1\MacData.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Asn1\PfxAsn.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Asn1\SafeBagAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\CertBag.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\CmsSignature.DSA.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\KeyBag.cs" />
@@ -330,6 +336,7 @@
     <Compile Include="System\Security\Cryptography\Pkcs\Rfc3161TimestampToken.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Rfc3161TimestampTokenInfo.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\SafeContentsBag.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\SecretBag.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\ShroudedKeyBag.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\UnknownBag.cs" />
   </ItemGroup>

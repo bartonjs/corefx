@@ -9,7 +9,7 @@ using System.Security.Cryptography.Asn1;
 
 namespace System.Security.Cryptography.Pkcs
 {
-    public abstract partial class Pkcs12SafeBag
+    public abstract class Pkcs12SafeBag
     {
         private readonly string _bagIdValue;
         private Oid _bagOid;

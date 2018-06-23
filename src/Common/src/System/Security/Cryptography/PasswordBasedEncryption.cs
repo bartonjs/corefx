@@ -1019,7 +1019,7 @@ namespace System.Security.Cryptography
             writer.PopSequence();
         }
 
-        private static int NormalizeIterationCount(uint iterationCount)
+        internal static int NormalizeIterationCount(uint iterationCount)
         {
             if (iterationCount == 0 || iterationCount > IterationLimit)
             {
