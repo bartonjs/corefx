@@ -120,25 +120,6 @@ namespace System.Security.Cryptography.Pkcs
             }
         }
 
-        public void AddSafeContentsEnveloped(
-            Pkcs12SafeContents safeContents,
-            CmsRecipient recipient)
-        {
-            if (safeContents == null)
-                throw new ArgumentNullException(nameof(safeContents));
-            if (recipient == null)
-                throw new ArgumentNullException(nameof(recipient));
-            if (IsSealed)
-                throw new InvalidOperationException(SR.Cryptography_Pkcs12_PfxIsSealed);
-
-            if (_contents == null)
-            {
-                _contents = new List<ContentInfoAsn>();
-            }
-
-            throw new NotImplementedException();
-        }
-
         public void AddSafeContentsUnencrypted(Pkcs12SafeContents safeContents)
         {
             if (safeContents == null)
