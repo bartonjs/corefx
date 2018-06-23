@@ -29,6 +29,22 @@ namespace System.Security.Cryptography.Pkcs
             };
         }
 
-        protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
+        protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten)
+        {
+            throw null;
+        }
+
+        public static SafeContentsBag CreateEncrypted(
+            Pkcs12SafeContents safeContents,
+            ReadOnlySpan<char> password,
+            PbeParameters pbeParameters)
+        {
+            throw null;
+        }
+
+        public static SafeContentsBag CreateUnencrypted(Pkcs12SafeContents contents)
+        {
+            throw null;
+        }
     }
 }

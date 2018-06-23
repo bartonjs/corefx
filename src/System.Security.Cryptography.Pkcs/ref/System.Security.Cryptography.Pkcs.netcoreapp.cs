@@ -68,9 +68,6 @@ namespace System.Security.Cryptography.Pkcs
         public void AddSafeBag(Pkcs12SafeBag safeBag) => throw null;
         public CertBag AddCertificate(X509Certificate2 certificate) => throw null;
         public KeyBag AddKeyUnencrypted(ReadOnlyMemory<byte> pkcs8PrivateKey) => throw null;
-        public SafeContentsBag AddNestedSafeContentsEncrypted(Pkcs12SafeContents safeContents, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
-        public SafeContentsBag AddNestedSafeContentsEnveloped(Pkcs12SafeContents safeContents, CmsRecipient recipient) => throw null;
-        public SafeContentsBag AddNestedSafeContentsUnencrypted(Pkcs12SafeContents safeContents) => throw null;
         public ShroudedKeyBag AddShroudedKey(ReadOnlyMemory<byte> encryptedPkcs8PrivateKey) => throw null;
         public ShroudedKeyBag AddShroudedKey(DSA key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public ShroudedKeyBag AddShroudedKey(ECDiffieHellman key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
@@ -163,6 +160,8 @@ namespace System.Security.Cryptography.Pkcs
         private SafeContentsBag() : base(null) { }
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
         public Pkcs12SafeContents SafeContents { get; }
+        public static SafeContentsBag CreateEncrypted(Pkcs12SafeContents safeContents, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
+        public static SafeContentsBag CreateUnencrypted(Pkcs12SafeContents contents) => throw null;
     }
     public sealed partial class SecretBag : Pkcs12SafeBag
     {
