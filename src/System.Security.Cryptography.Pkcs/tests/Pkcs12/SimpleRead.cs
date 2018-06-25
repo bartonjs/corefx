@@ -43,7 +43,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             CertBag certBag = (CertBag)safe1Bags[0];
 
             Assert.True(certBag.IsX509Certificate, "certBag.IsX509Certificate");
-            Assert.InRange(certBag.RawData.Length, loader.CerData.Length + 2, int.MaxValue);
+            Assert.InRange(certBag.EncodedCertificate.Length, loader.CerData.Length + 2, int.MaxValue);
 
             byte[] data = { 9, 8, 7, 6, 5, 4, 3, 2, 1 };
             byte[] encrypted;
@@ -104,7 +104,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             CertBag certBag = Assert.IsType<CertBag>(safe0Bags[0]);
 
             Assert.True(certBag.IsX509Certificate, "certBag.IsX509Certificate");
-            Assert.InRange(certBag.RawData.Length, loader.CerData.Length + 2, int.MaxValue);
+            Assert.InRange(certBag.EncodedCertificate.Length, loader.CerData.Length + 2, int.MaxValue);
 
             List<Pkcs12SafeBag> safe1Bags = new List<Pkcs12SafeBag>(authSafe[1].GetBags());
             Assert.Equal(1, safe0Bags.Count);

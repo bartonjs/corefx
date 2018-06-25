@@ -24,7 +24,7 @@ namespace System.Security.Cryptography.Pkcs
             IsX509Certificate = _decoded.CertId == Oids.Pkcs12X509CertBagType;
         }
 
-        internal CertBag(X509Certificate2 cert)
+        public CertBag(X509Certificate2 cert)
             : base(Oids.Pkcs12CertBag)
         {
             byte[] certData = cert.RawData;
@@ -38,6 +38,22 @@ namespace System.Security.Cryptography.Pkcs
             IsX509Certificate = true;
         }
 
+        public CertBag(Oid certificateType, ReadOnlyMemory<byte> encodedCertificate, bool skipCopy = false)
+            : base(Oids.Pkcs12CertBag)
+        {
+            if (certificateType == null)
+                throw new ArgumentNullException(nameof(certificateType));
+
+            _decoded = new CertBagAsn
+            {
+                CertId = certificateType.Value,
+                CertValue = skipCopy ? encodedCertificate : encodedCertificate.ToArray(),
+            };
+
+            _certTypeOid = new Oid(certificateType);
+            IsX509Certificate = _decoded.CertId == Oids.Pkcs12X509CertBagType;
+        }
+
         public Oid GetCertificateType()
         {
             if (_certTypeOid == null)
@@ -48,7 +64,7 @@ namespace System.Security.Cryptography.Pkcs
             return new Oid(_certTypeOid);
         }
 
-        public ReadOnlyMemory<byte> RawData => _decoded.CertValue;
+        public ReadOnlyMemory<byte> EncodedCertificate => _decoded.CertValue;
 
         public X509Certificate2 GetCertificate()
         {

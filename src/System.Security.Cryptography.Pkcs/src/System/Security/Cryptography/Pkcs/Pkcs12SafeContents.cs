@@ -64,7 +64,6 @@ namespace System.Security.Cryptography.Pkcs
             _bags.Add(safeBag);
         }
 
-        public CertBag AddCertificate(X509Certificate2 certificate) => throw null;
         public KeyBag AddKeyUnencrypted(ReadOnlyMemory<byte> pkcs8PrivateKey) => throw null;
         public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue) => throw null;
 

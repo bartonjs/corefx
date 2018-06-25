@@ -48,7 +48,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.GetCertificate())
             {
-                contents.AddCertificate(cert);
+                contents.AddSafeBag(new CertBag(cert));
                 rawData = cert.RawData;
             }
 
@@ -78,7 +78,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.GetCertificate())
             {
-                contents.AddCertificate(cert);
+                contents.AddSafeBag(new CertBag(cert));
                 rawData = cert.RawData;
             }
 
@@ -121,8 +121,9 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             using (RSA certKey = cert.GetRSAPrivateKey())
             using (RSA exportableKey = certKey.MakeExportable())
             {
-                CertBag certBag = contents.AddCertificate(cert);
+                CertBag certBag = new CertBag(cert);
                 certBag.Attributes.Add(localKeyId);
+                contents.AddSafeBag(certBag);
 
                 rawData = cert.RawData;
 
@@ -172,8 +173,9 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.TryGetCertificateWithPrivateKey())
             {
-                CertBag certBag = safe1.AddCertificate(cert);
+                CertBag certBag = new CertBag(cert);
                 certBag.Attributes.Add(localKeyId);
+                safe1.AddSafeBag(certBag);
 
                 rawData = cert.RawData;
 
@@ -227,8 +229,8 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             using (X509Certificate2 cert2 = Certificates.RSAKeyTransfer2.GetCertificate())
             {
                 // Windows seems to treat these as a stack.  (LIFO)
-                contents.AddCertificate(cert2);
-                contents.AddCertificate(cert1);
+                contents.AddSafeBag(new CertBag(cert2));
+                contents.AddSafeBag(new CertBag(cert1));
                 rawData1 = cert1.RawData;
                 rawData2 = cert2.RawData;
             }

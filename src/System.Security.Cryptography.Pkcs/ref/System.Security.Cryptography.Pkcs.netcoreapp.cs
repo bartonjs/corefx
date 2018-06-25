@@ -13,9 +13,10 @@ namespace System.Security.Cryptography.Pkcs
 {
     public sealed partial class CertBag : Pkcs12SafeBag
     {
-        private CertBag() : base(null) { }
+        public CertBag(X509Certificate2 certificate) : base(null) { }
+        public CertBag(Oid certificateType, ReadOnlyMemory<byte> encodedCertificate, bool skipCopy=false) : base(null) { }
         public bool IsX509Certificate { get; }
-        public ReadOnlyMemory<byte> RawData { get; }
+        public ReadOnlyMemory<byte> EncodedCertificate { get; }
         public Oid GetCertificateType() => throw null;
         public X509Certificate2 GetCertificate() => throw null;
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
@@ -63,7 +64,6 @@ namespace System.Security.Cryptography.Pkcs
         public ConfidentialityMode DataConfidentialityMode { get; }
         public bool IsReadOnly { get; }
         public void AddSafeBag(Pkcs12SafeBag safeBag) => throw null;
-        public CertBag AddCertificate(X509Certificate2 certificate) => throw null;
         public KeyBag AddKeyUnencrypted(ReadOnlyMemory<byte> pkcs8PrivateKey) => throw null;
         public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue) => throw null;
         public void Decrypt(ReadOnlySpan<char> password) => throw null;
