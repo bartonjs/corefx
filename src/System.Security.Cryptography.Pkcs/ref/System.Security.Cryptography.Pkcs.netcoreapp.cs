@@ -33,7 +33,6 @@ namespace System.Security.Cryptography.Pkcs
         public void AddSafeContentsUnencrypted(Pkcs12SafeContents safeContents) => throw null;
         public byte[] Encode() => throw null;
         public void SealAndMac(ReadOnlySpan<char> password, HashAlgorithmName hashAlgorithm, int iterationCount) => throw null;
-        public void SealAndSign(CmsSigner signer) => throw null;
         public bool TryEncode(Span<byte> destination, out int bytesWritten) => throw null;
     }
     public sealed partial class Pkcs12Info
@@ -42,7 +41,6 @@ namespace System.Security.Cryptography.Pkcs
         public ReadOnlyCollection<Pkcs12SafeContents> AuthenticatedSafe { get; }
         public IntegrityMode DataIntegrityMode { get; }
         public bool VerifyMac(ReadOnlySpan<char> password) => throw null;
-        public bool VerifySignature(X509Certificate2 signerCertificate) => throw null;
         public static Pkcs12Info Decode(ReadOnlyMemory<byte> encodedBytes, out int bytesConsumed, bool skipCopy=false) => throw null;
         public enum IntegrityMode
         {
@@ -74,10 +72,7 @@ namespace System.Security.Cryptography.Pkcs
         public ShroudedKeyBag AddShroudedKey(RSA key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue) => throw null;
         public void Decrypt(ReadOnlySpan<char> password) => throw null;
-        public void DecryptEnveloped(System.Security.Cryptography.X509Certificates.X509Certificate2Collection extraStore = null) => throw null;
         public IEnumerable<Pkcs12SafeBag> GetBags() => throw null;
-        public bool TryDecryptInto(ReadOnlySpan<char> password, Memory<byte> destination, out int bytesWritten) => throw null;
-        public bool TryDecryptEnvelopedInto(Memory<byte> destination, out int bytesWritten, System.Security.Cryptography.X509Certificates.X509Certificate2Collection extraStore = null) => throw null;
         public enum ConfidentialityMode
         {
             Unknown = 0,

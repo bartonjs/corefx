@@ -98,8 +98,6 @@ namespace System.Security.Cryptography.Pkcs
             }
         }
 
-        public bool VerifySignature(X509Certificate2 signerCertificate) => throw null;
-
         public static Pkcs12Info Decode(
             ReadOnlyMemory<byte> encodedBytes,
             out int bytesConsumed,

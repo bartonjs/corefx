@@ -325,16 +325,6 @@ namespace System.Security.Cryptography.Pkcs
             }
         }
 
-        public void SealAndSign(CmsSigner signer)
-        {
-            if (signer == null)
-                throw new ArgumentNullException(nameof(signer));
-            if (IsSealed)
-                throw new InvalidOperationException(SR.Cryptography_Pkcs12_PfxIsSealed);
-
-            throw new NotImplementedException();
-        }
-
         public bool TryEncode(Span<byte> destination, out int bytesWritten)
         {
             if (!IsSealed)

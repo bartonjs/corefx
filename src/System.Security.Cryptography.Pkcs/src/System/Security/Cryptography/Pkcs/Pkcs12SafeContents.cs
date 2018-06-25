@@ -135,20 +135,6 @@ namespace System.Security.Cryptography.Pkcs
             DataConfidentialityMode = ConfidentialityMode.None;
         }
 
-        public void DecryptEnveloped(X509Certificate2Collection extraStore = null)
-        {
-            if (DataConfidentialityMode != ConfidentialityMode.PublicKey)
-            {
-                throw new InvalidOperationException(
-                    SR.Format(
-                        SR.Cryptography_Pkcs12_WrongModeForDecrypt,
-                        ConfidentialityMode.PublicKey,
-                        DataConfidentialityMode));
-            }
-
-            throw null;
-        }
-
         public IEnumerable<Pkcs12SafeBag> GetBags()
         {
             if (DataConfidentialityMode != ConfidentialityMode.None)
@@ -164,9 +150,6 @@ namespace System.Security.Cryptography.Pkcs
 
             return _bags.AsReadOnly();
         }
-
-        public bool TryDecryptInto(ReadOnlySpan<char> password, Memory<byte> destination, out int bytesWritten) => throw null;
-        public bool TryDecryptEnvelopedInto(Memory<byte> destination, out int bytesWritten, System.Security.Cryptography.X509Certificates.X509Certificate2Collection extraStore = null) => throw null;
 
         private static List<Pkcs12SafeBag> ReadBags(ReadOnlyMemory<byte> serialized)
         {
