@@ -177,15 +177,17 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
                 rawData = cert.RawData;
 
-                ShroudedKeyBag keyBag = safe2.AddShroudedKey(
+                ShroudedKeyBag keyBag = new ShroudedKeyBag(
                     cert.GetRSAPrivateKey().ExportEncryptedPkcs8PrivateKey(
                         password,
                         new PbeParameters(
                             PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
                             HashAlgorithmName.SHA1,
-                            2068)));
+                            2068)),
+                    skipCopy: true);
 
                 keyBag.Attributes.Add(localKeyId);
+                safe2.AddSafeBag(keyBag);
             }
 
             Pkcs12Builder builder = new Pkcs12Builder();
