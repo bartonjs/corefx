@@ -101,6 +101,12 @@ namespace System.Security.Cryptography.Pkcs
         public static Pkcs8PrivateKeyInfo DecryptAndDecode(ReadOnlySpan<char> password, ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
         public static Pkcs8PrivateKeyInfo DecryptAndDecode(ReadOnlySpan<byte> passwordBytes, ReadOnlyMemory<byte> source, out int bytesRead) => throw null;
     }
+    public sealed partial class Pkcs9LocalKeyId : Pkcs9AttributeObject
+    {
+        public ReadOnlyMemory<byte> KeyId { get; }
+        public Pkcs9LocalKeyId() => throw null;
+        public Pkcs9LocalKeyId(ReadOnlySpan<byte> keyId) => throw null;
+    }
     public sealed partial class Rfc3161TimestampRequest
     {
         private Rfc3161TimestampRequest() { }

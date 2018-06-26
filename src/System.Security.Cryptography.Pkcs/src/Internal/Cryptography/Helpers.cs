@@ -373,6 +373,10 @@ namespace Internal.Cryptography
                     attributeObject = Upgrade<Pkcs9MessageDigest>(attributeObject);
                     break;
 
+                case Oids.LocalKeyId:
+                    attributeObject = Upgrade<Pkcs9LocalKeyId>(attributeObject);
+                    break;
+
                 default:
                     break;
             }

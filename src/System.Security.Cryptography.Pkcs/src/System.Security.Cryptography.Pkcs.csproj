@@ -331,6 +331,7 @@
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12SafeBag.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12SafeContents.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs8PrivateKeyInfo.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Pkcs9LocalKeyId.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Rfc3161RequestResponseStatus.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Rfc3161TimestampRequest.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Rfc3161TimestampToken.cs" />

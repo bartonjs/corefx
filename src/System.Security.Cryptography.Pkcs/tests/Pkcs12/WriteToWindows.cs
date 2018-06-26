@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Security.Cryptography.X509Certificates;
-using Test.Cryptography;
 using Xunit;
 
 namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
@@ -113,9 +112,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Pkcs12SafeContents contents = new Pkcs12SafeContents();
             byte[] rawData;
 
-            AsnEncodedData localKeyId = new AsnEncodedData(
-                "1.2.840.113549.1.9.21",
-                "040101".HexToByteArray());
+            Pkcs9LocalKeyId localKeyId = new Pkcs9LocalKeyId(new byte[] { 1 });
 
             using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.TryGetCertificateWithPrivateKey(true))
             using (RSA certKey = cert.GetRSAPrivateKey())
@@ -164,10 +161,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Pkcs12SafeContents safe2 = new Pkcs12SafeContents();
             byte[] rawData;
 
-            AsnEncodedData localKeyId = new AsnEncodedData(
-                "1.2.840.113549.1.9.21",
-                "040101".HexToByteArray());
-
+            Pkcs9LocalKeyId localKeyId = new Pkcs9LocalKeyId(new byte[] { 1 });
             const string password = nameof(WriteOneCertWithKey_LikeWindows);
 
             using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.TryGetCertificateWithPrivateKey(true))

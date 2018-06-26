@@ -33,6 +33,7 @@ namespace System.Security.Cryptography.Pkcs.Tests
         public const string MessageDigest = "1.2.840.113549.1.9.4";
         public const string DocumentName = "1.3.6.1.4.1.311.88.2.1";
         public const string CounterSigner = "1.2.840.113549.1.9.6";
+        public const string LocalKeyId = "1.2.840.113549.1.9.21";
 
 
         // Key wrap algorithms

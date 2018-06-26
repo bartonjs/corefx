@@ -32,6 +32,7 @@ namespace System.Security.Cryptography
         internal const string SigningCertificate = "1.2.840.113549.1.9.16.2.12";
         internal const string SigningCertificateV2 = "1.2.840.113549.1.9.16.2.47";
         internal const string DocumentName = "1.3.6.1.4.1.311.88.2.1";
+        internal const string LocalKeyId = "1.2.840.113549.1.9.21";
 
         // Key wrap algorithms
         internal const string CmsRc2Wrap = "1.2.840.113549.1.9.16.3.7";
