@@ -186,6 +186,7 @@ namespace System.Security.Cryptography.Pkcs
         public enum IntegrityMode
         {
             Unknown,
+            None,
             Password,
             PublicKey,
         }

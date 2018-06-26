@@ -325,6 +325,11 @@ namespace System.Security.Cryptography.Pkcs
             }
         }
 
+        public void SealWithoutIntegrity()
+        {
+            throw new NotImplementedException();
+        }
+
         public bool TryEncode(Span<byte> destination, out int bytesWritten)
         {
             if (!IsSealed)

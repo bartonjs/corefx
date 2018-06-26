@@ -34,6 +34,7 @@ namespace System.Security.Cryptography.Pkcs
         public void AddSafeContentsUnencrypted(Pkcs12SafeContents safeContents) => throw null;
         public byte[] Encode() => throw null;
         public void SealAndMac(ReadOnlySpan<char> password, HashAlgorithmName hashAlgorithm, int iterationCount) => throw null;
+        public void SealWithoutIntegrity() => throw null;
         public bool TryEncode(Span<byte> destination, out int bytesWritten) => throw null;
     }
     public sealed partial class Pkcs12Info
@@ -46,8 +47,9 @@ namespace System.Security.Cryptography.Pkcs
         public enum IntegrityMode
         {
             Unknown = 0,
-            Password = 1,
-            PublicKey = 2,
+            None = 1,
+            Password = 2,
+            PublicKey = 3,
         }
     }
     public abstract partial class Pkcs12SafeBag
