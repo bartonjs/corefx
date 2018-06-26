@@ -48,6 +48,9 @@ namespace System.Security.Cryptography.Pkcs.Tests
         public const string Pkcs7Hashed = "1.2.840.113549.1.7.5";
         public const string Pkcs7Encrypted = "1.2.840.113549.1.7.6";
 
+        // PKCS12 bag types
+        public const string CertBag = "1.2.840.113549.1.12.10.1.3";
+
         // X509 extensions
         public const string SubjectKeyIdentifier = "2.5.29.14";
         public const string BasicConstraints2 = "2.5.29.19";

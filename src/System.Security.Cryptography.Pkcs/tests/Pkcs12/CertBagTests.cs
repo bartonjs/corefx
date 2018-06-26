@@ -21,6 +21,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         public static void InvalidCertificateTypeVerifiedLate()
         {
             var certBag = new CertBag(new Oid(null, null), ReadOnlyMemory<byte>.Empty, true);
+            Assert.Equal(Oids.CertBag, certBag.GetBagId().Value);
             Assert.ThrowsAny<CryptographicException>(() => certBag.Encode());
         }
 
