@@ -18,6 +18,14 @@ namespace System.Security.Cryptography.Pkcs
 
         public bool IsSealed => !_sealedData.IsEmpty;
 
+        public void AddSafeContentsEncrypted(
+            Pkcs12SafeContents safeContents,
+            ReadOnlySpan<byte> passwordBytes,
+            PbeParameters pbeParameters)
+        {
+            throw new NotImplementedException();
+        }
+
         public unsafe void AddSafeContentsEncrypted(
             Pkcs12SafeContents safeContents,
             ReadOnlySpan<char> password,

@@ -30,6 +30,7 @@ namespace System.Security.Cryptography.Pkcs
     public sealed partial class Pkcs12Builder
     {
         public bool IsSealed { get; }
+        public void AddSafeContentsEncrypted(Pkcs12SafeContents safeContents, ReadOnlySpan<byte> passwordBytes, PbeParameters pbeParameters) => throw null;
         public void AddSafeContentsEncrypted(Pkcs12SafeContents safeContents, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public void AddSafeContentsUnencrypted(Pkcs12SafeContents safeContents) => throw null;
         public byte[] Encode() => throw null;
