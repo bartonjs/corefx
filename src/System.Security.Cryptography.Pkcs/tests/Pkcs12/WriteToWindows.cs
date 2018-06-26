@@ -117,7 +117,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 "1.2.840.113549.1.9.21",
                 "040101".HexToByteArray());
 
-            using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.TryGetCertificateWithPrivateKey())
+            using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.TryGetCertificateWithPrivateKey(true))
             using (RSA certKey = cert.GetRSAPrivateKey())
             using (RSA exportableKey = certKey.MakeExportable())
             {
@@ -170,7 +170,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             const string password = nameof(WriteOneCertWithKey_LikeWindows);
 
-            using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.TryGetCertificateWithPrivateKey())
+            using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.TryGetCertificateWithPrivateKey(true))
             {
                 CertBag certBag = safe1.AddCertificate(cert);
                 certBag.Attributes.Add(localKeyId);
