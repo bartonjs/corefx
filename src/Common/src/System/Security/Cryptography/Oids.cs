@@ -91,7 +91,7 @@ namespace System.Security.Cryptography
         internal const string Pkcs12SecretBag = Pkcs12BagTypesPrefix + "5";
         internal const string Pkcs12SafeContentsBag = Pkcs12BagTypesPrefix + "6";
         internal const string Pkcs12X509CertBagType = "1.2.840.113549.1.9.22.1";
-        internal const string Pkcs12SdsiCertBagType = "1.2.840.113549.1.9.22.1";
+        internal const string Pkcs12SdsiCertBagType = "1.2.840.113549.1.9.22.2";
 
         // PKCS#5
         private const string Pkcs5Prefix = "1.2.840.113549.1.5.";

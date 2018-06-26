@@ -24,6 +24,40 @@ namespace System.Security.Cryptography.Pkcs
             IsX509Certificate = _decoded.CertId == Oids.Pkcs12X509CertBagType;
         }
 
+        /// <summary>
+        /// Create a CertBag for a specified certificate type and encoding.
+        /// </summary>
+        /// <param name="certificateType">The identifier for the certificate type</param>
+        /// <param name="encodedCertificate">The encoded value</param>
+        /// <param name="skipCopy">
+        ///   <c>true</c> to store the <paramref name="encodedCertificate"/> value,
+        ///   <c>false</c> to store a copy of the data <paramref name="encodedCertificate"/> represents.
+        /// </param>
+        /// <remarks>
+        /// No validation is done to ensure that the <paramref name="encodedCertificate"/> value is
+        /// correct for the indicated <paramref name="certificateType"/>.  Note that for X.509
+        /// public-key certificates the correct encoding for a CertBag value is to wrap the
+        /// DER-encoded certificate in an OCTET STRING.
+        /// </remarks>
+        public CertBag(
+            Oid certificateType,
+            ReadOnlyMemory<byte> encodedCertificate,
+            bool skipCopy = false)
+            : base(Oids.Pkcs12CertBag)
+        {
+            if (certificateType == null)
+                throw new ArgumentNullException(nameof(certificateType));
+
+            _decoded = new CertBagAsn
+            {
+                CertId = certificateType.Value,
+                CertValue = skipCopy ? encodedCertificate : encodedCertificate.ToArray(),
+            };
+
+            _certTypeOid = new Oid(certificateType);
+            IsX509Certificate = _decoded.CertId == Oids.Pkcs12X509CertBagType;
+        }
+
         internal CertBag(X509Certificate2 cert)
             : base(Oids.Pkcs12CertBag)
         {

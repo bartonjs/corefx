@@ -14,6 +14,7 @@ namespace System.Security.Cryptography.Pkcs
     public sealed partial class CertBag : Pkcs12SafeBag
     {
         private CertBag() : base(null) { }
+        public CertBag(Oid certificateType, ReadOnlyMemory<byte> encodedCertificate, bool skipCopy=false) : base(null) => throw null;
         public bool IsX509Certificate { get; }
         public ReadOnlyMemory<byte> EncodedCertificate { get; }
         public Oid GetCertificateType() => throw null;
@@ -66,10 +67,8 @@ namespace System.Security.Cryptography.Pkcs
         public CertBag AddCertificate(X509Certificate2 certificate) => throw null;
         public KeyBag AddKeyUnencrypted(ReadOnlyMemory<byte> pkcs8PrivateKey) => throw null;
         public ShroudedKeyBag AddShroudedKey(ReadOnlyMemory<byte> encryptedPkcs8PrivateKey) => throw null;
-        public ShroudedKeyBag AddShroudedKey(DSA key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
-        public ShroudedKeyBag AddShroudedKey(ECDiffieHellman key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
-        public ShroudedKeyBag AddShroudedKey(ECDsa key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
-        public ShroudedKeyBag AddShroudedKey(RSA key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
+        public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
+        public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<byte> password, PbeParameters pbeParameters) => throw null;
         public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue) => throw null;
         public void Decrypt(ReadOnlySpan<char> password) => throw null;
         public IEnumerable<Pkcs12SafeBag> GetBags() => throw null;

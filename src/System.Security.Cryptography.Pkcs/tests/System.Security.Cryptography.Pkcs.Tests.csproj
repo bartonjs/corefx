@@ -47,6 +47,7 @@
   <ItemGroup Condition="'$(TargetGroup)' == 'netcoreapp'">
     <Compile Include="EnvelopedCms\DecryptTestsUsingExplicitPrivateKey.cs" />
     <Compile Include="EnvelopedCms\SubjectIdentifierTests.cs" />
+    <Compile Include="Pkcs12\CertBagTests.cs" />
     <Compile Include="Pkcs12\SimpleRead.cs" />
     <Compile Include="Pkcs12\WriteToWindows.cs" />
     <Compile Include="Rfc3161\TimestampRequestTests.cs" />

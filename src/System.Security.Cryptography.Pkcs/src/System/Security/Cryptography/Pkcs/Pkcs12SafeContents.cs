@@ -64,13 +64,22 @@ namespace System.Security.Cryptography.Pkcs
             _bags.Add(safeBag);
         }
 
-        public CertBag AddCertificate(X509Certificate2 certificate) => throw null;
         public KeyBag AddKeyUnencrypted(ReadOnlyMemory<byte> pkcs8PrivateKey) => throw null;
         public ShroudedKeyBag AddShroudedKey(ReadOnlyMemory<byte> encryptedPkcs8PrivateKey) => throw null;
         public ShroudedKeyBag AddShroudedKey(DSA key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public ShroudedKeyBag AddShroudedKey(ECDiffieHellman key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public ShroudedKeyBag AddShroudedKey(ECDsa key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public ShroudedKeyBag AddShroudedKey(RSA key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
+        public CertBag AddCertificate(X509Certificate2 certificate)
+        {
+            if (certificate == null)
+                throw new ArgumentNullException(nameof(certificate));
+
+            var bag = new CertBag(certificate);
+            AddSafeBag(bag);
+            return bag;
+        }
+
         public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue) => throw null;
 
         public void Decrypt(ReadOnlySpan<char> password)
