@@ -48,7 +48,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.GetCertificate())
             {
-                contents.AddSafeBag(new CertBag(cert));
+                contents.AddCertificate(cert);
                 rawData = cert.RawData;
             }
 
@@ -78,7 +78,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.GetCertificate())
             {
-                contents.AddSafeBag(new CertBag(cert));
+                contents.AddCertificate(cert);
                 rawData = cert.RawData;
             }
 
@@ -121,9 +121,8 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             using (RSA certKey = cert.GetRSAPrivateKey())
             using (RSA exportableKey = certKey.MakeExportable())
             {
-                CertBag certBag = new CertBag(cert);
+                CertBag certBag = contents.AddCertificate(cert);
                 certBag.Attributes.Add(localKeyId);
-                contents.AddSafeBag(certBag);
 
                 rawData = cert.RawData;
 
@@ -173,23 +172,20 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.TryGetCertificateWithPrivateKey())
             {
-                CertBag certBag = new CertBag(cert);
+                CertBag certBag = safe1.AddCertificate(cert);
                 certBag.Attributes.Add(localKeyId);
-                safe1.AddSafeBag(certBag);
 
                 rawData = cert.RawData;
 
-                ShroudedKeyBag keyBag = new ShroudedKeyBag(
+                ShroudedKeyBag keyBag = safe2.AddShroudedKey(
                     cert.GetRSAPrivateKey().ExportEncryptedPkcs8PrivateKey(
                         password,
                         new PbeParameters(
                             PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
                             HashAlgorithmName.SHA1,
-                            2068)),
-                    skipCopy: true);
+                            2068)));
 
                 keyBag.Attributes.Add(localKeyId);
-                safe2.AddSafeBag(keyBag);
             }
 
             Pkcs12Builder builder = new Pkcs12Builder();
@@ -229,8 +225,8 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             using (X509Certificate2 cert2 = Certificates.RSAKeyTransfer2.GetCertificate())
             {
                 // Windows seems to treat these as a stack.  (LIFO)
-                contents.AddSafeBag(new CertBag(cert2));
-                contents.AddSafeBag(new CertBag(cert1));
+                contents.AddCertificate(cert2);
+                contents.AddCertificate(cert1);
                 rawData1 = cert1.RawData;
                 rawData2 = cert2.RawData;
             }

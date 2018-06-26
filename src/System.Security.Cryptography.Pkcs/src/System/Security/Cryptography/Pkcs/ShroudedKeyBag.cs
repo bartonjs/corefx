@@ -8,10 +8,10 @@ namespace System.Security.Cryptography.Pkcs
     {
         public ReadOnlyMemory<byte> EncryptedPkcs8PrivateKey { get; }
 
-        public ShroudedKeyBag(ReadOnlyMemory<byte> bagValue, bool skipCopy=false)
+        internal ShroudedKeyBag(ReadOnlyMemory<byte> bagValue)
             : base(Oids.Pkcs12ShroudedKeyBag)
         {
-            EncryptedPkcs8PrivateKey = skipCopy ? bagValue : bagValue.ToArray();
+            EncryptedPkcs8PrivateKey = bagValue;
         }
 
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten)

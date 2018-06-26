@@ -13,8 +13,7 @@ namespace System.Security.Cryptography.Pkcs
 {
     public sealed partial class CertBag : Pkcs12SafeBag
     {
-        public CertBag(X509Certificate2 certificate) : base(null) { }
-        public CertBag(Oid certificateType, ReadOnlyMemory<byte> encodedCertificate, bool skipCopy=false) : base(null) { }
+        private CertBag() : base(null) { }
         public bool IsX509Certificate { get; }
         public ReadOnlyMemory<byte> EncodedCertificate { get; }
         public Oid GetCertificateType() => throw null;
@@ -64,7 +63,13 @@ namespace System.Security.Cryptography.Pkcs
         public ConfidentialityMode DataConfidentialityMode { get; }
         public bool IsReadOnly { get; }
         public void AddSafeBag(Pkcs12SafeBag safeBag) => throw null;
+        public CertBag AddCertificate(X509Certificate2 certificate) => throw null;
         public KeyBag AddKeyUnencrypted(ReadOnlyMemory<byte> pkcs8PrivateKey) => throw null;
+        public ShroudedKeyBag AddShroudedKey(ReadOnlyMemory<byte> encryptedPkcs8PrivateKey) => throw null;
+        public ShroudedKeyBag AddShroudedKey(DSA key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
+        public ShroudedKeyBag AddShroudedKey(ECDiffieHellman key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
+        public ShroudedKeyBag AddShroudedKey(ECDsa key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
+        public ShroudedKeyBag AddShroudedKey(RSA key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue) => throw null;
         public void Decrypt(ReadOnlySpan<char> password) => throw null;
         public IEnumerable<Pkcs12SafeBag> GetBags() => throw null;
@@ -161,7 +166,7 @@ namespace System.Security.Cryptography.Pkcs
     }
     public sealed partial class ShroudedKeyBag : Pkcs12SafeBag
     {
-        public ShroudedKeyBag(ReadOnlyMemory<byte> encryptedPkcs8PrivateKey, bool skipCopy=false) : base(null) { }
+        private ShroudedKeyBag() : base(null) { }
         public ReadOnlyMemory<byte> EncryptedPkcs8PrivateKey { get; }
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
     }
