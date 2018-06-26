@@ -81,6 +81,38 @@ namespace System.Security.Cryptography.Pkcs
             return bag;
         }
 
+        public ShroudedKeyBag AddShroudedKey(
+            AsymmetricAlgorithm key,
+            ReadOnlySpan<byte> passwordBytes,
+            PbeParameters pbeParameters)
+        {
+            if (key == null)
+                throw new ArgumentNullException(nameof(key));
+            if (IsReadOnly)
+                throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
+
+            byte[] encryptedPkcs8 = key.ExportEncryptedPkcs8PrivateKey(passwordBytes, pbeParameters);
+            var bag = new ShroudedKeyBag(encryptedPkcs8);
+            AddSafeBag(bag);
+            return bag;
+        }
+
+        public ShroudedKeyBag AddShroudedKey(
+            AsymmetricAlgorithm key,
+            ReadOnlySpan<char> password,
+            PbeParameters pbeParameters)
+        {
+            if (key == null)
+                throw new ArgumentNullException(nameof(key));
+            if (IsReadOnly)
+                throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
+
+            byte[] encryptedPkcs8 = key.ExportEncryptedPkcs8PrivateKey(password, pbeParameters);
+            var bag = new ShroudedKeyBag(encryptedPkcs8);
+            AddSafeBag(bag);
+            return bag;
+        }
+
         public ShroudedKeyBag AddShroudedKey(ReadOnlyMemory<byte> encryptedPkcs8PrivateKey)
         {
             var bag = new ShroudedKeyBag(encryptedPkcs8PrivateKey);
@@ -88,8 +120,6 @@ namespace System.Security.Cryptography.Pkcs
             return bag;
         }
 
-        public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<byte> passwordBytes, PbeParameters pbeParameters) => throw null;
-        public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue) => throw null;
 
         public void Decrypt(ReadOnlySpan<char> password)
@@ -158,8 +188,7 @@ namespace System.Security.Cryptography.Pkcs
         {
             if (DataConfidentialityMode != ConfidentialityMode.None)
             {
-                throw new InvalidOperationException(
-                    "Cannot enumerate the contents of an encrypted or enveloped SafeContents.");
+                throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsEncrypted);
             }
 
             if (_bags == null)
