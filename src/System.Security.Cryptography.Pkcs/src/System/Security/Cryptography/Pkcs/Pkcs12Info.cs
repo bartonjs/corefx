@@ -6,7 +6,6 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Security.Cryptography.Asn1;
 using System.Security.Cryptography.Pkcs.Asn1;
-using System.Security.Cryptography.X509Certificates;
 using Internal.Cryptography;
 
 namespace System.Security.Cryptography.Pkcs
@@ -126,6 +125,10 @@ namespace System.Security.Cryptography.Pkcs
                 if (pfx.MacData.HasValue)
                 {
                     mode = IntegrityMode.Password;
+                }
+                else
+                {
+                    mode = IntegrityMode.None;
                 }
             }
             else if (pfx.AuthSafe.ContentType == Oids.Pkcs7Signed)

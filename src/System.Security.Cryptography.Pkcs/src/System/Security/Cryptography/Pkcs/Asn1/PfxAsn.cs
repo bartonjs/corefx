@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Runtime.InteropServices;
+using System.Security.Cryptography.Asn1;
 
 namespace System.Security.Cryptography.Pkcs.Asn1
 {
@@ -20,6 +21,7 @@ namespace System.Security.Cryptography.Pkcs.Asn1
 
         public ContentInfoAsn AuthSafe;
 
+        [OptionalValue]
         public MacData? MacData;
     }
 }
