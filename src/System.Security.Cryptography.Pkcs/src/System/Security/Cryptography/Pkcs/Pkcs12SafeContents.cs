@@ -120,7 +120,20 @@ namespace System.Security.Cryptography.Pkcs
             return bag;
         }
 
-        public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue) => throw null;
+        public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue)
+        {
+            if (secretType == null)
+                throw new ArgumentNullException(nameof(secretType));
+
+            // Read to ensure that there is precisely one legally encoded value.
+            AsnReader reader = new AsnReader(secretValue, AsnEncodingRules.BER);
+            reader.GetEncodedValue();
+            reader.ThrowIfNotEmpty();
+
+            var bag = new SecretBag(secretType, secretValue);
+            AddSafeBag(bag);
+            return bag;
+        }
 
         public void Decrypt(ReadOnlySpan<char> password)
         {
@@ -230,8 +243,10 @@ namespace System.Security.Cryptography.Pkcs
                             bag = CertBag.DecodeValue(bagValue);
                             break;
                         case Oids.Pkcs12CrlBag:
+                            // Known, but no first-class support currently.
                             break;
                         case Oids.Pkcs12SecretBag:
+                            bag = SecretBag.DecodeValue(bagValue);
                             break;
                         case Oids.Pkcs12SafeContentsBag:
                             bag = SafeContentsBag.Decode(bagValue);

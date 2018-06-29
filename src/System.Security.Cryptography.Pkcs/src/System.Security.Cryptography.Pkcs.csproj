@@ -323,6 +323,7 @@
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\MacData.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\PfxAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\SafeBagAsn.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Asn1\SecretBagAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\CertBag.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\CmsSignature.DSA.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\KeyBag.cs" />
