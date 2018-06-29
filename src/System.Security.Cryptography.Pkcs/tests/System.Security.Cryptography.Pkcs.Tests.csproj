@@ -50,6 +50,7 @@
     <Compile Include="Pkcs12\CertBagTests.cs" />
     <Compile Include="Pkcs12\Pkcs12Documents.cs" />
     <Compile Include="Pkcs12\Pkcs12InfoTests.cs" />
+    <Compile Include="Pkcs12\Pkcs12SafeContentsTests.cs" />
     <Compile Include="Pkcs12\Pkcs12SafeBagTests.cs" />
     <Compile Include="Pkcs12\Pkcs9LocalKeyIdTests.cs" />
     <Compile Include="Pkcs12\SimpleRead.cs" />
