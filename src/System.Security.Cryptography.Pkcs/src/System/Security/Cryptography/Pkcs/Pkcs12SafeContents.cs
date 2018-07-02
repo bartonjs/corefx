@@ -68,6 +68,8 @@ namespace System.Security.Cryptography.Pkcs
         {
             if (certificate == null)
                 throw new ArgumentNullException(nameof(certificate));
+            if (IsReadOnly)
+                throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
 
             var bag = new CertBag(certificate);
             AddSafeBag(bag);
