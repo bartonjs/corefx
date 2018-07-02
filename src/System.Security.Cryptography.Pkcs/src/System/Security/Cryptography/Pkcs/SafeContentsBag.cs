@@ -36,6 +36,14 @@ namespace System.Security.Cryptography.Pkcs
 
         public static SafeContentsBag CreateEncrypted(
             Pkcs12SafeContents safeContents,
+            ReadOnlySpan<byte> passwordBytes,
+            PbeParameters pbeParameters)
+        {
+            throw null;
+        }
+
+        public static SafeContentsBag CreateEncrypted(
+            Pkcs12SafeContents safeContents,
             ReadOnlySpan<char> password,
             PbeParameters pbeParameters)
         {

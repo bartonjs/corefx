@@ -100,7 +100,7 @@ namespace System.Security.Cryptography.Pkcs
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
 
             byte[] encryptedPkcs8 = key.ExportEncryptedPkcs8PrivateKey(passwordBytes, pbeParameters);
-            var bag = new ShroudedKeyBag(encryptedPkcs8);
+            var bag = new ShroudedKeyBag(encryptedPkcs8, skipCopy: true);
             AddSafeBag(bag);
             return bag;
         }
@@ -116,14 +116,7 @@ namespace System.Security.Cryptography.Pkcs
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
 
             byte[] encryptedPkcs8 = key.ExportEncryptedPkcs8PrivateKey(password, pbeParameters);
-            var bag = new ShroudedKeyBag(encryptedPkcs8);
-            AddSafeBag(bag);
-            return bag;
-        }
-
-        public ShroudedKeyBag AddShroudedKey(ReadOnlyMemory<byte> encryptedPkcs8PrivateKey)
-        {
-            var bag = new ShroudedKeyBag(encryptedPkcs8PrivateKey);
+            var bag = new ShroudedKeyBag(encryptedPkcs8, skipCopy: true);
             AddSafeBag(bag);
             return bag;
         }
