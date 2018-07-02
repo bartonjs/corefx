@@ -4,6 +4,7 @@
 
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using Test.Cryptography;
 using Xunit;
 
 namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
@@ -79,6 +80,34 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
+        public static void AddKeyUnencryptedDisallowsNull(bool forReadOnly)
+        {
+            Pkcs12SafeContents contents = new Pkcs12SafeContents();
+
+            if (forReadOnly)
+            {
+                contents = MakeReadonly(contents);
+            }
+
+            AssertExtensions.Throws<ArgumentNullException>(
+                "key",
+                () => contents.AddKeyUnencrypted(null));
+        }
+
+        [Fact]
+        public static void AddKeyUnencryptedDisallowedInReadOnly()
+        {
+            Pkcs12SafeContents contents = MakeReadonly(new Pkcs12SafeContents());
+
+            using (RSA rsa = RSA.Create(512))
+            {
+                Assert.Throws<InvalidOperationException>(() => contents.AddKeyUnencrypted(rsa));
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
         public static void AddShroudedKeyWithBytesDisallowsNull(bool forReadOnly)
         {
             Pkcs12SafeContents contents = new Pkcs12SafeContents();
@@ -132,6 +161,56 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 Assert.Throws<InvalidOperationException>(
                     () => contents.AddShroudedKey(rsa, ReadOnlySpan<byte>.Empty, s_pbeParameters));
             }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public static void DecryptThrowsWhenNotPasswordMode(bool forReadOnly)
+        {
+            Pkcs12SafeContents contents = new Pkcs12SafeContents();
+
+            if (forReadOnly)
+            {
+                contents = MakeReadonly(contents);
+            }
+
+            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.None, contents.DataConfidentialityMode);
+            Assert.Throws<InvalidOperationException>(() => contents.Decrypt("test"));
+        }
+
+        [Fact]
+        public static void DecryptThrowsForWrongPassword()
+        {
+            var loader = (CertLoaderFromRawData)Certificates.RSAKeyTransfer_ExplicitSki;
+            ReadOnlyMemory<byte> pfxData = loader.PfxData;
+            Pkcs12Info info = Pkcs12Info.Decode(pfxData, out _, skipCopy: true);
+            Pkcs12SafeContents firstContents = info.AuthenticatedSafe[0];
+
+            Assert.Equal(
+                Pkcs12SafeContents.ConfidentialityMode.Password,
+                firstContents.DataConfidentialityMode);
+
+            // This password experimentally encounters a PKCS7 padding verification error.
+            Assert.ThrowsAny<CryptographicException>(() => firstContents.Decrypt("000"));
+            // This password experimentally does not get a PKCS7 padding error,
+            // but gets a deserialization error
+            Assert.ThrowsAny<CryptographicException>(() => firstContents.Decrypt("0G7"));
+        }
+
+        [Fact]
+        public static void GetBagsThrowsForConfidentialData()
+        {
+            var loader = (CertLoaderFromRawData)Certificates.RSAKeyTransfer_ExplicitSki;
+            ReadOnlyMemory<byte> pfxData = loader.PfxData;
+            Pkcs12Info info = Pkcs12Info.Decode(pfxData, out _, skipCopy: true);
+            Pkcs12SafeContents firstContents = info.AuthenticatedSafe[0];
+
+            Assert.Equal(
+                Pkcs12SafeContents.ConfidentialityMode.Password,
+                firstContents.DataConfidentialityMode);
+
+            Assert.Throws<InvalidOperationException>(() => firstContents.GetBags());
         }
 
         private static Pkcs12SafeContents MakeReadonly(Pkcs12SafeContents contents)
