@@ -123,8 +123,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
                 rawData = cert.RawData;
 
-                KeyBag keyBag = contents.AddKeyUnencrypted(exportableKey.ExportPkcs8PrivateKey());
-
+                KeyBag keyBag = contents.AddKeyUnencrypted(exportableKey);
                 keyBag.Attributes.Add(localKeyId);
             }
 

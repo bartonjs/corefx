@@ -23,7 +23,7 @@ namespace System.Security.Cryptography.Pkcs
     }
     public sealed partial class KeyBag : Pkcs12SafeBag
     {
-        private KeyBag() : base(null) { }
+        public KeyBag(ReadOnlyMemory<byte> pkcs8PrivateKey, bool skipCopy=false) : base(null) { }
         public ReadOnlyMemory<byte> Pkcs8PrivateKey { get; }
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
     }
@@ -68,7 +68,7 @@ namespace System.Security.Cryptography.Pkcs
         public bool IsReadOnly { get; }
         public void AddSafeBag(Pkcs12SafeBag safeBag) => throw null;
         public CertBag AddCertificate(X509Certificate2 certificate) => throw null;
-        public KeyBag AddKeyUnencrypted(ReadOnlyMemory<byte> pkcs8PrivateKey) => throw null;
+        public KeyBag AddKeyUnencrypted(AsymmetricAlgorithm key) => throw null;
         public ShroudedKeyBag AddShroudedKey(ReadOnlyMemory<byte> encryptedPkcs8PrivateKey) => throw null;
         public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<byte> password, PbeParameters pbeParameters) => throw null;

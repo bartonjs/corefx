@@ -76,9 +76,15 @@ namespace System.Security.Cryptography.Pkcs
             return bag;
         }
 
-        public KeyBag AddKeyUnencrypted(ReadOnlyMemory<byte> pkcs8PrivateKey)
+        public KeyBag AddKeyUnencrypted(AsymmetricAlgorithm key)
         {
-            var bag = new KeyBag(pkcs8PrivateKey);
+            if (key == null)
+                throw new ArgumentNullException(nameof(key));
+            if (IsReadOnly)
+                throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
+
+            byte[] pkcs8PrivateKey = key.ExportPkcs8PrivateKey();
+            var bag = new KeyBag(pkcs8PrivateKey, skipCopy: true);
             AddSafeBag(bag);
             return bag;
         }
