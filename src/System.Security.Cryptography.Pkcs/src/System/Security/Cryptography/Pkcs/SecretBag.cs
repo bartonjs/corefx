@@ -11,7 +11,7 @@ namespace System.Security.Cryptography.Pkcs
     public sealed class SecretBag : Pkcs12SafeBag
     {
         private Oid _secretTypeOid;
-        private SecretBagAsn _decoded;
+        private readonly SecretBagAsn _decoded;
 
         public ReadOnlyMemory<byte> SecretValue => _decoded.SecretValue;
 
@@ -20,7 +20,7 @@ namespace System.Security.Cryptography.Pkcs
         {
         }
 
-        internal SecretBag(Oid secretTypeOid, ReadOnlyMemory<byte> secretValue)
+        internal SecretBag(Oid secretTypeOid, ReadOnlyMemory<byte> secretValue, bool skipCopy=false)
             : this()
         {
             Debug.Assert(secretTypeOid != null);
@@ -30,7 +30,7 @@ namespace System.Security.Cryptography.Pkcs
             _decoded = new SecretBagAsn
             {
                 SecretTypeId = secretTypeOid.Value,
-                SecretValue = secretValue,
+                SecretValue = skipCopy ? secretValue : secretValue.ToArray(),
             };
         }
 
@@ -52,7 +52,7 @@ namespace System.Security.Cryptography.Pkcs
 
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten)
         {
-            using (AsnWriter writer = AsnSerializer.Serialize(_decoded, AsnEncodingRules.DER))
+            using (AsnWriter writer = AsnSerializer.Serialize(_decoded, AsnEncodingRules.BER))
             {
                 return writer.TryEncode(destination, out bytesWritten);
             }

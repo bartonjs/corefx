@@ -121,7 +121,7 @@ namespace System.Security.Cryptography.Pkcs
             return bag;
         }
 
-        public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue)
+        public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue, bool skipCopy=false)
         {
             if (secretType == null)
                 throw new ArgumentNullException(nameof(secretType));
@@ -131,7 +131,7 @@ namespace System.Security.Cryptography.Pkcs
             reader.GetEncodedValue();
             reader.ThrowIfNotEmpty();
 
-            var bag = new SecretBag(secretType, secretValue);
+            var bag = new SecretBag(secretType, secretValue, skipCopy);
             AddSafeBag(bag);
             return bag;
         }

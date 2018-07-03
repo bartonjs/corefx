@@ -70,7 +70,7 @@ namespace System.Security.Cryptography.Pkcs
         public KeyBag AddKeyUnencrypted(AsymmetricAlgorithm key) => throw null;
         public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<byte> password, PbeParameters pbeParameters) => throw null;
-        public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue) => throw null;
+        public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue, bool skipCopy=false) => throw null;
         public void Decrypt(ReadOnlySpan<char> password) => throw null;
         public IEnumerable<Pkcs12SafeBag> GetBags() => throw null;
         public enum ConfidentialityMode

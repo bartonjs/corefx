@@ -159,7 +159,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             using (RSA rsa = RSA.Create(512))
             {
                 Assert.Throws<InvalidOperationException>(
-                    () => contents.AddShroudedKey(rsa, ReadOnlySpan<byte>.Empty, s_pbeParameters));
+                    () => contents.AddShroudedKey(rsa, ReadOnlySpan<char>.Empty, s_pbeParameters));
             }
         }
 
@@ -211,6 +211,31 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 firstContents.DataConfidentialityMode);
 
             Assert.Throws<InvalidOperationException>(() => firstContents.GetBags());
+        }
+
+        [Fact]
+        public static void EncodeGrowsWhenNeeded()
+        {
+            Pkcs12Builder builder = new Pkcs12Builder();
+            Pkcs12SafeContents contents = new Pkcs12SafeContents();
+            Oid oid = new Oid("0.0", "0.0");
+            byte[] bigBuf = new byte[16 * 1024 + 4];
+            bigBuf[0] = 0x04;
+            bigBuf[1] = 0x82;
+            ref byte upper = ref bigBuf[2];
+            ref byte lower = ref bigBuf[3];
+
+            foreach (int size in new[] { 1024, 2048, 4096, 8192, 5184, 16 * 1024})
+            {
+                lower = (byte)size;
+                upper = (byte)(size >> 8);
+                contents.AddSecret(oid, bigBuf.AsMemory(0, 4 + size));
+            }
+           
+            builder.AddSafeContentsUnencrypted(contents);
+            builder.SealAndMac("hi", HashAlgorithmName.SHA1, 120);
+            byte[] output = builder.Encode();
+            Assert.NotNull(output);
         }
 
         private static Pkcs12SafeContents MakeReadonly(Pkcs12SafeContents contents)
