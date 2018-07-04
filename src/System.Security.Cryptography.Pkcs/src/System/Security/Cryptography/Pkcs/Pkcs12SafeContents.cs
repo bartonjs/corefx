@@ -136,7 +136,17 @@ namespace System.Security.Cryptography.Pkcs
             return bag;
         }
 
+        public void Decrypt(ReadOnlySpan<byte> passwordBytes)
+        {
+            Decrypt(ReadOnlySpan<char>.Empty, passwordBytes);
+        }
+
         public void Decrypt(ReadOnlySpan<char> password)
+        {
+            Decrypt(password, ReadOnlySpan<byte>.Empty);
+        }
+
+        private void Decrypt(ReadOnlySpan<char> password, ReadOnlySpan<byte> passwordBytes)
         {
             if (DataConfidentialityMode != ConfidentialityMode.Password)
             {
@@ -179,7 +189,7 @@ namespace System.Security.Cryptography.Pkcs
             int written = PasswordBasedEncryption.Decrypt(
                 encryptedData.EncryptedContentInfo.ContentEncryptionAlgorithm,
                 password,
-                ReadOnlySpan<byte>.Empty,
+                passwordBytes,
                 encryptedData.EncryptedContentInfo.EncryptedContent.Value.Span,
                 destination);
 
@@ -268,6 +278,92 @@ namespace System.Security.Cryptography.Pkcs
             }
 
             return bags;
+        }
+
+        internal byte[] Encrypt(
+            ReadOnlySpan<char> password,
+            ReadOnlySpan<byte> passwordBytes,
+            PbeParameters pbeParameters)
+        {
+            Debug.Assert(pbeParameters != null);
+            Debug.Assert(pbeParameters.IterationCount >= 1);
+
+            AsnWriter writer = null;
+
+            using (AsnWriter contentsWriter = Encode())
+            {
+                ReadOnlySpan<byte> contentsSpan = contentsWriter.EncodeAsSpan();
+
+                PasswordBasedEncryption.InitiateEncryption(
+                    pbeParameters,
+                    out SymmetricAlgorithm cipher,
+                    out string hmacOid,
+                    out string encryptionAlgorithmOid,
+                    out bool isPkcs12);
+
+                int cipherBlockBytes = cipher.BlockSize / 8;
+                byte[] encryptedRent = ArrayPool<byte>.Shared.Rent(contentsSpan.Length + cipherBlockBytes);
+                Span<byte> encryptedSpan = Span<byte>.Empty;
+                Span<byte> iv = stackalloc byte[cipherBlockBytes];
+                Span<byte> salt = stackalloc byte[16];
+                RandomNumberGenerator.Fill(salt);
+
+                try
+                {
+                    int written = PasswordBasedEncryption.Encrypt(
+                        password,
+                        passwordBytes,
+                        cipher,
+                        isPkcs12,
+                        contentsSpan,
+                        pbeParameters,
+                        salt,
+                        encryptedRent,
+                        iv);
+
+                    encryptedSpan = encryptedRent.AsSpan(0, written);
+
+                    writer = new AsnWriter(AsnEncodingRules.DER);
+
+                    // EncryptedData
+                    writer.PushSequence();
+
+                    // version
+                    // Since we're not writing unprotected attributes, version=0
+                    writer.WriteInteger(0);
+
+                    // encryptedContentInfo
+                    {
+                        writer.PushSequence();
+                        writer.WriteObjectIdentifier(Oids.Pkcs7Data);
+
+                        PasswordBasedEncryption.WritePbeAlgorithmIdentifier(
+                            writer,
+                            isPkcs12,
+                            encryptionAlgorithmOid,
+                            salt,
+                            pbeParameters.IterationCount,
+                            hmacOid,
+                            iv);
+
+                        writer.WriteOctetString(
+                            new Asn1Tag(TagClass.ContextSpecific, 0),
+                            encryptedSpan);
+
+                        writer.PopSequence();
+                    }
+
+                    writer.PopSequence();
+
+                    return writer.Encode();
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(encryptedSpan);
+                    ArrayPool<byte>.Shared.Return(encryptedRent);
+                    writer?.Dispose();
+                }
+            }
         }
 
         internal AsnWriter Encode()

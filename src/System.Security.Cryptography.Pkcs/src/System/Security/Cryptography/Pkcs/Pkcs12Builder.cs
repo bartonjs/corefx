@@ -23,10 +23,31 @@ namespace System.Security.Cryptography.Pkcs
             ReadOnlySpan<byte> passwordBytes,
             PbeParameters pbeParameters)
         {
-            throw new NotImplementedException();
+            if (safeContents == null)
+                throw new ArgumentNullException(nameof(safeContents));
+            if (pbeParameters == null)
+                throw new ArgumentNullException(nameof(pbeParameters));
+            if (pbeParameters.IterationCount < 1)
+                throw new ArgumentOutOfRangeException(nameof(pbeParameters.IterationCount));
+            if (IsSealed)
+                throw new InvalidOperationException(SR.Cryptography_Pkcs12_PfxIsSealed);
+
+            if (_contents == null)
+            {
+                _contents = new List<ContentInfoAsn>();
+            }
+
+            byte[] encrypted = safeContents.Encrypt(ReadOnlySpan<char>.Empty, passwordBytes, pbeParameters);
+
+            _contents.Add(
+                new ContentInfoAsn
+                {
+                    ContentType = Oids.Pkcs7Encrypted,
+                    Content = encrypted,
+                });
         }
 
-        public unsafe void AddSafeContentsEncrypted(
+        public void AddSafeContentsEncrypted(
             Pkcs12SafeContents safeContents,
             ReadOnlySpan<char> password,
             PbeParameters pbeParameters)
@@ -45,87 +66,14 @@ namespace System.Security.Cryptography.Pkcs
                 _contents = new List<ContentInfoAsn>();
             }
 
-            AsnWriter writer = null;
+            byte[] encrypted = safeContents.Encrypt(password, ReadOnlySpan<byte>.Empty, pbeParameters);
 
-            using (AsnWriter contentsWriter = safeContents.Encode())
-            {
-                ReadOnlySpan<byte> contentsSpan = contentsWriter.EncodeAsSpan();
-
-                PasswordBasedEncryption.InitiateEncryption(
-                    pbeParameters,
-                    out SymmetricAlgorithm cipher,
-                    out string hmacOid,
-                    out string encryptionAlgorithmOid,
-                    out bool isPkcs12);
-
-                int cipherBlockBytes = cipher.BlockSize / 8;
-                byte[] encryptedRent = ArrayPool<byte>.Shared.Rent(contentsSpan.Length + cipherBlockBytes);
-                Span<byte> encryptedSpan = Span<byte>.Empty;
-                Span<byte> iv = stackalloc byte[cipherBlockBytes];
-                Span<byte> salt = stackalloc byte[16];
-                RandomNumberGenerator.Fill(salt);
-
-                try
+            _contents.Add(
+                new ContentInfoAsn
                 {
-                    int written = PasswordBasedEncryption.Encrypt(
-                        password,
-                        ReadOnlySpan<byte>.Empty,
-                        cipher,
-                        isPkcs12,
-                        contentsSpan,
-                        pbeParameters,
-                        salt,
-                        encryptedRent,
-                        iv);
-
-                    encryptedSpan = encryptedRent.AsSpan(0, written);
-
-                    writer = new AsnWriter(AsnEncodingRules.DER);
-
-                    // EncryptedData
-                    writer.PushSequence();
-
-                    // version
-                    // Since we're not writing unprotected attributes, version=0
-                    writer.WriteInteger(0);
-
-                    // encryptedContentInfo
-                    {
-                        writer.PushSequence();
-                        writer.WriteObjectIdentifier(Oids.Pkcs7Data);
-
-                        PasswordBasedEncryption.WritePbeAlgorithmIdentifier(
-                            writer,
-                            isPkcs12,
-                            encryptionAlgorithmOid,
-                            salt,
-                            pbeParameters.IterationCount,
-                            hmacOid,
-                            iv);
-
-                        writer.WriteOctetString(
-                            new Asn1Tag(TagClass.ContextSpecific, 0),
-                            encryptedSpan);
-
-                        writer.PopSequence();
-                    }
-
-                    writer.PopSequence();
-
-                    _contents.Add(
-                        new ContentInfoAsn
-                        {
-                            ContentType = Oids.Pkcs7Encrypted,
-                            Content = writer.Encode(),
-                        });
-                }
-                finally
-                {
-                    CryptographicOperations.ZeroMemory(encryptedSpan);
-                    ArrayPool<byte>.Shared.Return(encryptedRent);
-                    writer?.Dispose();
-                }
-            }
+                    ContentType = Oids.Pkcs7Encrypted,
+                    Content = encrypted,
+                });
         }
 
         public void AddSafeContentsUnencrypted(Pkcs12SafeContents safeContents)

@@ -48,6 +48,7 @@
     <Compile Include="EnvelopedCms\DecryptTestsUsingExplicitPrivateKey.cs" />
     <Compile Include="EnvelopedCms\SubjectIdentifierTests.cs" />
     <Compile Include="Pkcs12\CertBagTests.cs" />
+    <Compile Include="Pkcs12\Pkcs12BuilderTests.cs" />
     <Compile Include="Pkcs12\Pkcs12Documents.cs" />
     <Compile Include="Pkcs12\Pkcs12InfoTests.cs" />
     <Compile Include="Pkcs12\Pkcs12SafeContentsTests.cs" />
