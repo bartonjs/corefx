@@ -32,12 +32,17 @@ namespace System.Security.Cryptography.Pkcs
             if (IsSealed)
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_PfxIsSealed);
 
+            PasswordBasedEncryption.ValidatePbeParameters(
+                pbeParameters,
+                ReadOnlySpan<char>.Empty,
+                passwordBytes);
+
+            byte[] encrypted = safeContents.Encrypt(ReadOnlySpan<char>.Empty, passwordBytes, pbeParameters);
+
             if (_contents == null)
             {
                 _contents = new List<ContentInfoAsn>();
             }
-
-            byte[] encrypted = safeContents.Encrypt(ReadOnlySpan<char>.Empty, passwordBytes, pbeParameters);
 
             _contents.Add(
                 new ContentInfoAsn
@@ -61,12 +66,17 @@ namespace System.Security.Cryptography.Pkcs
             if (IsSealed)
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_PfxIsSealed);
 
+            PasswordBasedEncryption.ValidatePbeParameters(
+                pbeParameters,
+                password,
+                ReadOnlySpan<byte>.Empty);
+
+            byte[] encrypted = safeContents.Encrypt(password, ReadOnlySpan<byte>.Empty, pbeParameters);
+
             if (_contents == null)
             {
                 _contents = new List<ContentInfoAsn>();
             }
-
-            byte[] encrypted = safeContents.Encrypt(password, ReadOnlySpan<byte>.Empty, pbeParameters);
 
             _contents.Add(
                 new ContentInfoAsn
@@ -283,7 +293,43 @@ namespace System.Security.Cryptography.Pkcs
 
         public void SealWithoutIntegrity()
         {
-            throw new NotImplementedException();
+            if (IsSealed)
+                throw new InvalidOperationException(SR.Cryptography_Pkcs12_PfxIsSealed);
+
+            ContentInfoAsn[] contents = _contents?.ToArray() ?? Array.Empty<ContentInfoAsn>();
+
+            using (AsnWriter contentsWriter = AsnSerializer.Serialize(contents, AsnEncodingRules.BER))
+            using (AsnWriter writer = new AsnWriter(AsnEncodingRules.BER))
+            {
+                // https://tools.ietf.org/html/rfc7292#section-4
+                //
+                // PFX ::= SEQUENCE {
+                //   version    INTEGER {v3(3)}(v3,...),
+                //   authSafe   ContentInfo,
+                //   macData    MacData OPTIONAL
+                // }
+                writer.PushSequence();
+
+                writer.WriteInteger(3);
+
+                writer.PushSequence();
+                {
+                    writer.WriteObjectIdentifier(Oids.Pkcs7Data);
+
+                    Asn1Tag contextSpecific0 = new Asn1Tag(TagClass.ContextSpecific, 0);
+
+                    writer.PushSequence(contextSpecific0);
+                    {
+                        writer.WriteOctetString(contentsWriter.EncodeAsSpan());
+                        writer.PopSequence(contextSpecific0);
+                    }
+
+                    writer.PopSequence();
+                }
+
+                writer.PopSequence();
+                _sealedData = writer.Encode();
+            }
         }
 
         public bool TryEncode(Span<byte> destination, out int bytesWritten)
