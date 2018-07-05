@@ -56,6 +56,7 @@
     <Compile Include="Pkcs12\Pkcs9LocalKeyIdTests.cs" />
     <Compile Include="Pkcs12\SimpleRead.cs" />
     <Compile Include="Pkcs12\SecretBagTests.cs" />
+    <Compile Include="Pkcs12\ShroudedKeyBagTests.cs" />
     <Compile Include="Pkcs12\WriteToWindows.cs" />
     <Compile Include="Rfc3161\TimestampRequestTests.cs" />
     <Compile Include="Rfc3161\TimestampTokenInfoTests.cs" />
