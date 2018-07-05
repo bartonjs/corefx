@@ -48,6 +48,11 @@ namespace System.Security.Cryptography.Pkcs
             if (certificateType == null)
                 throw new ArgumentNullException(nameof(certificateType));
 
+            // Read to ensure that there is precisely one legally encoded value.
+            AsnReader reader = new AsnReader(encodedCertificate, AsnEncodingRules.BER);
+            reader.GetEncodedValue();
+            reader.ThrowIfNotEmpty();
+
             _decoded = new CertBagAsn
             {
                 CertId = certificateType.Value,

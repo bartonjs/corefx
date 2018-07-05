@@ -3,12 +3,16 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Security.Cryptography.X509Certificates;
+using Test.Cryptography;
 using Xunit;
 
 namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 {
     public static class CertBagTests
     {
+        private static readonly ReadOnlyMemory<byte> s_derNull = new byte[] { 0x05, 0x00 };
+        private static readonly Oid s_x509TypeOid = new Oid("1.2.840.113549.1.9.22.1");
+
         [Fact]
         public static void CertificateTypeRequired()
         {
@@ -20,7 +24,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         [Fact]
         public static void InvalidCertificateTypeVerifiedLate()
         {
-            var certBag = new CertBag(new Oid(null, null), ReadOnlyMemory<byte>.Empty, true);
+            var certBag = new CertBag(new Oid(null, null), s_derNull, true);
             Assert.Equal(Oids.CertBag, certBag.GetBagId().Value);
             Assert.ThrowsAny<CryptographicException>(() => certBag.Encode());
         }
@@ -30,7 +34,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         [InlineData(false)]
         public static void SkipCopyHonored(bool skipCopy)
         {
-            byte[] data = new byte[1];
+            byte[] data = s_derNull.ToArray();
             var certBag = new CertBag(new Oid(Oids.Pkcs7Data, Oids.Pkcs7Data), data, skipCopy);
             ReadOnlyMemory<byte> dataProperty = certBag.EncodedCertificate;
 
@@ -54,7 +58,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.GetCertificate())
             {
                 var certBag = new CertBag(
-                    new Oid("1.2.840.113549.1.9.22.1"),
+                    s_x509TypeOid,
                     cert.RawData,
                     skipCopy: true);
 
@@ -67,7 +71,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         public static void OidCtorPreservesFriendlyName()
         {
             Oid oid = new Oid(Oids.Pkcs7Data, "Hello");
-            var certBag = new CertBag(oid, ReadOnlyMemory<byte>.Empty, true);
+            var certBag = new CertBag(oid, s_derNull, true);
             Oid firstCall = certBag.GetCertificateType();
             Oid secondCall = certBag.GetCertificateType();
 
@@ -87,7 +91,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         [InlineData("1.2.840.113549.1.9.22.11", false)]
         public static void VerifyIsX509(string oidValue, bool expectedValue)
         {
-            var certBag = new CertBag(new Oid(oidValue), ReadOnlyMemory<byte>.Empty, true);
+            var certBag = new CertBag(new Oid(oidValue), s_derNull, true);
 
             if (expectedValue)
             {
@@ -113,6 +117,43 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 {
                     Assert.True(extracted.RawData.AsSpan().SequenceEqual(cert.RawData));
                 }
+            }
+        }
+
+        [Theory]
+        // No data
+        [InlineData("", false)]
+        // Length exceeds payload
+        [InlineData("0401", false)]
+        // Two values (aka length undershoots payload)
+        [InlineData("0400020100", false)]
+        // No length
+        [InlineData("04", false)]
+        // Legal
+        [InlineData("0400", true)]
+        // A legal tag-length-value, but not a legal BIT STRING value.
+        [InlineData("0300", true)]
+        // SEQUENCE (indefinite length) {
+        //   Constructed OCTET STRING (indefinite length) {
+        //     OCTET STRING (inefficient encoded length 01): 07
+        //   }
+        // }
+        [InlineData("30802480048200017F00000000", true)]
+        // Previous example, trailing byte
+        [InlineData("30802480048200017F0000000000", false)]
+        public static void EncodedCertificateMustBeValidBer(string inputHex, bool expectSuccess)
+        {
+            byte[] data = inputHex.HexToByteArray();
+            Func<CertBag> func = () => new CertBag(s_x509TypeOid, data, skipCopy: true);
+
+            if (!expectSuccess)
+            {
+                Assert.ThrowsAny<CryptographicException>(func);
+            }
+            else
+            {
+                // Assert.NoThrow
+                func();
             }
         }
     }
