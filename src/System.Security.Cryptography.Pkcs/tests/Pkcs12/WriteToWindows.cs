@@ -10,6 +10,11 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
     [PlatformSpecific(TestPlatforms.Windows)]
     public static class WriteToWindows
     {
+        private static readonly PbeParameters s_win7Pbe = new PbeParameters(
+            PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
+            HashAlgorithmName.SHA1,
+            2068);
+
         [Theory]
         [InlineData(1)]
         [InlineData(2)]
@@ -87,10 +92,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             builder.AddSafeContentsEncrypted(
                 contents,
                 password,
-                new PbeParameters(
-                    PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
-                    HashAlgorithmName.SHA1,
-                    2050));
+                s_win7Pbe);
 
             builder.SealAndMac(password, HashAlgorithmName.SHA1, 1024);
             byte[] pfx = builder.Encode();
@@ -134,10 +136,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             builder.AddSafeContentsEncrypted(
                 contents,
                 password,
-                new PbeParameters(
-                    PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
-                    HashAlgorithmName.SHA1,
-                    2050));
+                s_win7Pbe);
 
             builder.SealAndMac(password, HashAlgorithmName.SHA1, 1024);
             byte[] pfx = builder.Encode();
@@ -177,10 +176,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                     keyBag = safe2.AddShroudedKey(
                         rsa,
                         password,
-                        new PbeParameters(
-                            PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
-                            HashAlgorithmName.SHA1,
-                            2068));
+                        s_win7Pbe);
                 }
 
                 keyBag.Attributes.Add(localKeyId);
@@ -191,10 +187,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             builder.AddSafeContentsEncrypted(
                 safe1,
                 password,
-                new PbeParameters(
-                    PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
-                    HashAlgorithmName.SHA1,
-                    2068));
+                s_win7Pbe);
 
             builder.AddSafeContentsUnencrypted(safe2);
 
