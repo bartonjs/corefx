@@ -12,8 +12,8 @@ namespace System.Security.Cryptography.Pkcs
     {
         public Pkcs12SafeContents SafeContents { get; private set; }
 
-        private SafeContentsBag()
-            : base(Oids.Pkcs12SafeContentsBag)
+        private SafeContentsBag(ReadOnlyMemory<byte> encoded)
+            : base(Oids.Pkcs12SafeContentsBag, encoded)
         {
         }
 
@@ -24,20 +24,10 @@ namespace System.Security.Cryptography.Pkcs
 
             Pkcs12SafeContents contents = new Pkcs12SafeContents(contentInfo);
 
-            return new SafeContentsBag
+            return new SafeContentsBag(encoded)
             {
                 SafeContents = contents
             };
-        }
-
-        protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten)
-        {
-            Debug.Assert(SafeContents != null);
-
-            using (AsnWriter writer = SafeContents.Encode())
-            {
-                return writer.TryEncode(destination, out bytesWritten);
-            }
         }
 
         public static SafeContentsBag CreateEncrypted(
@@ -106,7 +96,7 @@ namespace System.Security.Cryptography.Pkcs
                     Content = encrypted,
                 });
 
-            return new SafeContentsBag
+            return new SafeContentsBag(encrypted)
             {
                 SafeContents = encryptedCopy,
             };
@@ -120,7 +110,7 @@ namespace System.Security.Cryptography.Pkcs
             ContentInfoAsn contentInfo = safeContents.EncodeToContentInfo();
             Pkcs12SafeContents copy = new Pkcs12SafeContents(contentInfo);
 
-            return new SafeContentsBag
+            return new SafeContentsBag(contentInfo.Content)
             {
                 SafeContents = copy,
             };

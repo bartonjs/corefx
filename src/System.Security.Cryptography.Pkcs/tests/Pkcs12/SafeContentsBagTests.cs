@@ -100,16 +100,16 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Action<Pkcs12SafeContents> postprocessor)
         {
             Pkcs12SafeContents contents1 = new Pkcs12SafeContents();
-            contents1.AddSecret(s_zeroOid, s_derNull, skipCopy: true);
+            contents1.AddSecret(s_zeroOid, s_derNull);
 
-            contents1.AddSecret(s_zeroOid, new byte[] { 4, 1, 2 }, skipCopy: true).Attributes.Add(
+            contents1.AddSecret(s_zeroOid, new byte[] { 4, 1, 2 }).Attributes.Add(
                 new Pkcs9LocalKeyId(s_derNull.Span));
 
-            contents1.AddSecret(s_zeroOid, new byte[] { 4, 1, 3 }, skipCopy: true);
+            contents1.AddSecret(s_zeroOid, new byte[] { 4, 1, 3 });
 
             SafeContentsBag safeContentsBag = creator(contents1);
 
-            contents1.AddSecret(s_zeroOid, new byte[] { 4, 1, 4 }, skipCopy: true);
+            contents1.AddSecret(s_zeroOid, new byte[] { 4, 1, 4 });
 
             Pkcs12SafeContents contents2 = safeContentsBag.SafeContents;
             Assert.NotSame(contents2, contents1);

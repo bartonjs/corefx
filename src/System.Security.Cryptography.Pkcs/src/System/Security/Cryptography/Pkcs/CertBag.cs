@@ -16,8 +16,8 @@ namespace System.Security.Cryptography.Pkcs
 
         public bool IsX509Certificate { get; }
 
-        private CertBag(CertBagAsn decoded)
-            : base(Oids.Pkcs12CertBag)
+        private CertBag(ReadOnlyMemory<byte> encodedBagValue, CertBagAsn decoded)
+            : base(Oids.Pkcs12CertBag, encodedBagValue)
         {
             _decoded = decoded;
 
@@ -29,50 +29,38 @@ namespace System.Security.Cryptography.Pkcs
         /// </summary>
         /// <param name="certificateType">The identifier for the certificate type</param>
         /// <param name="encodedCertificate">The encoded value</param>
-        /// <param name="skipCopy">
-        ///   <c>true</c> to store the <paramref name="encodedCertificate"/> value,
-        ///   <c>false</c> to store a copy of the data <paramref name="encodedCertificate"/> represents.
-        /// </param>
         /// <remarks>
         /// No validation is done to ensure that the <paramref name="encodedCertificate"/> value is
         /// correct for the indicated <paramref name="certificateType"/>.  Note that for X.509
         /// public-key certificates the correct encoding for a CertBag value is to wrap the
         /// DER-encoded certificate in an OCTET STRING.
         /// </remarks>
-        public CertBag(
-            Oid certificateType,
-            ReadOnlyMemory<byte> encodedCertificate,
-            bool skipCopy = false)
-            : base(Oids.Pkcs12CertBag)
+        public CertBag(Oid certificateType, ReadOnlyMemory<byte> encodedCertificate)
+            : base(
+                Oids.Pkcs12CertBag,
+                EncodeBagValue(certificateType, encodedCertificate),
+                skipCopy: true)
         {
-            if (certificateType == null)
-                throw new ArgumentNullException(nameof(certificateType));
-
-            // Read to ensure that there is precisely one legally encoded value.
-            AsnReader reader = new AsnReader(encodedCertificate, AsnEncodingRules.BER);
-            reader.GetEncodedValue();
-            reader.ThrowIfNotEmpty();
-
-            _decoded = new CertBagAsn
-            {
-                CertId = certificateType.Value,
-                CertValue = skipCopy ? encodedCertificate : encodedCertificate.ToArray(),
-            };
-
             _certTypeOid = new Oid(certificateType);
+
+            _decoded = AsnSerializer.Deserialize<CertBagAsn>(
+                EncodedBagValue,
+                AsnEncodingRules.BER);
+
             IsX509Certificate = _decoded.CertId == Oids.Pkcs12X509CertBagType;
         }
 
         internal CertBag(X509Certificate2 cert)
-            : base(Oids.Pkcs12CertBag)
+            : base(
+                Oids.Pkcs12CertBag,
+                EncodeBagValue(
+                    Oids.Pkcs12X509CertBagType,
+                    PkcsPal.Instance.EncodeOctetString(cert.RawData)),
+                skipCopy: true)
         {
-            byte[] certData = cert.RawData;
-
-            _decoded = new CertBagAsn
-            {
-                CertId = Oids.Pkcs12X509CertBagType,
-                CertValue = PkcsPal.Instance.EncodeOctetString(certData),
-            };
+            _decoded = AsnSerializer.Deserialize<CertBagAsn>(
+                EncodedBagValue,
+                AsnEncodingRules.BER);
 
             IsX509Certificate = true;
         }
@@ -99,18 +87,39 @@ namespace System.Security.Cryptography.Pkcs
             return new X509Certificate2(Helpers.DecodeOctetString(_decoded.CertValue).ToArray());
         }
 
-        protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten)
+        private static byte[] EncodeBagValue(Oid certificateType, ReadOnlyMemory<byte> encodedCertificate)
         {
-            using (AsnWriter writer = AsnSerializer.Serialize(_decoded, AsnEncodingRules.DER))
+            if (certificateType == null)
+                throw new ArgumentNullException(nameof(certificateType));
+
+            return EncodeBagValue(certificateType.Value, encodedCertificate);
+        }
+
+        private static byte[] EncodeBagValue(string certificateType, ReadOnlyMemory<byte> encodedCertificate)
+        {
+            // Read to ensure that there is precisely one legally encoded value.
+            AsnReader reader = new AsnReader(encodedCertificate, AsnEncodingRules.BER);
+            reader.GetEncodedValue();
+            reader.ThrowIfNotEmpty();
+
+            // No need to copy encodedCertificate here, because it will be copied into the
+            // return value.
+            CertBagAsn certBagAsn = new CertBagAsn
             {
-                return writer.TryEncode(destination, out bytesWritten);
+                CertId = certificateType,
+                CertValue = encodedCertificate,
+            };
+
+            using (AsnWriter writer = AsnSerializer.Serialize(certBagAsn, AsnEncodingRules.BER))
+            {
+                return writer.Encode();
             }
         }
 
         internal static CertBag DecodeValue(ReadOnlyMemory<byte> bagValue)
         {
             CertBagAsn decoded = AsnSerializer.Deserialize<CertBagAsn>(bagValue, AsnEncodingRules.BER);
-            return new CertBag(decoded);
+            return new CertBag(bagValue, decoded);
         }
     }
 }

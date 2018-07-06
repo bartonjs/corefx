@@ -103,13 +103,13 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             if (skipCopy)
             {
                 Assert.True(
-                    s_derNull.Span == shroudedKeyBag.EncryptedPkcs8PrivateKey.Span,
+                    s_derNull.Span.Overlaps(shroudedKeyBag.EncryptedPkcs8PrivateKey.Span),
                     "Same memory");
             }
             else
             {
                 Assert.False(
-                    s_derNull.Span == shroudedKeyBag.EncryptedPkcs8PrivateKey.Span,
+                    s_derNull.Span.Overlaps(shroudedKeyBag.EncryptedPkcs8PrivateKey.Span),
                     "Same memory");
             }
         }

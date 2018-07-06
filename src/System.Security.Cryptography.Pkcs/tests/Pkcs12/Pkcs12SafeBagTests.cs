@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Linq;
+using Test.Cryptography;
 using Xunit;
 
 namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
@@ -30,16 +31,6 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Pkcs12SafeBag safeBag = new TestSafeBag(Oids.Aes192);
             byte[] encoded = safeBag.Encode();
             Assert.NotNull(encoded);
-        }
-
-        [Fact]
-        public static void TryEncodeValueGrows()
-        {
-            TestSafeBag safeBag = new TestSafeBag(Oids.ContentType);
-            byte[] encoded = safeBag.Encode();
-            Assert.NotNull(encoded);
-
-            Assert.InRange(safeBag.LastDestinationSize, safeBag.DeniedDestinationSize + 1, int.MaxValue);
         }
 
         [Fact]
@@ -96,29 +87,73 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.Same(firstCall, safeBag.Attributes);
         }
 
+        [Theory]
+        // No data
+        [InlineData("", false)]
+        // Length exceeds payload
+        [InlineData("0401", false)]
+        // Two values (aka length undershoots payload)
+        [InlineData("0400020100", false)]
+        // No length
+        [InlineData("04", false)]
+        // Legal
+        [InlineData("0400", true)]
+        // A legal tag-length-value, but not a legal BIT STRING value.
+        [InlineData("0300", true)]
+        // SEQUENCE (indefinite length) {
+        //   Constructed OCTET STRING (indefinite length) {
+        //     OCTET STRING (inefficient encoded length 01): 07
+        //   }
+        // }
+        [InlineData("30802480048200017F00000000", true)]
+        // Previous example, trailing byte
+        [InlineData("30802480048200017F0000000000", false)]
+        public static void BaseClassVerifiesSingleBer(string inputHex, bool expectSuccess)
+        {
+            byte[] inputBytes = inputHex.HexToByteArray();
+            Func<TestSafeBag> func = () => new TestSafeBag(Oids.BasicConstraints2, inputBytes);
+
+            if (expectSuccess)
+            {
+                TestSafeBag bag = func();
+                Assert.True(bag.EncodedBagValue.Span.SequenceEqual(inputBytes));
+            }
+            else
+            {
+                Assert.ThrowsAny<CryptographicException>(func);
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public static void BaseClassHonorsSkipCopy(bool skipCopy)
+        {
+            byte[] test = { 0x05, 0x00 };
+            Pkcs12SafeBag bag = new TestSafeBag(Oids.ContentType, test, skipCopy);
+            bool isSame = test.AsSpan().Overlaps(bag.EncodedBagValue.Span);
+
+            if (skipCopy)
+            {
+                Assert.True(isSame, "Is same memory");
+            }
+            else
+            {
+                Assert.False(isSame, "Is same memory");
+            }
+        }
+
         private class TestSafeBag : Pkcs12SafeBag
         {
-            internal int LastDestinationSize = -1;
-            internal int DeniedDestinationSize = -1;
+            private static readonly ReadOnlyMemory<byte> s_derNull = new byte[] { 0x05, 0x00 };
 
-            public TestSafeBag(string bagIdValue) : base(bagIdValue)
+            public TestSafeBag(string bagIdValue) : base(bagIdValue, s_derNull, skipCopy: true)
             {
             }
 
-            protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten)
+            public TestSafeBag(string bagIdValue, ReadOnlyMemory<byte> encodedValue, bool skipCopy = true)
+                : base(bagIdValue, encodedValue, skipCopy)
             {
-                if (destination.Length < 2 || DeniedDestinationSize < 0)
-                {
-                    DeniedDestinationSize = destination.Length;
-                    bytesWritten = 0;
-                    return false;
-                }
-
-                destination[0] = 0x05;
-                destination[1] = 0x00;
-                bytesWritten = 2;
-                LastDestinationSize = destination.Length;
-                return true;
             }
         }
     }

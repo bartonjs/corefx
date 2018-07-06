@@ -58,15 +58,13 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         }
 
         [Fact]
-        public static void BadOidSucceedsUntilEncode()
+        public static void BadOidFails()
         {
             string payloadHex = "0403090807";
 
             Pkcs12SafeContents contents = new Pkcs12SafeContents();
-            SecretBag bag = contents.AddSecret(new Oid("Hi", "There"), payloadHex.HexToByteArray());
-            
-            Assert.Equal(payloadHex, bag.SecretValue.ByteArrayToHex());
-            Assert.ThrowsAny<CryptographicException>(() => bag.Encode());
+            Assert.ThrowsAny<CryptographicException>(
+                () => contents.AddSecret(new Oid("Hi", "There"), payloadHex.HexToByteArray()));
         }
 
         [Theory]

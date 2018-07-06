@@ -22,34 +22,10 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         }
 
         [Fact]
-        public static void InvalidCertificateTypeVerifiedLate()
+        public static void InvalidCertificateTypeVerifiedInCtor()
         {
-            var certBag = new CertBag(new Oid(null, null), s_derNull, true);
-            Assert.Equal(Oids.CertBag, certBag.GetBagId().Value);
-            Assert.ThrowsAny<CryptographicException>(() => certBag.Encode());
-        }
-
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public static void SkipCopyHonored(bool skipCopy)
-        {
-            byte[] data = s_derNull.ToArray();
-            var certBag = new CertBag(new Oid(Oids.Pkcs7Data, Oids.Pkcs7Data), data, skipCopy);
-            ReadOnlyMemory<byte> dataProperty = certBag.EncodedCertificate;
-
-            Assert.Equal(data.Length, dataProperty.Length);
-            Assert.True(data.AsSpan().SequenceEqual(dataProperty.Span));
-            bool areSame = dataProperty.Span.Overlaps(data);
-
-            if (skipCopy)
-            {
-                Assert.True(areSame);
-            }
-            else
-            {
-                Assert.False(areSame);
-            }
+            Assert.ThrowsAny<CryptographicException>(
+                () => new CertBag(new Oid(null, null), s_derNull));
         }
 
         [Fact]
@@ -57,10 +33,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         {
             using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.GetCertificate())
             {
-                var certBag = new CertBag(
-                    s_x509TypeOid,
-                    cert.RawData,
-                    skipCopy: true);
+                var certBag = new CertBag(s_x509TypeOid, cert.RawData);
 
                 Assert.True(certBag.IsX509Certificate, "certBag.IsX509Certificate");
                 Assert.ThrowsAny<CryptographicException>(() => certBag.GetCertificate());
@@ -71,7 +44,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         public static void OidCtorPreservesFriendlyName()
         {
             Oid oid = new Oid(Oids.Pkcs7Data, "Hello");
-            var certBag = new CertBag(oid, s_derNull, true);
+            var certBag = new CertBag(oid, s_derNull);
             Oid firstCall = certBag.GetCertificateType();
             Oid secondCall = certBag.GetCertificateType();
 
@@ -91,7 +64,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         [InlineData("1.2.840.113549.1.9.22.11", false)]
         public static void VerifyIsX509(string oidValue, bool expectedValue)
         {
-            var certBag = new CertBag(new Oid(oidValue), s_derNull, true);
+            var certBag = new CertBag(new Oid(oidValue), s_derNull);
 
             if (expectedValue)
             {
@@ -144,7 +117,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         public static void EncodedCertificateMustBeValidBer(string inputHex, bool expectSuccess)
         {
             byte[] data = inputHex.HexToByteArray();
-            Func<CertBag> func = () => new CertBag(s_x509TypeOid, data, skipCopy: true);
+            Func<CertBag> func = () => new CertBag(s_x509TypeOid, data);
 
             if (!expectSuccess)
             {

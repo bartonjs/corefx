@@ -28,7 +28,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         public static void EncryptDecryptMixBytesAndChars(bool encryptBytes)
         {
             Pkcs12SafeContents contents = new Pkcs12SafeContents();
-            contents.AddSecret(s_zeroOid, s_derNull, skipCopy: true);
+            contents.AddSecret(s_zeroOid, s_derNull);
 
             string password = nameof(EncryptDecryptMixBytesAndChars);
             Span<byte> passwordUtf8Bytes = stackalloc byte[password.Length];
@@ -80,7 +80,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         public static void EncryptPkcs12KdfWithBytes()
         {
             Pkcs12SafeContents contents = new Pkcs12SafeContents();
-            contents.AddSecret(s_zeroOid, s_derNull, skipCopy: true);
+            contents.AddSecret(s_zeroOid, s_derNull);
 
             Pkcs12Builder builder = new Pkcs12Builder();
 
@@ -110,7 +110,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Pkcs12Builder builder2 = new Pkcs12Builder();
 
             Pkcs12SafeContents contents = new Pkcs12SafeContents();
-            contents.AddSecret(s_zeroOid, s_derNull, skipCopy: true);
+            contents.AddSecret(s_zeroOid, s_derNull);
 
             builder1.AddSafeContentsUnencrypted(contents);
             builder2.AddSafeContentsUnencrypted(contents);
@@ -211,7 +211,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Pkcs12Builder builder2 = new Pkcs12Builder();
 
             Pkcs12SafeContents contents = new Pkcs12SafeContents();
-            contents.AddSecret(s_zeroOid, s_derNull, skipCopy: true);
+            contents.AddSecret(s_zeroOid, s_derNull);
 
             builder1.AddSafeContentsEncrypted(contents, ReadOnlySpan<byte>.Empty, s_pbkdf2Parameters);
             builder1.SealWithoutIntegrity();
@@ -232,7 +232,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         public static void AddContentsAfterSealing()
         {
             Pkcs12SafeContents contents = new Pkcs12SafeContents();
-            contents.AddSecret(s_zeroOid, s_derNull, skipCopy: true);
+            contents.AddSecret(s_zeroOid, s_derNull);
 
             Pkcs12Builder builder = new Pkcs12Builder();
             builder.SealWithoutIntegrity();

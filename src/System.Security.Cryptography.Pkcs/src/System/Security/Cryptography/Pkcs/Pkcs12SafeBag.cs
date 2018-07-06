@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Security.Cryptography.Asn1;
@@ -14,6 +13,8 @@ namespace System.Security.Cryptography.Pkcs
         private readonly string _bagIdValue;
         private Oid _bagOid;
         private CryptographicAttributeObjectCollection _attributes;
+
+        public ReadOnlyMemory<byte> EncodedBagValue { get; }
 
         public CryptographicAttributeObjectCollection Attributes
         {
@@ -34,12 +35,18 @@ namespace System.Security.Cryptography.Pkcs
             }
         }
 
-        protected Pkcs12SafeBag(string bagIdValue)
+        protected Pkcs12SafeBag(string bagIdValue, ReadOnlyMemory<byte> encodedBagValue, bool skipCopy=false)
         {
             if (string.IsNullOrEmpty(bagIdValue))
                 throw new ArgumentNullException(nameof(bagIdValue));
 
+            // Read to ensure that there is precisely one legally encoded value.
+            AsnReader reader = new AsnReader(encodedBagValue, AsnEncodingRules.BER);
+            reader.GetEncodedValue();
+            reader.ThrowIfNotEmpty();
+
             _bagIdValue = bagIdValue;
+            EncodedBagValue = skipCopy ? encodedBagValue : encodedBagValue.ToArray();
         }
 
         public byte[] Encode()
@@ -80,31 +87,17 @@ namespace System.Security.Cryptography.Pkcs
 
         private AsnWriter EncodeToWriter()
         {
-            byte[] rented = ArrayPool<byte>.Shared.Rent(4096);
-            Memory<byte> valueMemory = default;
+            AsnWriter writer = new AsnWriter(AsnEncodingRules.BER);
 
-            AsnWriter writer = null;
             try
             {
-                int valueBytesWritten;
-
-                while (!TryEncodeValue(rented, out valueBytesWritten))
-                {
-                    byte[] newRented = ArrayPool<byte>.Shared.Rent(rented.Length * 2);
-                    ArrayPool<byte>.Shared.Return(rented);
-                    rented = newRented;
-                }
-
-                valueMemory = rented.AsMemory(0, valueBytesWritten);
-
-                writer = new AsnWriter(AsnEncodingRules.BER);
                 writer.PushSequence();
 
                 writer.WriteObjectIdentifier(_bagIdValue);
 
                 Asn1Tag contextSpecific0 = new Asn1Tag(TagClass.ContextSpecific, 0);
                 writer.PushSequence(contextSpecific0);
-                writer.WriteEncodedValue(valueMemory);
+                writer.WriteEncodedValue(EncodedBagValue);
                 writer.PopSequence(contextSpecific0);
 
                 if (_attributes?.Count > 0)
@@ -129,16 +122,9 @@ namespace System.Security.Cryptography.Pkcs
             }
             catch
             {
-                writer?.Dispose();
+                writer.Dispose();
                 throw;
             }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(valueMemory.Span);
-                ArrayPool<byte>.Shared.Return(rented);
-            }
         }
-
-        protected abstract bool TryEncodeValue(Span<byte> destination, out int bytesWritten);
     }
 }

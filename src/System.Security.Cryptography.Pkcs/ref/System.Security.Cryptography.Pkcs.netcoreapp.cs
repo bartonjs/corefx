@@ -13,18 +13,16 @@ namespace System.Security.Cryptography.Pkcs
 {
     public sealed partial class CertBag : Pkcs12SafeBag
     {
-        public CertBag(Oid certificateType, ReadOnlyMemory<byte> encodedCertificate, bool skipCopy=false) : base(null) => throw null;
+        public CertBag(Oid certificateType, ReadOnlyMemory<byte> encodedCertificate) : base(null, default) => throw null;
         public bool IsX509Certificate { get; }
         public ReadOnlyMemory<byte> EncodedCertificate { get; }
         public Oid GetCertificateType() => throw null;
         public X509Certificate2 GetCertificate() => throw null;
-        protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
     }
     public sealed partial class KeyBag : Pkcs12SafeBag
     {
-        public KeyBag(ReadOnlyMemory<byte> pkcs8PrivateKey, bool skipCopy=false) : base(null) { }
+        public KeyBag(ReadOnlyMemory<byte> pkcs8PrivateKey, bool skipCopy=false) : base(null, default) { }
         public ReadOnlyMemory<byte> Pkcs8PrivateKey { get; }
-        protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
     }
     public sealed partial class Pkcs12Builder
     {
@@ -54,12 +52,12 @@ namespace System.Security.Cryptography.Pkcs
     }
     public abstract partial class Pkcs12SafeBag
     {
-        protected Pkcs12SafeBag(string bagIdValue) { }
+        protected Pkcs12SafeBag(string bagIdValue, ReadOnlyMemory<byte> encodedBagValue, bool skipCopy=false) { }
         public CryptographicAttributeObjectCollection Attributes { get; }
+        public ReadOnlyMemory<byte> EncodedBagValue { get; }
         public byte[] Encode() => throw null;
         public Oid GetBagId() => throw null;
         public bool TryEncode(Span<byte> destination, out int bytesWritten) => throw null;
-        protected abstract bool TryEncodeValue(Span<byte> destination, out int bytesWritten);
     }
     public sealed partial class Pkcs12SafeContents
     {
@@ -70,7 +68,7 @@ namespace System.Security.Cryptography.Pkcs
         public KeyBag AddKeyUnencrypted(AsymmetricAlgorithm key) => throw null;
         public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<byte> passwordBytes, PbeParameters pbeParameters) => throw null;
-        public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue, bool skipCopy=false) => throw null;
+        public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue) => throw null;
         public void Decrypt(ReadOnlySpan<byte> passwordBytes) => throw null;
         public void Decrypt(ReadOnlySpan<char> password) => throw null;
         public IEnumerable<Pkcs12SafeBag> GetBags() => throw null;
@@ -158,8 +156,7 @@ namespace System.Security.Cryptography.Pkcs
     }
     public sealed partial class SafeContentsBag : Pkcs12SafeBag
     {
-        private SafeContentsBag() : base(null) { }
-        protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
+        private SafeContentsBag() : base(null, default) { }
         public Pkcs12SafeContents SafeContents { get; }
         public static SafeContentsBag CreateEncrypted(Pkcs12SafeContents safeContents, ReadOnlySpan<byte> passwordBytes, PbeParameters pbeParameters) => throw null;
         public static SafeContentsBag CreateEncrypted(Pkcs12SafeContents safeContents, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
@@ -167,16 +164,14 @@ namespace System.Security.Cryptography.Pkcs
     }
     public sealed partial class SecretBag : Pkcs12SafeBag
     {
-        private SecretBag() : base(null) { }
+        private SecretBag() : base(null, default) { }
         public Oid GetSecretType() => throw null;
         public ReadOnlyMemory<byte> SecretValue { get; }
-        protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
     }
     public sealed partial class ShroudedKeyBag : Pkcs12SafeBag
     {
-        public ShroudedKeyBag(ReadOnlyMemory<byte> encryptedPkcs8PrivateKey, bool skipCopy=false) : base(null) { }
+        public ShroudedKeyBag(ReadOnlyMemory<byte> encryptedPkcs8PrivateKey, bool skipCopy=false) : base(null, default) { }
         public ReadOnlyMemory<byte> EncryptedPkcs8PrivateKey { get; }
-        protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten) => throw null;
     }
     public sealed partial class SignerInfo
     {

@@ -57,6 +57,9 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.IsNotType<KeyBag>(bag);
             Assert.IsNotType<SecretBag>(bag);
             Assert.IsNotType<ShroudedKeyBag>(bag);
+
+            CustomBagType customBag = new CustomBagType(bag.EncodedBagValue);
+            Assert.Equal(2, customBag.Value);
         }
 
         [Fact]
@@ -83,27 +86,32 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
         private class CustomBagType : Pkcs12SafeBag
         {
-            private readonly byte _value;
-
             public CustomBagType(byte value)
-                : base("0.0")
+                : this(new byte[] { 4, 1, value })
             {
-                _value = value;
             }
 
-            protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten)
+            public CustomBagType(ReadOnlyMemory<byte> encoded, bool skipCopy=false)
+                : base("0.0", encoded, skipCopy)
             {
-                if (destination.Length < 3)
-                {
-                    bytesWritten = 0;
-                    return false;
-                }
+            }
 
-                destination[0] = 0x04;
-                destination[1] = 0x01;
-                destination[2] = _value;
-                bytesWritten = 3;
-                return true;
+            public byte Value
+            {
+                get
+                {
+                    if (EncodedBagValue.Length == 3)
+                    {
+                        ReadOnlySpan<byte> bagValue = EncodedBagValue.Span;
+
+                        if (bagValue[0] == 0x04 && bagValue[1] == 0x01)
+                        {
+                            return bagValue[2];
+                        }
+                    }
+
+                    throw new InvalidOperationException();
+                }
             }
         }
     }

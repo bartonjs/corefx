@@ -15,27 +15,21 @@ namespace System.Security.Cryptography.Pkcs
 
         public ReadOnlyMemory<byte> SecretValue => _decoded.SecretValue;
 
-        private SecretBag()
-            : base(Oids.Pkcs12SecretBag)
+        private SecretBag(ReadOnlyMemory<byte> encodedBagValue)
+            : base(Oids.Pkcs12SecretBag, encodedBagValue, skipCopy: true)
         {
         }
 
-        internal SecretBag(Oid secretTypeOid, ReadOnlyMemory<byte> secretValue, bool skipCopy=false)
-            : this()
+        internal SecretBag(Oid secretTypeOid, ReadOnlyMemory<byte> secretValue)
+            : this(EncodeBagValue(secretTypeOid, secretValue))
         {
-            Debug.Assert(secretTypeOid != null);
-
             _secretTypeOid = new Oid(secretTypeOid);
 
-            _decoded = new SecretBagAsn
-            {
-                SecretTypeId = secretTypeOid.Value,
-                SecretValue = skipCopy ? secretValue : secretValue.ToArray(),
-            };
+            _decoded = AsnSerializer.Deserialize<SecretBagAsn>(EncodedBagValue, AsnEncodingRules.BER);
         }
 
-        private SecretBag(SecretBagAsn secretBagAsn)
-            : this()
+        private SecretBag(SecretBagAsn secretBagAsn, ReadOnlyMemory<byte> encodedBagValue)
+            : this(encodedBagValue)
         {
             _decoded = secretBagAsn;
         }
@@ -50,18 +44,26 @@ namespace System.Security.Cryptography.Pkcs
             return new Oid(_secretTypeOid);
         }
 
-        protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten)
+        private static byte[] EncodeBagValue(Oid secretTypeOid, in ReadOnlyMemory<byte> secretValue)
         {
-            using (AsnWriter writer = AsnSerializer.Serialize(_decoded, AsnEncodingRules.BER))
+            Debug.Assert(secretTypeOid != null);
+
+            SecretBagAsn secretBagAsn = new SecretBagAsn
             {
-                return writer.TryEncode(destination, out bytesWritten);
+                SecretTypeId = secretTypeOid.Value,
+                SecretValue = secretValue,
+            };
+
+            using (AsnWriter writer = AsnSerializer.Serialize(secretBagAsn, AsnEncodingRules.BER))
+            {
+                return writer.Encode();
             }
         }
 
         internal static SecretBag DecodeValue(ReadOnlyMemory<byte> bagValue)
         {
             SecretBagAsn decoded = AsnSerializer.Deserialize<SecretBagAsn>(bagValue, AsnEncodingRules.BER);
-            return new SecretBag(decoded);
+            return new SecretBag(decoded, bagValue);
         }
     }
 }
