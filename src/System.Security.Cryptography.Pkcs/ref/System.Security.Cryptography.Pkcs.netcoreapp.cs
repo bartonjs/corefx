@@ -163,7 +163,7 @@ namespace System.Security.Cryptography.Pkcs
         public Pkcs12SafeContents SafeContents { get; }
         public static SafeContentsBag CreateEncrypted(Pkcs12SafeContents safeContents, ReadOnlySpan<byte> passwordBytes, PbeParameters pbeParameters) => throw null;
         public static SafeContentsBag CreateEncrypted(Pkcs12SafeContents safeContents, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
-        public static SafeContentsBag CreateUnencrypted(Pkcs12SafeContents contents) => throw null;
+        public static SafeContentsBag CreateUnencrypted(Pkcs12SafeContents safeContents) => throw null;
     }
     public sealed partial class SecretBag : Pkcs12SafeBag
     {

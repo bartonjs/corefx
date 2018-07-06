@@ -433,5 +433,46 @@ namespace System.Security.Cryptography.Pkcs
             Password = 2,
             PublicKey = 3,
         }
+
+        internal ContentInfoAsn EncodeToContentInfo()
+        {
+            using (AsnWriter contentsWriter = Encode())
+            {
+                if (DataConfidentialityMode == ConfidentialityMode.None)
+                {
+                    using (AsnWriter valueWriter = new AsnWriter(AsnEncodingRules.DER))
+                    {
+                        valueWriter.WriteOctetString(contentsWriter.EncodeAsSpan());
+
+                        return new ContentInfoAsn
+                        {
+                            ContentType = Oids.Pkcs7Data,
+                            Content = valueWriter.Encode(),
+                        };
+                    }
+                }
+
+                if (DataConfidentialityMode == ConfidentialityMode.Password)
+                {
+                    return new ContentInfoAsn
+                    {
+                        ContentType = Oids.Pkcs7Encrypted,
+                        Content = contentsWriter.Encode(),
+                    };
+                }
+
+                if (DataConfidentialityMode == ConfidentialityMode.PublicKey)
+                {
+                    return new ContentInfoAsn
+                    {
+                        ContentType = Oids.Pkcs7Enveloped,
+                        Content = contentsWriter.Encode(),
+                    };
+                }
+
+                Debug.Fail($"No handler for {DataConfidentialityMode}");
+                throw new CryptographicException();
+            }
+        }
     }
 }

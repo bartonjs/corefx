@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Diagnostics;
 using System.Security.Cryptography.Asn1;
 using System.Security.Cryptography.Pkcs.Asn1;
 
@@ -31,7 +32,12 @@ namespace System.Security.Cryptography.Pkcs
 
         protected override bool TryEncodeValue(Span<byte> destination, out int bytesWritten)
         {
-            throw null;
+            Debug.Assert(SafeContents != null);
+
+            using (AsnWriter writer = SafeContents.Encode())
+            {
+                return writer.TryEncode(destination, out bytesWritten);
+            }
         }
 
         public static SafeContentsBag CreateEncrypted(
@@ -39,7 +45,23 @@ namespace System.Security.Cryptography.Pkcs
             ReadOnlySpan<byte> passwordBytes,
             PbeParameters pbeParameters)
         {
-            throw null;
+            if (safeContents == null)
+                throw new ArgumentNullException(nameof(safeContents));
+            if (pbeParameters == null)
+                throw new ArgumentNullException(nameof(pbeParameters));
+            if (pbeParameters.IterationCount < 1)
+                throw new ArgumentOutOfRangeException(nameof(pbeParameters.IterationCount));
+
+            PasswordBasedEncryption.ValidatePbeParameters(
+                pbeParameters,
+                ReadOnlySpan<char>.Empty,
+                passwordBytes);
+
+            return CreateEncrypted(
+                safeContents,
+                ReadOnlySpan<char>.Empty,
+                passwordBytes,
+                pbeParameters);
         }
 
         public static SafeContentsBag CreateEncrypted(
@@ -47,12 +69,61 @@ namespace System.Security.Cryptography.Pkcs
             ReadOnlySpan<char> password,
             PbeParameters pbeParameters)
         {
-            throw null;
+            if (safeContents == null)
+                throw new ArgumentNullException(nameof(safeContents));
+            if (pbeParameters == null)
+                throw new ArgumentNullException(nameof(pbeParameters));
+            if (pbeParameters.IterationCount < 1)
+                throw new ArgumentOutOfRangeException(nameof(pbeParameters.IterationCount));
+
+            PasswordBasedEncryption.ValidatePbeParameters(
+                pbeParameters,
+                password,
+                ReadOnlySpan<byte>.Empty);
+
+            return CreateEncrypted(
+                safeContents,
+                password,
+                ReadOnlySpan<byte>.Empty,
+                pbeParameters);
         }
 
-        public static SafeContentsBag CreateUnencrypted(Pkcs12SafeContents contents)
+        private static SafeContentsBag CreateEncrypted(
+            Pkcs12SafeContents safeContents,
+            ReadOnlySpan<char> password,
+            ReadOnlySpan<byte> passwordBytes,
+            PbeParameters pbeParameters)
         {
-            throw null;
+            Debug.Assert(safeContents != null);
+            Debug.Assert(pbeParameters != null);
+
+            byte[] encrypted = safeContents.Encrypt(password, passwordBytes, pbeParameters);
+
+            Pkcs12SafeContents encryptedCopy = new Pkcs12SafeContents(
+                new ContentInfoAsn
+                {
+                    ContentType = Oids.Pkcs7Encrypted,
+                    Content = encrypted,
+                });
+
+            return new SafeContentsBag
+            {
+                SafeContents = encryptedCopy,
+            };
+        }
+
+        public static SafeContentsBag CreateUnencrypted(Pkcs12SafeContents safeContents)
+        {
+            if (safeContents == null)
+                throw new ArgumentNullException(nameof(safeContents));
+
+            ContentInfoAsn contentInfo = safeContents.EncodeToContentInfo();
+            Pkcs12SafeContents copy = new Pkcs12SafeContents(contentInfo);
+
+            return new SafeContentsBag
+            {
+                SafeContents = copy,
+            };
         }
     }
 }
