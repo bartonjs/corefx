@@ -22,7 +22,7 @@ namespace System.Security.Cryptography.Pkcs
                 return false;
             }
 
-            bytesWritten = destination.Length;
+            bytesWritten = _bagValue.Length;
             _bagValue.Span.CopyTo(destination);
             return true;
         }
