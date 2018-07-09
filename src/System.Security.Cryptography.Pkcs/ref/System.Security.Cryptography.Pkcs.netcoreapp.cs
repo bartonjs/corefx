@@ -18,7 +18,7 @@ namespace System.Security.Cryptography.Pkcs
         public void AddSafeContentsEncrypted(Pkcs12SafeContents safeContents, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public void AddSafeContentsUnencrypted(Pkcs12SafeContents safeContents) => throw null;
         public byte[] Encode() => throw null;
-        public void SealAndMac(ReadOnlySpan<char> password, HashAlgorithmName hashAlgorithm, int iterationCount) => throw null;
+        public void SealWithMac(ReadOnlySpan<char> password, HashAlgorithmName hashAlgorithm, int iterationCount) => throw null;
         public void SealWithoutIntegrity() => throw null;
         public bool TryEncode(Span<byte> destination, out int bytesWritten) => throw null;
     }

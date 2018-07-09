@@ -50,7 +50,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 builder.AddSafeContentsEncrypted(contents, password, s_pbkdf2Parameters);
             }
 
-            builder.SealAndMac(password, HashAlgorithmName.SHA1, 2048);
+            builder.SealWithMac(password, HashAlgorithmName.SHA1, 2048);
 
             byte[] encoded = builder.Encode();
             Pkcs12Info info = Pkcs12Info.Decode(encoded, out _, skipCopy: true);
@@ -125,8 +125,8 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             if (mode == Pkcs12IntegrityMode.Password)
             {
-                builder1.SealAndMac(ReadOnlySpan<char>.Empty, HashAlgorithmName.SHA1, 2);
-                builder2.SealAndMac(ReadOnlySpan<char>.Empty, HashAlgorithmName.SHA1, 2);
+                builder1.SealWithMac(ReadOnlySpan<char>.Empty, HashAlgorithmName.SHA1, 2);
+                builder2.SealWithMac(ReadOnlySpan<char>.Empty, HashAlgorithmName.SHA1, 2);
 
                 // Two OCTET STRINGs of 20 bytes, and the INTEGER 2
                 macTrailerLength = 2 + 20 + 2 + 20 + 2 + 3;
@@ -202,12 +202,12 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         public static void SealAfterSeal()
         {
             Pkcs12Builder builder = new Pkcs12Builder();
-            builder.SealAndMac(ReadOnlySpan<char>.Empty, HashAlgorithmName.SHA1, 2);
+            builder.SealWithMac(ReadOnlySpan<char>.Empty, HashAlgorithmName.SHA1, 2);
 
             Assert.Throws<InvalidOperationException>(() => builder.SealWithoutIntegrity());
 
             Assert.Throws<InvalidOperationException>(
-                () => builder.SealAndMac(ReadOnlySpan<char>.Empty, HashAlgorithmName.SHA1, 2));
+                () => builder.SealWithMac(ReadOnlySpan<char>.Empty, HashAlgorithmName.SHA1, 2));
         }
 
         [Fact]
@@ -331,7 +331,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             if (withMac)
             {
                 password = "mac";
-                builder.SealAndMac(password, HashAlgorithmName.SHA1, 2);
+                builder.SealWithMac(password, HashAlgorithmName.SHA1, 2);
             }
             else
             {
@@ -369,7 +369,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             AssertExtensions.Throws<ArgumentOutOfRangeException>(
                 "iterationCount",
-                () => builder.SealAndMac("hi", HashAlgorithmName.SHA1, iterationCount));
+                () => builder.SealWithMac("hi", HashAlgorithmName.SHA1, iterationCount));
         }
 
         [Theory]
@@ -383,7 +383,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             if (withMac)
             {
                 password = "mac";
-                builder.SealAndMac(password, HashAlgorithmName.SHA1, 2);
+                builder.SealWithMac(password, HashAlgorithmName.SHA1, 2);
             }
             else
             {
@@ -416,8 +416,8 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Pkcs12Builder builder1 = new Pkcs12Builder();
             Pkcs12Builder builder2 = new Pkcs12Builder();
 
-            builder1.SealAndMac("hi", HashAlgorithmName.SHA1, 1);
-            builder2.SealAndMac("hi", HashAlgorithmName.SHA1, 2);
+            builder1.SealWithMac("hi", HashAlgorithmName.SHA1, 1);
+            builder2.SealWithMac("hi", HashAlgorithmName.SHA1, 2);
 
             byte[] encode1 = builder1.Encode();
             byte[] encode2 = builder2.Encode();

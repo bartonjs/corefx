@@ -115,7 +115,7 @@ namespace System.Security.Cryptography.Pkcs
             return _sealedData.ToArray();
         }
 
-        public void SealAndMac(
+        public void SealWithMac(
             ReadOnlySpan<char> password,
             HashAlgorithmName hashAlgorithm,
             int iterationCount)

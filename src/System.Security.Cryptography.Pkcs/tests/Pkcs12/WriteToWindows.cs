@@ -31,7 +31,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             string password = $"Password{iterationCount}IsMyVoice";
 
             // Windows 7 through 10-1709 only support SHA-1 as the MAC PRF
-            builder.SealAndMac(password, HashAlgorithmName.SHA1, iterationCount);
+            builder.SealWithMac(password, HashAlgorithmName.SHA1, iterationCount);
 
             byte[] emptyPfx = builder.Encode();
 
@@ -60,7 +60,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             builder.AddSafeContentsUnencrypted(contents);
 
             const string password = nameof(WriteOneCertNoKeys_NoEncryption);
-            builder.SealAndMac(password, HashAlgorithmName.SHA1, 1024);
+            builder.SealWithMac(password, HashAlgorithmName.SHA1, 1024);
             byte[] pfx = builder.Encode();
 
             ImportedCollection coll =
@@ -94,7 +94,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 password,
                 s_win7Pbe);
 
-            builder.SealAndMac(password, HashAlgorithmName.SHA1, 1024);
+            builder.SealWithMac(password, HashAlgorithmName.SHA1, 1024);
             byte[] pfx = builder.Encode();
 
             ImportedCollection coll =
@@ -138,7 +138,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 password,
                 s_win7Pbe);
 
-            builder.SealAndMac(password, HashAlgorithmName.SHA1, 1024);
+            builder.SealWithMac(password, HashAlgorithmName.SHA1, 1024);
             byte[] pfx = builder.Encode();
 
             ImportedCollection coll =
@@ -191,7 +191,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             builder.AddSafeContentsUnencrypted(safe2);
 
-            builder.SealAndMac(password, HashAlgorithmName.SHA1, 2068);
+            builder.SealWithMac(password, HashAlgorithmName.SHA1, 2068);
             byte[] pfx = builder.Encode();
 
             ImportedCollection coll =
@@ -226,7 +226,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             builder.AddSafeContentsUnencrypted(contents);
 
             const string password = nameof(WriteOneCertNoKeys_NoEncryption);
-            builder.SealAndMac(password, HashAlgorithmName.SHA1, 1024);
+            builder.SealWithMac(password, HashAlgorithmName.SHA1, 1024);
             byte[] pfx = builder.Encode();
 
             ImportedCollection coll =

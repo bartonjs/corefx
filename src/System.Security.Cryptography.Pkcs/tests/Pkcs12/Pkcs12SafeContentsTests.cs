@@ -274,7 +274,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             }
            
             builder.AddSafeContentsUnencrypted(contents);
-            builder.SealAndMac("hi", HashAlgorithmName.SHA1, 120);
+            builder.SealWithMac("hi", HashAlgorithmName.SHA1, 120);
             byte[] output = builder.Encode();
             Assert.NotNull(output);
         }
@@ -283,7 +283,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         {
             Pkcs12Builder builder = new Pkcs12Builder();
             builder.AddSafeContentsUnencrypted(contents);
-            builder.SealAndMac(ReadOnlySpan<char>.Empty, HashAlgorithmName.SHA1, 1);
+            builder.SealWithMac(ReadOnlySpan<char>.Empty, HashAlgorithmName.SHA1, 1);
             Pkcs12Info info = Pkcs12Info.Decode(builder.Encode(), out _, skipCopy: true);
             return info.AuthenticatedSafe.Single();
         }
