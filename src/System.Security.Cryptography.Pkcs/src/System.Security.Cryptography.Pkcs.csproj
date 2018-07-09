@@ -340,7 +340,6 @@
     <Compile Include="System\Security\Cryptography\Pkcs\Rfc3161TimestampRequest.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Rfc3161TimestampToken.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Rfc3161TimestampTokenInfo.cs" />
-    <Compile Include="System\Security\Cryptography\Pkcs\UnknownBag.cs" />
   </ItemGroup>
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.targets))\dir.targets" />
 </Project>

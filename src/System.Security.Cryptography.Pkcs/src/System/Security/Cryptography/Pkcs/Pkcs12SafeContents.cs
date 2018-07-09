@@ -291,7 +291,7 @@ namespace System.Security.Cryptography.Pkcs
 
                 if (bag == null)
                 {
-                    bag = new UnknownBag(serializedBags[i].BagId, bagValue);
+                    bag = new Pkcs12SafeBag.UnknownBag(serializedBags[i].BagId, bagValue);
                 }
 
                 bag.Attributes = SignerInfo.MakeAttributeCollection(serializedBags[i].BagAttributes);

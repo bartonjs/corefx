@@ -131,5 +131,13 @@ namespace System.Security.Cryptography.Pkcs
                 throw;
             }
         }
+
+        internal sealed class UnknownBag : Pkcs12SafeBag
+        {
+            internal UnknownBag(string oidValue, ReadOnlyMemory<byte> bagValue)
+                : base(oidValue, bagValue)
+            {
+            }
+        }
     }
 }
