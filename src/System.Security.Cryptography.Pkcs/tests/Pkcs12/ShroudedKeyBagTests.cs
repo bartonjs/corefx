@@ -27,7 +27,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             using (RSA rsa = RSA.Create(512))
             {
                 Pkcs12SafeContents contents = new Pkcs12SafeContents();
-                ShroudedKeyBag keyBag = contents.AddShroudedKey(rsa, nameof(rsa), s_win7Pbe);
+                Pkcs12ShroudedKeyBag keyBag = contents.AddShroudedKey(rsa, nameof(rsa), s_win7Pbe);
 
                 using (RSA rsa2 = RSA.Create())
                 {
@@ -64,7 +64,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 Pkcs12SafeContents contents = new Pkcs12SafeContents();
                 Span<byte> encryptionKey = new byte[] { 1, 2, 3, 4, 5 };
 
-                ShroudedKeyBag keyBag = contents.AddShroudedKey(rsa, encryptionKey, s_pbkdf2Pbe);
+                Pkcs12ShroudedKeyBag keyBag = contents.AddShroudedKey(rsa, encryptionKey, s_pbkdf2Pbe);
 
                 using (RSA rsa2 = RSA.Create())
                 {
@@ -98,7 +98,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         [InlineData(true)]
         public static void SkipCopyHonored(bool skipCopy)
         {
-            ShroudedKeyBag shroudedKeyBag = new ShroudedKeyBag(s_derNull, skipCopy);
+            Pkcs12ShroudedKeyBag shroudedKeyBag = new Pkcs12ShroudedKeyBag(s_derNull, skipCopy);
 
             if (skipCopy)
             {
@@ -138,7 +138,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         public static void CtorEnsuresValidBerValue(string inputHex, bool expectSuccess)
         {
             byte[] data = inputHex.HexToByteArray();
-            Func<ShroudedKeyBag> func = () => new ShroudedKeyBag(data, skipCopy: true);
+            Func<Pkcs12ShroudedKeyBag> func = () => new Pkcs12ShroudedKeyBag(data, skipCopy: true);
 
             if (!expectSuccess)
             {

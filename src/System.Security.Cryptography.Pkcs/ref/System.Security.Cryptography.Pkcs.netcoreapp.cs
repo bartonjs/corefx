@@ -67,8 +67,8 @@ namespace System.Security.Cryptography.Pkcs
         public Pkcs12CertBag AddCertificate(X509Certificate2 certificate) => throw null;
         public Pkcs12KeyBag AddKeyUnencrypted(AsymmetricAlgorithm key) => throw null;
         public Pkcs12SafeContentsBag AddNestedContents(Pkcs12SafeContents safeContents) => throw null;
-        public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
-        public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<byte> passwordBytes, PbeParameters pbeParameters) => throw null;
+        public Pkcs12ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
+        public Pkcs12ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<byte> passwordBytes, PbeParameters pbeParameters) => throw null;
         public Pkcs12SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue) => throw null;
         public void Decrypt(ReadOnlySpan<byte> passwordBytes) => throw null;
         public void Decrypt(ReadOnlySpan<char> password) => throw null;
@@ -91,6 +91,11 @@ namespace System.Security.Cryptography.Pkcs
         private Pkcs12SecretBag() : base(null, default) { }
         public Oid GetSecretType() => throw null;
         public ReadOnlyMemory<byte> SecretValue { get; }
+    }
+    public sealed partial class Pkcs12ShroudedKeyBag : Pkcs12SafeBag
+    {
+        public Pkcs12ShroudedKeyBag(ReadOnlyMemory<byte> encryptedPkcs8PrivateKey, bool skipCopy = false) : base(null, default) { }
+        public ReadOnlyMemory<byte> EncryptedPkcs8PrivateKey { get; }
     }
     public sealed partial class Pkcs8PrivateKeyInfo
     {
@@ -165,11 +170,6 @@ namespace System.Security.Cryptography.Pkcs
         public byte[] Encode() => throw null;
         public bool TryEncode(Span<byte> destination, out int bytesWritten) => throw null;
         public static bool TryDecode(ReadOnlyMemory<byte> encodedBytes, out Rfc3161TimestampTokenInfo timestampTokenInfo, out int bytesConsumed) { throw null; }
-    }
-    public sealed partial class ShroudedKeyBag : Pkcs12SafeBag
-    {
-        public ShroudedKeyBag(ReadOnlyMemory<byte> encryptedPkcs8PrivateKey, bool skipCopy=false) : base(null, default) { }
-        public ReadOnlyMemory<byte> EncryptedPkcs8PrivateKey { get; }
     }
     public sealed partial class SignerInfo
     {

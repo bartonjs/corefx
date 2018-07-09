@@ -4,9 +4,9 @@
 
 namespace System.Security.Cryptography.Pkcs
 {
-    public sealed class ShroudedKeyBag : Pkcs12SafeBag
+    public sealed class Pkcs12ShroudedKeyBag : Pkcs12SafeBag
     {
-        public ShroudedKeyBag(ReadOnlyMemory<byte> encryptedPkcs8PrivateKey, bool skipCopy=false)
+        public Pkcs12ShroudedKeyBag(ReadOnlyMemory<byte> encryptedPkcs8PrivateKey, bool skipCopy=false)
             : base(Oids.Pkcs12ShroudedKeyBag, encryptedPkcs8PrivateKey, skipCopy)
         {
         }

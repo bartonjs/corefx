@@ -110,7 +110,7 @@ namespace System.Security.Cryptography.Pkcs
             return bag;
         }
 
-        public ShroudedKeyBag AddShroudedKey(
+        public Pkcs12ShroudedKeyBag AddShroudedKey(
             AsymmetricAlgorithm key,
             ReadOnlySpan<byte> passwordBytes,
             PbeParameters pbeParameters)
@@ -121,12 +121,12 @@ namespace System.Security.Cryptography.Pkcs
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
 
             byte[] encryptedPkcs8 = key.ExportEncryptedPkcs8PrivateKey(passwordBytes, pbeParameters);
-            var bag = new ShroudedKeyBag(encryptedPkcs8, skipCopy: true);
+            var bag = new Pkcs12ShroudedKeyBag(encryptedPkcs8, skipCopy: true);
             AddSafeBag(bag);
             return bag;
         }
 
-        public ShroudedKeyBag AddShroudedKey(
+        public Pkcs12ShroudedKeyBag AddShroudedKey(
             AsymmetricAlgorithm key,
             ReadOnlySpan<char> password,
             PbeParameters pbeParameters)
@@ -137,7 +137,7 @@ namespace System.Security.Cryptography.Pkcs
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
 
             byte[] encryptedPkcs8 = key.ExportEncryptedPkcs8PrivateKey(password, pbeParameters);
-            var bag = new ShroudedKeyBag(encryptedPkcs8, skipCopy: true);
+            var bag = new Pkcs12ShroudedKeyBag(encryptedPkcs8, skipCopy: true);
             AddSafeBag(bag);
             return bag;
         }
@@ -269,7 +269,7 @@ namespace System.Security.Cryptography.Pkcs
                             bag = new Pkcs12KeyBag(bagValue);
                             break;
                         case Oids.Pkcs12ShroudedKeyBag:
-                            bag = new ShroudedKeyBag(bagValue);
+                            bag = new Pkcs12ShroudedKeyBag(bagValue);
                             break;
                         case Oids.Pkcs12CertBag:
                             bag = Pkcs12CertBag.DecodeValue(bagValue);

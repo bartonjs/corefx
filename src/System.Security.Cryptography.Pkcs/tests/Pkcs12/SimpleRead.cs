@@ -35,7 +35,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             List<Pkcs12SafeBag> safe0Bags = new List<Pkcs12SafeBag>(authSafe[0].GetBags());
 
             Assert.Equal(1, safe0Bags.Count);
-            ShroudedKeyBag shroudedKeyBag = Assert.IsType<ShroudedKeyBag>(safe0Bags[0]);
+            Pkcs12ShroudedKeyBag shroudedKeyBag = Assert.IsType<Pkcs12ShroudedKeyBag>(safe0Bags[0]);
 
             CryptographicAttributeObjectCollection keyBagAttrs = shroudedKeyBag.Attributes;
             Assert.Same(keyBagAttrs, shroudedKeyBag.Attributes);
@@ -134,7 +134,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             List<Pkcs12SafeBag> safe1Bags = new List<Pkcs12SafeBag>(authSafe[1].GetBags());
             Assert.Equal(1, safe0Bags.Count);
-            ShroudedKeyBag shroudedKeyBag = Assert.IsType<ShroudedKeyBag>(safe1Bags[0]);
+            Pkcs12ShroudedKeyBag shroudedKeyBag = Assert.IsType<Pkcs12ShroudedKeyBag>(safe1Bags[0]);
 
             byte[] data = { 9, 8, 7, 6, 5, 4, 3, 2, 1 };
             byte[] encrypted;

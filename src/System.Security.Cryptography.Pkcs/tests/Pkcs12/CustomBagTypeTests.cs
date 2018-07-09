@@ -56,7 +56,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.IsNotType<Pkcs12CertBag>(bag);
             Assert.IsNotType<Pkcs12KeyBag>(bag);
             Assert.IsNotType<Pkcs12SecretBag>(bag);
-            Assert.IsNotType<ShroudedKeyBag>(bag);
+            Assert.IsNotType<Pkcs12ShroudedKeyBag>(bag);
 
             CustomBagType customBag = new CustomBagType(bag.EncodedBagValue);
             Assert.Equal(2, customBag.Value);

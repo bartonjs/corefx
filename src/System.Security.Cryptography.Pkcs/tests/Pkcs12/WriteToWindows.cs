@@ -169,7 +169,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
                 rawData = cert.RawData;
 
-                ShroudedKeyBag keyBag;
+                Pkcs12ShroudedKeyBag keyBag;
 
                 using (RSA rsa = cert.GetRSAPrivateKey())
                 {
