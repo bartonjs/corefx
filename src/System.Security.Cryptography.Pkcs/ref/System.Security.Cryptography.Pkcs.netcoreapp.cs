@@ -11,14 +11,6 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace System.Security.Cryptography.Pkcs
 {
-    public sealed partial class CertBag : Pkcs12SafeBag
-    {
-        public CertBag(Oid certificateType, ReadOnlyMemory<byte> encodedCertificate) : base(null, default) => throw null;
-        public bool IsX509Certificate { get; }
-        public ReadOnlyMemory<byte> EncodedCertificate { get; }
-        public Oid GetCertificateType() => throw null;
-        public X509Certificate2 GetCertificate() => throw null;
-    }
     public sealed partial class KeyBag : Pkcs12SafeBag
     {
         public KeyBag(ReadOnlyMemory<byte> pkcs8PrivateKey, bool skipCopy=false) : base(null, default) { }
@@ -34,6 +26,14 @@ namespace System.Security.Cryptography.Pkcs
         public void SealAndMac(ReadOnlySpan<char> password, HashAlgorithmName hashAlgorithm, int iterationCount) => throw null;
         public void SealWithoutIntegrity() => throw null;
         public bool TryEncode(Span<byte> destination, out int bytesWritten) => throw null;
+    }
+    public sealed partial class Pkcs12CertBag : Pkcs12SafeBag
+    {
+        public Pkcs12CertBag(Oid certificateType, ReadOnlyMemory<byte> encodedCertificate) : base(null, default) => throw null;
+        public bool IsX509Certificate { get; }
+        public ReadOnlyMemory<byte> EncodedCertificate { get; }
+        public Oid GetCertificateType() => throw null;
+        public X509Certificate2 GetCertificate() => throw null;
     }
     public sealed partial class Pkcs12Info
     {
@@ -64,7 +64,7 @@ namespace System.Security.Cryptography.Pkcs
         public ConfidentialityMode DataConfidentialityMode { get; }
         public bool IsReadOnly { get; }
         public void AddSafeBag(Pkcs12SafeBag safeBag) => throw null;
-        public CertBag AddCertificate(X509Certificate2 certificate) => throw null;
+        public Pkcs12CertBag AddCertificate(X509Certificate2 certificate) => throw null;
         public KeyBag AddKeyUnencrypted(AsymmetricAlgorithm key) => throw null;
         public SafeContentsBag AddNestedContents(Pkcs12SafeContents safeContents) => throw null;
         public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;

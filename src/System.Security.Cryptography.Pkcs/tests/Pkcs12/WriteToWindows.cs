@@ -120,7 +120,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             using (RSA certKey = cert.GetRSAPrivateKey())
             using (RSA exportableKey = certKey.MakeExportable())
             {
-                CertBag certBag = contents.AddCertificate(cert);
+                Pkcs12CertBag certBag = contents.AddCertificate(cert);
                 certBag.Attributes.Add(localKeyId);
 
                 rawData = cert.RawData;
@@ -164,7 +164,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.TryGetCertificateWithPrivateKey(true))
             {
-                CertBag certBag = safe1.AddCertificate(cert);
+                Pkcs12CertBag certBag = safe1.AddCertificate(cert);
                 certBag.Attributes.Add(localKeyId);
 
                 rawData = cert.RawData;

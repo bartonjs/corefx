@@ -9,14 +9,14 @@ using Internal.Cryptography;
 
 namespace System.Security.Cryptography.Pkcs
 {
-    public sealed class CertBag : Pkcs12SafeBag
+    public sealed class Pkcs12CertBag : Pkcs12SafeBag
     {
         private Oid _certTypeOid;
         private readonly CertBagAsn _decoded;
 
         public bool IsX509Certificate { get; }
 
-        private CertBag(ReadOnlyMemory<byte> encodedBagValue, CertBagAsn decoded)
+        private Pkcs12CertBag(ReadOnlyMemory<byte> encodedBagValue, CertBagAsn decoded)
             : base(Oids.Pkcs12CertBag, encodedBagValue)
         {
             _decoded = decoded;
@@ -35,7 +35,7 @@ namespace System.Security.Cryptography.Pkcs
         /// public-key certificates the correct encoding for a CertBag value is to wrap the
         /// DER-encoded certificate in an OCTET STRING.
         /// </remarks>
-        public CertBag(Oid certificateType, ReadOnlyMemory<byte> encodedCertificate)
+        public Pkcs12CertBag(Oid certificateType, ReadOnlyMemory<byte> encodedCertificate)
             : base(
                 Oids.Pkcs12CertBag,
                 EncodeBagValue(certificateType, encodedCertificate),
@@ -50,7 +50,7 @@ namespace System.Security.Cryptography.Pkcs
             IsX509Certificate = _decoded.CertId == Oids.Pkcs12X509CertBagType;
         }
 
-        internal CertBag(X509Certificate2 cert)
+        internal Pkcs12CertBag(X509Certificate2 cert)
             : base(
                 Oids.Pkcs12CertBag,
                 EncodeBagValue(
@@ -116,10 +116,10 @@ namespace System.Security.Cryptography.Pkcs
             }
         }
 
-        internal static CertBag DecodeValue(ReadOnlyMemory<byte> bagValue)
+        internal static Pkcs12CertBag DecodeValue(ReadOnlyMemory<byte> bagValue)
         {
             CertBagAsn decoded = AsnSerializer.Deserialize<CertBagAsn>(bagValue, AsnEncodingRules.BER);
-            return new CertBag(bagValue, decoded);
+            return new Pkcs12CertBag(bagValue, decoded);
         }
     }
 }

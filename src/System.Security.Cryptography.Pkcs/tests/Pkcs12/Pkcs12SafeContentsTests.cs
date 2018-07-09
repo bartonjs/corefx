@@ -48,7 +48,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         public static void AddBagDisallowedInReadOnly()
         {
             Pkcs12SafeContents contents = MakeReadonly(new Pkcs12SafeContents());
-            CertBag certBag = new CertBag(s_zeroOid, s_derNull);
+            Pkcs12CertBag certBag = new Pkcs12CertBag(s_zeroOid, s_derNull);
 
             Assert.True(contents.IsReadOnly);
             Assert.Throws<InvalidOperationException>(() => contents.AddSafeBag(certBag));

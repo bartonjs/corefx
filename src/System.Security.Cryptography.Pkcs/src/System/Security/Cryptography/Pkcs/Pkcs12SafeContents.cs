@@ -71,14 +71,14 @@ namespace System.Security.Cryptography.Pkcs
             _bags.Add(safeBag);
         }
 
-        public CertBag AddCertificate(X509Certificate2 certificate)
+        public Pkcs12CertBag AddCertificate(X509Certificate2 certificate)
         {
             if (certificate == null)
                 throw new ArgumentNullException(nameof(certificate));
             if (IsReadOnly)
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
 
-            var bag = new CertBag(certificate);
+            var bag = new Pkcs12CertBag(certificate);
             AddSafeBag(bag);
             return bag;
         }
@@ -272,7 +272,7 @@ namespace System.Security.Cryptography.Pkcs
                             bag = new ShroudedKeyBag(bagValue);
                             break;
                         case Oids.Pkcs12CertBag:
-                            bag = CertBag.DecodeValue(bagValue);
+                            bag = Pkcs12CertBag.DecodeValue(bagValue);
                             break;
                         case Oids.Pkcs12CrlBag:
                             // Known, but no first-class support currently.

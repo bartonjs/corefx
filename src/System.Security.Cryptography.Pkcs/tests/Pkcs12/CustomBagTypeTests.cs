@@ -53,7 +53,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.Equal(1, bags.Count);
 
             Pkcs12SafeBag bag = bags[0];
-            Assert.IsNotType<CertBag>(bag);
+            Assert.IsNotType<Pkcs12CertBag>(bag);
             Assert.IsNotType<KeyBag>(bag);
             Assert.IsNotType<SecretBag>(bag);
             Assert.IsNotType<ShroudedKeyBag>(bag);

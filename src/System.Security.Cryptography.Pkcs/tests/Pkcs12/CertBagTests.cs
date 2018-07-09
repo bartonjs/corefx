@@ -18,14 +18,14 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         {
             AssertExtensions.Throws<ArgumentNullException>(
                 "certificateType",
-                () => new CertBag(null, ReadOnlyMemory<byte>.Empty));
+                () => new Pkcs12CertBag(null, ReadOnlyMemory<byte>.Empty));
         }
 
         [Fact]
         public static void InvalidCertificateTypeVerifiedInCtor()
         {
             Assert.ThrowsAny<CryptographicException>(
-                () => new CertBag(new Oid(null, null), s_derNull));
+                () => new Pkcs12CertBag(new Oid(null, null), s_derNull));
         }
 
         [Fact]
@@ -33,7 +33,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         {
             using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.GetCertificate())
             {
-                var certBag = new CertBag(s_x509TypeOid, cert.RawData);
+                var certBag = new Pkcs12CertBag(s_x509TypeOid, cert.RawData);
 
                 Assert.True(certBag.IsX509Certificate, "certBag.IsX509Certificate");
                 Assert.ThrowsAny<CryptographicException>(() => certBag.GetCertificate());
@@ -44,7 +44,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         public static void OidCtorPreservesFriendlyName()
         {
             Oid oid = new Oid(Oids.Pkcs7Data, "Hello");
-            var certBag = new CertBag(oid, s_derNull);
+            var certBag = new Pkcs12CertBag(oid, s_derNull);
             Oid firstCall = certBag.GetCertificateType();
             Oid secondCall = certBag.GetCertificateType();
 
@@ -64,7 +64,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         [InlineData("1.2.840.113549.1.9.22.11", false)]
         public static void VerifyIsX509(string oidValue, bool expectedValue)
         {
-            var certBag = new CertBag(new Oid(oidValue), s_derNull);
+            var certBag = new Pkcs12CertBag(new Oid(oidValue), s_derNull);
 
             if (expectedValue)
             {
@@ -84,7 +84,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             using (X509Certificate2 cert = Certificates.RSAKeyTransferCapi1.GetCertificate())
             {
                 Pkcs12SafeContents contents = new Pkcs12SafeContents();
-                CertBag certBag = contents.AddCertificate(cert);
+                Pkcs12CertBag certBag = contents.AddCertificate(cert);
 
                 using (X509Certificate2 extracted = certBag.GetCertificate())
                 {
@@ -117,7 +117,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         public static void EncodedCertificateMustBeValidBer(string inputHex, bool expectSuccess)
         {
             byte[] data = inputHex.HexToByteArray();
-            Func<CertBag> func = () => new CertBag(s_x509TypeOid, data);
+            Func<Pkcs12CertBag> func = () => new Pkcs12CertBag(s_x509TypeOid, data);
 
             if (!expectSuccess)
             {
