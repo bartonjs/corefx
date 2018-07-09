@@ -29,7 +29,7 @@ namespace System.Security.Cryptography.Pkcs
                 throw new ArgumentNullException(nameof(pbeParameters));
             if (pbeParameters.IterationCount < 1)
                 throw new ArgumentOutOfRangeException(nameof(pbeParameters.IterationCount));
-            if (safeContents.DataConfidentialityMode != Pkcs12SafeContents.ConfidentialityMode.None)
+            if (safeContents.ConfidentialityMode != Pkcs12ConfidentialityMode.None)
                 throw new ArgumentException(SR.Cryptography_Pkcs12_CannotProcessEncryptedSafeContents, nameof(safeContents));
             if (IsSealed)
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_PfxIsSealed);
@@ -65,7 +65,7 @@ namespace System.Security.Cryptography.Pkcs
                 throw new ArgumentNullException(nameof(pbeParameters));
             if (pbeParameters.IterationCount < 1)
                 throw new ArgumentOutOfRangeException(nameof(pbeParameters.IterationCount));
-            if (safeContents.DataConfidentialityMode != Pkcs12SafeContents.ConfidentialityMode.None)
+            if (safeContents.ConfidentialityMode != Pkcs12ConfidentialityMode.None)
                 throw new ArgumentException(SR.Cryptography_Pkcs12_CannotProcessEncryptedSafeContents, nameof(safeContents));
             if (IsSealed)
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_PfxIsSealed);

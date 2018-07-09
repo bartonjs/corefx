@@ -29,8 +29,8 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.Same(authSafe, info.AuthenticatedSafe);
             Assert.Equal(2, authSafe.Count);
 
-            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.None, authSafe[0].DataConfidentialityMode);
-            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.None, authSafe[1].DataConfidentialityMode);
+            Assert.Equal(Pkcs12ConfidentialityMode.None, authSafe[0].ConfidentialityMode);
+            Assert.Equal(Pkcs12ConfidentialityMode.None, authSafe[1].ConfidentialityMode);
 
             List<Pkcs12SafeBag> safe0Bags = new List<Pkcs12SafeBag>(authSafe[0].GetBags());
 
@@ -115,15 +115,15 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.Same(authSafe, info.AuthenticatedSafe);
             Assert.Equal(2, authSafe.Count);
 
-            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.Password, authSafe[0].DataConfidentialityMode);
-            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.None, authSafe[1].DataConfidentialityMode);
+            Assert.Equal(Pkcs12ConfidentialityMode.Password, authSafe[0].ConfidentialityMode);
+            Assert.Equal(Pkcs12ConfidentialityMode.None, authSafe[1].ConfidentialityMode);
 
             Assert.ThrowsAny<CryptographicException>(
                 () => authSafe[0].Decrypt(loader.Password.AsSpan().Slice(1)));
 
-            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.Password, authSafe[0].DataConfidentialityMode);
+            Assert.Equal(Pkcs12ConfidentialityMode.Password, authSafe[0].ConfidentialityMode);
             authSafe[0].Decrypt(loader.Password);
-            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.None, authSafe[0].DataConfidentialityMode);
+            Assert.Equal(Pkcs12ConfidentialityMode.None, authSafe[0].ConfidentialityMode);
 
             List<Pkcs12SafeBag> safe0Bags = new List<Pkcs12SafeBag>(authSafe[0].GetBags());
             Assert.Equal(1, safe0Bags.Count);

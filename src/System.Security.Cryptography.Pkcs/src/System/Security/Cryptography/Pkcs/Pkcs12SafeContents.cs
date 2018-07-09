@@ -18,18 +18,18 @@ namespace System.Security.Cryptography.Pkcs
         private ReadOnlyMemory<byte> _encrypted;
         private List<Pkcs12SafeBag> _bags;
 
-        public ConfidentialityMode DataConfidentialityMode { get; private set; }
+        public Pkcs12ConfidentialityMode ConfidentialityMode { get; private set; }
         public bool IsReadOnly { get; }
 
         public Pkcs12SafeContents()
         {
-            DataConfidentialityMode = ConfidentialityMode.None;
+            ConfidentialityMode = Pkcs12ConfidentialityMode.None;
         }
 
         internal Pkcs12SafeContents(ReadOnlyMemory<byte> serialized)
         {
             IsReadOnly = true;
-            DataConfidentialityMode = ConfidentialityMode.None;
+            ConfidentialityMode = Pkcs12ConfidentialityMode.None;
             _bags = ReadBags(serialized);
         }
 
@@ -40,15 +40,15 @@ namespace System.Security.Cryptography.Pkcs
             switch (contentInfoAsn.ContentType)
             {
                 case Oids.Pkcs7Encrypted:
-                    DataConfidentialityMode = ConfidentialityMode.Password;
+                    ConfidentialityMode = Pkcs12ConfidentialityMode.Password;
                     _encrypted = contentInfoAsn.Content;
                     break;
                 case Oids.Pkcs7Enveloped:
-                    DataConfidentialityMode = ConfidentialityMode.PublicKey;
+                    ConfidentialityMode = Pkcs12ConfidentialityMode.PublicKey;
                     _encrypted = contentInfoAsn.Content;
                     break;
                 case Oids.Pkcs7Data:
-                    DataConfidentialityMode = ConfidentialityMode.None;
+                    ConfidentialityMode = Pkcs12ConfidentialityMode.None;
                     _bags = ReadBags(Helpers.DecodeOctetString(contentInfoAsn.Content));
                     break;
                 default:
@@ -100,7 +100,7 @@ namespace System.Security.Cryptography.Pkcs
         {
             if (safeContents == null)
                 throw new ArgumentNullException(nameof(safeContents));
-            if (safeContents.DataConfidentialityMode != ConfidentialityMode.None)
+            if (safeContents.ConfidentialityMode != Pkcs12ConfidentialityMode.None)
                 throw new ArgumentException(SR.Cryptography_Pkcs12_CannotProcessEncryptedSafeContents, nameof(safeContents));
             if (IsReadOnly)
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
@@ -169,13 +169,13 @@ namespace System.Security.Cryptography.Pkcs
 
         private void Decrypt(ReadOnlySpan<char> password, ReadOnlySpan<byte> passwordBytes)
         {
-            if (DataConfidentialityMode != ConfidentialityMode.Password)
+            if (ConfidentialityMode != Pkcs12ConfidentialityMode.Password)
             {
                 throw new InvalidOperationException(
                     SR.Format(
                         SR.Cryptography_Pkcs12_WrongModeForDecrypt,
-                        ConfidentialityMode.Password,
-                        DataConfidentialityMode));
+                        Pkcs12ConfidentialityMode.Password,
+                        ConfidentialityMode));
             }
 
             EncryptedDataAsn encryptedData =
@@ -226,12 +226,12 @@ namespace System.Security.Cryptography.Pkcs
 
             _encrypted = ReadOnlyMemory<byte>.Empty;
             _bags = bags;
-            DataConfidentialityMode = ConfidentialityMode.None;
+            ConfidentialityMode = Pkcs12ConfidentialityMode.None;
         }
 
         public IEnumerable<Pkcs12SafeBag> GetBags()
         {
-            if (DataConfidentialityMode != ConfidentialityMode.None)
+            if (ConfidentialityMode != Pkcs12ConfidentialityMode.None)
             {
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsEncrypted);
             }
@@ -391,15 +391,15 @@ namespace System.Security.Cryptography.Pkcs
         {
             AsnWriter writer;
 
-            if (DataConfidentialityMode == ConfidentialityMode.Password ||
-                DataConfidentialityMode == ConfidentialityMode.PublicKey)
+            if (ConfidentialityMode == Pkcs12ConfidentialityMode.Password ||
+                ConfidentialityMode == Pkcs12ConfidentialityMode.PublicKey)
             {
                 writer = new AsnWriter(AsnEncodingRules.BER);
                 writer.WriteEncodedValue(_encrypted);
                 return writer;
             }
 
-            Debug.Assert(DataConfidentialityMode == ConfidentialityMode.None);
+            Debug.Assert(ConfidentialityMode == Pkcs12ConfidentialityMode.None);
 
             writer = new AsnWriter(AsnEncodingRules.BER);
 
@@ -425,19 +425,11 @@ namespace System.Security.Cryptography.Pkcs
             }
         }
 
-        public enum ConfidentialityMode
-        {
-            Unknown = 0,
-            None = 1,
-            Password = 2,
-            PublicKey = 3,
-        }
-
         internal ContentInfoAsn EncodeToContentInfo()
         {
             using (AsnWriter contentsWriter = Encode())
             {
-                if (DataConfidentialityMode == ConfidentialityMode.None)
+                if (ConfidentialityMode == Pkcs12ConfidentialityMode.None)
                 {
                     using (AsnWriter valueWriter = new AsnWriter(AsnEncodingRules.DER))
                     {
@@ -451,7 +443,7 @@ namespace System.Security.Cryptography.Pkcs
                     }
                 }
 
-                if (DataConfidentialityMode == ConfidentialityMode.Password)
+                if (ConfidentialityMode == Pkcs12ConfidentialityMode.Password)
                 {
                     return new ContentInfoAsn
                     {
@@ -460,7 +452,7 @@ namespace System.Security.Cryptography.Pkcs
                     };
                 }
 
-                if (DataConfidentialityMode == ConfidentialityMode.PublicKey)
+                if (ConfidentialityMode == Pkcs12ConfidentialityMode.PublicKey)
                 {
                     return new ContentInfoAsn
                     {
@@ -469,7 +461,7 @@ namespace System.Security.Cryptography.Pkcs
                     };
                 }
 
-                Debug.Fail($"No handler for {DataConfidentialityMode}");
+                Debug.Fail($"No handler for {ConfidentialityMode}");
                 throw new CryptographicException();
             }
         }

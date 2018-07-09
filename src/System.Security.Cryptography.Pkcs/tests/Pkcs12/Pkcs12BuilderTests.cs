@@ -62,8 +62,8 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Pkcs12SafeContents readContents = authSafe[0];
 
             Assert.Equal(
-                Pkcs12SafeContents.ConfidentialityMode.Password,
-                readContents.DataConfidentialityMode);
+                Pkcs12ConfidentialityMode.Password,
+                readContents.ConfidentialityMode);
 
             if (encryptBytes)
             {
@@ -75,8 +75,8 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             }
 
             Assert.Equal(
-                Pkcs12SafeContents.ConfidentialityMode.None,
-                readContents.DataConfidentialityMode);
+                Pkcs12ConfidentialityMode.None,
+                readContents.ConfidentialityMode);
 
             List<Pkcs12SafeBag> bags = readContents.GetBags().ToList();
             Assert.Equal(1, bags.Count);

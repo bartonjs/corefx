@@ -40,8 +40,8 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.NotSame(readContents, builtContents);
 
             Assert.Equal(
-                Pkcs12SafeContents.ConfidentialityMode.None,
-                readContents.DataConfidentialityMode);
+                Pkcs12ConfidentialityMode.None,
+                readContents.ConfidentialityMode);
 
             Assert.True(readContents.IsReadOnly);
             
@@ -103,8 +103,8 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Pkcs12SafeContents readContents = safeContentsBag.SafeContents;
 
             Assert.Equal(
-                Pkcs12SafeContents.ConfidentialityMode.None,
-                readContents.DataConfidentialityMode);
+                Pkcs12ConfidentialityMode.None,
+                readContents.ConfidentialityMode);
 
             Assert.True(readContents.IsReadOnly);
 

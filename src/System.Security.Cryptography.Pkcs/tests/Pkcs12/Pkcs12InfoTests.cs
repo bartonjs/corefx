@@ -53,8 +53,8 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Pkcs12SafeContents firstSafe = safes[0];
             Pkcs12SafeContents secondSafe = safes[1];
 
-            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.None, firstSafe.DataConfidentialityMode);
-            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.None, secondSafe.DataConfidentialityMode);
+            Assert.Equal(Pkcs12ConfidentialityMode.None, firstSafe.ConfidentialityMode);
+            Assert.Equal(Pkcs12ConfidentialityMode.None, secondSafe.ConfidentialityMode);
 
             Assert.True(firstSafe.IsReadOnly, "firstSafe.IsReadOnly");
             Assert.True(secondSafe.IsReadOnly, "secondSafe.IsReadOnly");
@@ -132,12 +132,12 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.Equal(1, authSafes.Count);
 
             Pkcs12SafeContents authSafe = authSafes[0];
-            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.Password, authSafe.DataConfidentialityMode);
+            Assert.Equal(Pkcs12ConfidentialityMode.Password, authSafe.ConfidentialityMode);
             // Wrong password
             Assert.ThrowsAny<CryptographicException>(() => authSafe.Decrypt(ReadOnlySpan<char>.Empty));
             authSafe.Decrypt(Pkcs12Documents.OracleWalletPassword);
 
-            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.None, authSafe.DataConfidentialityMode);
+            Assert.Equal(Pkcs12ConfidentialityMode.None, authSafe.ConfidentialityMode);
 
             List<Pkcs12SafeBag> bags = authSafe.GetBags().ToList();
             Assert.Equal(4, bags.Count);

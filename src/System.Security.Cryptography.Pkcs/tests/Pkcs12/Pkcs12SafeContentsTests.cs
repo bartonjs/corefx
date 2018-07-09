@@ -23,7 +23,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         public static void StartsInReadWriteNoConfidentialityMode()
         {
             Pkcs12SafeContents contents = new Pkcs12SafeContents();
-            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.None, contents.DataConfidentialityMode);
+            Assert.Equal(Pkcs12ConfidentialityMode.None, contents.ConfidentialityMode);
             Assert.False(contents.IsReadOnly);
         }
 
@@ -217,7 +217,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 contents = MakeReadonly(contents);
             }
 
-            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.None, contents.DataConfidentialityMode);
+            Assert.Equal(Pkcs12ConfidentialityMode.None, contents.ConfidentialityMode);
             Assert.Throws<InvalidOperationException>(() => contents.Decrypt("test"));
         }
 
@@ -230,8 +230,8 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Pkcs12SafeContents firstContents = info.AuthenticatedSafe[0];
 
             Assert.Equal(
-                Pkcs12SafeContents.ConfidentialityMode.Password,
-                firstContents.DataConfidentialityMode);
+                Pkcs12ConfidentialityMode.Password,
+                firstContents.ConfidentialityMode);
 
             // This password experimentally encounters a PKCS7 padding verification error.
             Assert.ThrowsAny<CryptographicException>(() => firstContents.Decrypt("000"));
@@ -249,8 +249,8 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Pkcs12SafeContents firstContents = info.AuthenticatedSafe[0];
 
             Assert.Equal(
-                Pkcs12SafeContents.ConfidentialityMode.Password,
-                firstContents.DataConfidentialityMode);
+                Pkcs12ConfidentialityMode.Password,
+                firstContents.ConfidentialityMode);
 
             Assert.Throws<InvalidOperationException>(() => firstContents.GetBags());
         }

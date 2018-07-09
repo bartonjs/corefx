@@ -47,7 +47,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.Equal(1, allContents.Count);
 
             Pkcs12SafeContents contents = allContents[0];
-            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.None, contents.DataConfidentialityMode);
+            Assert.Equal(Pkcs12ConfidentialityMode.None, contents.ConfidentialityMode);
 
             List<Pkcs12SafeBag> bags = contents.GetBags().ToList();
             Assert.Equal(1, bags.Count);

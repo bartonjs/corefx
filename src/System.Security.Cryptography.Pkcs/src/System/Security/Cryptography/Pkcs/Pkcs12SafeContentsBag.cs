@@ -19,7 +19,7 @@ namespace System.Security.Cryptography.Pkcs
         internal static Pkcs12SafeContentsBag Create(Pkcs12SafeContents copyFrom)
         {
             Debug.Assert(copyFrom != null);
-            Debug.Assert(copyFrom.DataConfidentialityMode == Pkcs12SafeContents.ConfidentialityMode.None);
+            Debug.Assert(copyFrom.ConfidentialityMode == Pkcs12ConfidentialityMode.None);
 
             using (AsnWriter writer = copyFrom.Encode())
             {

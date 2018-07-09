@@ -30,6 +30,13 @@ namespace System.Security.Cryptography.Pkcs
         public Oid GetCertificateType() => throw null;
         public X509Certificate2 GetCertificate() => throw null;
     }
+    public enum Pkcs12ConfidentialityMode
+    {
+        Unknown = 0,
+        None = 1,
+        Password = 2,
+        PublicKey = 3,
+    }
     public sealed partial class Pkcs12Info
     {
         private Pkcs12Info() { }
@@ -61,7 +68,7 @@ namespace System.Security.Cryptography.Pkcs
     }
     public sealed partial class Pkcs12SafeContents
     {
-        public ConfidentialityMode DataConfidentialityMode { get; }
+        public Pkcs12ConfidentialityMode ConfidentialityMode { get; }
         public bool IsReadOnly { get; }
         public void AddSafeBag(Pkcs12SafeBag safeBag) => throw null;
         public Pkcs12CertBag AddCertificate(X509Certificate2 certificate) => throw null;
@@ -73,13 +80,6 @@ namespace System.Security.Cryptography.Pkcs
         public void Decrypt(ReadOnlySpan<byte> passwordBytes) => throw null;
         public void Decrypt(ReadOnlySpan<char> password) => throw null;
         public IEnumerable<Pkcs12SafeBag> GetBags() => throw null;
-        public enum ConfidentialityMode
-        {
-            Unknown = 0,
-            None = 1,
-            Password = 2,
-            PublicKey = 3,
-        }
     }
     public sealed partial class Pkcs12SafeContentsBag : Pkcs12SafeBag
     {
