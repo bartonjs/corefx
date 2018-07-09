@@ -211,5 +211,17 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.InRange(totalContents, 4, 127);
             return outputBuf.Slice(0, totalContents + 2).ByteArrayToHex();
         }
+
+        [Fact]
+        public static void VerifyMacWithNoMac()
+        {
+            const string FullyEmptyHex =
+                "3016020103301106092A864886F70D010701A00404023000";
+
+            Pkcs12Info info = Pkcs12Info.Decode(FullyEmptyHex.HexToByteArray(), out _, skipCopy: true);
+            Assert.Equal(Pkcs12IntegrityMode.None, info.IntegrityMode);
+
+            Assert.Throws<InvalidOperationException>(() => info.VerifyMac("hi"));
+        }
     }
 }

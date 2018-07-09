@@ -260,7 +260,10 @@
     <value>New SafeBag values cannot be added to a Pkcs12SafeContents that was read from existing data.</value>
   </data>
   <data name="Cryptography_Pkcs12_WrongModeForDecrypt" xml:space="preserve">
-   <value>This decryption operation applies to 'ConfidentialityMode.{0}', but the target object is in 'ConfidentialityMode.{1}'.</value>
+   <value>This decryption operation applies to 'Pkcs12ConfidentialityMode.{0}', but the target object is in 'Pkcs12ConfidentialityMode.{1}'.</value>
+  </data>
+  <data name="Cryptography_Pkcs12_WrongModeForVerify" xml:space="preserve">
+   <value>This verification operation applies to 'Pkcs12IntegrityMode.{0}', but the target object is in 'Pkcs12IntegrityMode.{1}'.</value>
   </data>
   <data name="Cryptography_Pkcs_InvalidSignatureParameters" xml:space="preserve">
     <value>Invalid signature paramters.</value>

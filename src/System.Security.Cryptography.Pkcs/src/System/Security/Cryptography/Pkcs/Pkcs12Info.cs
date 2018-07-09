@@ -32,7 +32,11 @@ namespace System.Security.Cryptography.Pkcs
         {
             if (IntegrityMode != Pkcs12IntegrityMode.Password)
             {
-                return false;
+                throw new InvalidOperationException(
+                    SR.Format(
+                        SR.Cryptography_Pkcs12_WrongModeForVerify,
+                        Pkcs12IntegrityMode.Password,
+                        IntegrityMode));
             }
 
             Debug.Assert(_decoded.MacData.HasValue);
