@@ -83,7 +83,7 @@ namespace System.Security.Cryptography.Pkcs
             return bag;
         }
 
-        public KeyBag AddKeyUnencrypted(AsymmetricAlgorithm key)
+        public Pkcs12KeyBag AddKeyUnencrypted(AsymmetricAlgorithm key)
         {
             if (key == null)
                 throw new ArgumentNullException(nameof(key));
@@ -91,7 +91,7 @@ namespace System.Security.Cryptography.Pkcs
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
 
             byte[] pkcs8PrivateKey = key.ExportPkcs8PrivateKey();
-            var bag = new KeyBag(pkcs8PrivateKey, skipCopy: true);
+            var bag = new Pkcs12KeyBag(pkcs8PrivateKey, skipCopy: true);
             AddSafeBag(bag);
             return bag;
         }
@@ -266,7 +266,7 @@ namespace System.Security.Cryptography.Pkcs
                     switch (serializedBags[i].BagId)
                     {
                         case Oids.Pkcs12KeyBag:
-                            bag = new KeyBag(bagValue);
+                            bag = new Pkcs12KeyBag(bagValue);
                             break;
                         case Oids.Pkcs12ShroudedKeyBag:
                             bag = new ShroudedKeyBag(bagValue);

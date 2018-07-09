@@ -65,7 +65,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.Equal(1, firstContents.Length);
             Assert.Equal(1, secondContents.Length);
 
-            KeyBag keyBag = Assert.IsType<KeyBag>(firstContents[0]);
+            Pkcs12KeyBag keyBag = Assert.IsType<Pkcs12KeyBag>(firstContents[0]);
             Pkcs12CertBag certBag = Assert.IsType<Pkcs12CertBag>(secondContents[0]);
 
             CryptographicAttributeObjectCollection keyBagAttrs = keyBag.Attributes;

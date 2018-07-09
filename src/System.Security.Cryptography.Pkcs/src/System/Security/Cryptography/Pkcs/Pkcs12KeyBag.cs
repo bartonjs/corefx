@@ -4,9 +4,9 @@
 
 namespace System.Security.Cryptography.Pkcs
 {
-    public sealed class KeyBag : Pkcs12SafeBag
+    public sealed class Pkcs12KeyBag : Pkcs12SafeBag
     {
-        public KeyBag(ReadOnlyMemory<byte> pkcs8PrivateKey, bool skipCopy=false)
+        public Pkcs12KeyBag(ReadOnlyMemory<byte> pkcs8PrivateKey, bool skipCopy=false)
             : base(Oids.Pkcs12KeyBag, pkcs8PrivateKey, skipCopy)
         {
         }

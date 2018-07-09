@@ -11,11 +11,6 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace System.Security.Cryptography.Pkcs
 {
-    public sealed partial class KeyBag : Pkcs12SafeBag
-    {
-        public KeyBag(ReadOnlyMemory<byte> pkcs8PrivateKey, bool skipCopy=false) : base(null, default) { }
-        public ReadOnlyMemory<byte> Pkcs8PrivateKey { get; }
-    }
     public sealed partial class Pkcs12Builder
     {
         public bool IsSealed { get; }
@@ -50,6 +45,11 @@ namespace System.Security.Cryptography.Pkcs
             PublicKey = 3,
         }
     }
+    public sealed partial class Pkcs12KeyBag : Pkcs12SafeBag
+    {
+        public Pkcs12KeyBag(ReadOnlyMemory<byte> pkcs8PrivateKey, bool skipCopy = false) : base(null, default) { }
+        public ReadOnlyMemory<byte> Pkcs8PrivateKey { get; }
+    }
     public abstract partial class Pkcs12SafeBag
     {
         protected Pkcs12SafeBag(string bagIdValue, ReadOnlyMemory<byte> encodedBagValue, bool skipCopy=false) { }
@@ -65,7 +65,7 @@ namespace System.Security.Cryptography.Pkcs
         public bool IsReadOnly { get; }
         public void AddSafeBag(Pkcs12SafeBag safeBag) => throw null;
         public Pkcs12CertBag AddCertificate(X509Certificate2 certificate) => throw null;
-        public KeyBag AddKeyUnencrypted(AsymmetricAlgorithm key) => throw null;
+        public Pkcs12KeyBag AddKeyUnencrypted(AsymmetricAlgorithm key) => throw null;
         public SafeContentsBag AddNestedContents(Pkcs12SafeContents safeContents) => throw null;
         public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<byte> passwordBytes, PbeParameters pbeParameters) => throw null;

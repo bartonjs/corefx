@@ -17,7 +17,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             using (RSA rsa = RSA.Create(512))
             {
                 Pkcs12SafeContents contents = new Pkcs12SafeContents();
-                KeyBag keyBag = contents.AddKeyUnencrypted(rsa);
+                Pkcs12KeyBag keyBag = contents.AddKeyUnencrypted(rsa);
 
                 using (RSA rsa2 = RSA.Create())
                 {
@@ -50,7 +50,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         [InlineData(true)]
         public static void SkipCopyHonored(bool skipCopy)
         {
-            KeyBag keyBag = new KeyBag(s_derNull, skipCopy);
+            Pkcs12KeyBag keyBag = new Pkcs12KeyBag(s_derNull, skipCopy);
 
             if (skipCopy)
             {
@@ -90,7 +90,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         public static void CtorEnsuresValidBerValue(string inputHex, bool expectSuccess)
         {
             byte[] data = inputHex.HexToByteArray();
-            Func<KeyBag> func = () => new KeyBag(data, skipCopy: true);
+            Func<Pkcs12KeyBag> func = () => new Pkcs12KeyBag(data, skipCopy: true);
 
             if (!expectSuccess)
             {

@@ -325,10 +325,10 @@
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\SafeBagAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Asn1\SecretBagAsn.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\CmsSignature.DSA.cs" />
-    <Compile Include="System\Security\Cryptography\Pkcs\KeyBag.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12Builder.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12CertBag.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12Info.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12KeyBag.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12SafeBag.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12SafeContents.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs8PrivateKeyInfo.cs" />
