@@ -51,7 +51,7 @@ namespace System.Security.Cryptography.Pkcs
 
         public byte[] Encode()
         {
-            using (AsnWriter writer = EncodeToWriter())
+            using (AsnWriter writer = EncodeToNewWriter())
             {
                 return writer.Encode();
             }
@@ -69,7 +69,7 @@ namespace System.Security.Cryptography.Pkcs
 
         public bool TryEncode(Span<byte> destination, out int bytesWritten)
         {
-            using (AsnWriter writer = EncodeToWriter())
+            using (AsnWriter writer = EncodeToNewWriter())
             {
                 ReadOnlySpan<byte> encoded = writer.EncodeAsSpan();
 
@@ -84,40 +84,45 @@ namespace System.Security.Cryptography.Pkcs
                 return true;
             }
         }
+        
+        internal void EncodeTo(AsnWriter writer)
+        {
+            writer.PushSequence();
 
-        private AsnWriter EncodeToWriter()
+            writer.WriteObjectIdentifier(_bagIdValue);
+
+            Asn1Tag contextSpecific0 = new Asn1Tag(TagClass.ContextSpecific, 0);
+            writer.PushSequence(contextSpecific0);
+            writer.WriteEncodedValue(EncodedBagValue);
+            writer.PopSequence(contextSpecific0);
+
+            if (_attributes?.Count > 0)
+            {
+                List<AttributeAsn> attrs = CmsSigner.BuildAttributes(_attributes);
+
+                writer.PushSetOf();
+
+                foreach (AttributeAsn attr in attrs)
+                {
+                    writer.PushSequence();
+                    writer.WriteObjectIdentifier(attr.AttrType);
+                    writer.WriteEncodedValue(attr.AttrValues);
+                    writer.PopSequence();
+                }
+
+                writer.PopSetOf();
+            }
+
+            writer.PopSequence();
+        }
+
+        private AsnWriter EncodeToNewWriter()
         {
             AsnWriter writer = new AsnWriter(AsnEncodingRules.BER);
 
             try
             {
-                writer.PushSequence();
-
-                writer.WriteObjectIdentifier(_bagIdValue);
-
-                Asn1Tag contextSpecific0 = new Asn1Tag(TagClass.ContextSpecific, 0);
-                writer.PushSequence(contextSpecific0);
-                writer.WriteEncodedValue(EncodedBagValue);
-                writer.PopSequence(contextSpecific0);
-
-                if (_attributes?.Count > 0)
-                {
-                    List<AttributeAsn> attrs = CmsSigner.BuildAttributes(_attributes);
-
-                    writer.PushSetOf();
-
-                    foreach (AttributeAsn attr in attrs)
-                    {
-                        writer.PushSequence();
-                        writer.WriteObjectIdentifier(attr.AttrType);
-                        writer.WriteEncodedValue(attr.AttrValues);
-                        writer.PopSequence();
-                    }
-
-                    writer.PopSetOf();
-                }
-
-                writer.PopSequence();
+                EncodeTo(writer);
                 return writer;
             }
             catch

@@ -4,7 +4,6 @@
 
 using System.Diagnostics;
 using System.Security.Cryptography.Asn1;
-using System.Security.Cryptography.Pkcs.Asn1;
 
 namespace System.Security.Cryptography.Pkcs
 {
@@ -17,102 +16,24 @@ namespace System.Security.Cryptography.Pkcs
         {
         }
 
-        internal static SafeContentsBag Decode(ReadOnlyMemory<byte> encoded)
+        internal static SafeContentsBag Create(Pkcs12SafeContents copyFrom)
         {
-            ContentInfoAsn contentInfo =
-                AsnSerializer.Deserialize<ContentInfoAsn>(encoded, AsnEncodingRules.BER);
+            Debug.Assert(copyFrom != null);
+            Debug.Assert(copyFrom.DataConfidentialityMode == Pkcs12SafeContents.ConfidentialityMode.None);
 
-            Pkcs12SafeContents contents = new Pkcs12SafeContents(contentInfo);
+            using (AsnWriter writer = copyFrom.Encode())
+            {
+                return Decode(writer.Encode());
+            }
+        }
 
-            return new SafeContentsBag(encoded)
+        internal static SafeContentsBag Decode(ReadOnlyMemory<byte> encodedValue)
+        {
+            Pkcs12SafeContents contents = new Pkcs12SafeContents(encodedValue);
+
+            return new SafeContentsBag(encodedValue)
             {
                 SafeContents = contents
-            };
-        }
-
-        public static SafeContentsBag CreateEncrypted(
-            Pkcs12SafeContents safeContents,
-            ReadOnlySpan<byte> passwordBytes,
-            PbeParameters pbeParameters)
-        {
-            if (safeContents == null)
-                throw new ArgumentNullException(nameof(safeContents));
-            if (pbeParameters == null)
-                throw new ArgumentNullException(nameof(pbeParameters));
-            if (pbeParameters.IterationCount < 1)
-                throw new ArgumentOutOfRangeException(nameof(pbeParameters.IterationCount));
-
-            PasswordBasedEncryption.ValidatePbeParameters(
-                pbeParameters,
-                ReadOnlySpan<char>.Empty,
-                passwordBytes);
-
-            return CreateEncrypted(
-                safeContents,
-                ReadOnlySpan<char>.Empty,
-                passwordBytes,
-                pbeParameters);
-        }
-
-        public static SafeContentsBag CreateEncrypted(
-            Pkcs12SafeContents safeContents,
-            ReadOnlySpan<char> password,
-            PbeParameters pbeParameters)
-        {
-            if (safeContents == null)
-                throw new ArgumentNullException(nameof(safeContents));
-            if (pbeParameters == null)
-                throw new ArgumentNullException(nameof(pbeParameters));
-            if (pbeParameters.IterationCount < 1)
-                throw new ArgumentOutOfRangeException(nameof(pbeParameters.IterationCount));
-
-            PasswordBasedEncryption.ValidatePbeParameters(
-                pbeParameters,
-                password,
-                ReadOnlySpan<byte>.Empty);
-
-            return CreateEncrypted(
-                safeContents,
-                password,
-                ReadOnlySpan<byte>.Empty,
-                pbeParameters);
-        }
-
-        private static SafeContentsBag CreateEncrypted(
-            Pkcs12SafeContents safeContents,
-            ReadOnlySpan<char> password,
-            ReadOnlySpan<byte> passwordBytes,
-            PbeParameters pbeParameters)
-        {
-            Debug.Assert(safeContents != null);
-            Debug.Assert(pbeParameters != null);
-
-            byte[] encrypted = safeContents.Encrypt(password, passwordBytes, pbeParameters);
-
-            Pkcs12SafeContents encryptedCopy = new Pkcs12SafeContents(
-                new ContentInfoAsn
-                {
-                    ContentType = Oids.Pkcs7Encrypted,
-                    Content = encrypted,
-                });
-
-            return new SafeContentsBag(encrypted)
-            {
-                SafeContents = encryptedCopy,
-            };
-        }
-
-        public static SafeContentsBag CreateUnencrypted(Pkcs12SafeContents safeContents)
-        {
-            if (safeContents == null)
-                throw new ArgumentNullException(nameof(safeContents));
-
-            ContentInfoAsn contentInfo = safeContents.EncodeToContentInfo();
-            Pkcs12SafeContents copy = new Pkcs12SafeContents(contentInfo);
-
-            return new SafeContentsBag(contentInfo.Content)
-            {
-                SafeContents = copy,
             };
         }
     }

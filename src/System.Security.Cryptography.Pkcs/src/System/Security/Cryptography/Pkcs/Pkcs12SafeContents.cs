@@ -26,6 +26,13 @@ namespace System.Security.Cryptography.Pkcs
             DataConfidentialityMode = ConfidentialityMode.None;
         }
 
+        internal Pkcs12SafeContents(ReadOnlyMemory<byte> serialized)
+        {
+            IsReadOnly = true;
+            DataConfidentialityMode = ConfidentialityMode.None;
+            _bags = ReadBags(serialized);
+        }
+
         internal Pkcs12SafeContents(ContentInfoAsn contentInfoAsn)
         {
             IsReadOnly = true;
@@ -85,6 +92,20 @@ namespace System.Security.Cryptography.Pkcs
 
             byte[] pkcs8PrivateKey = key.ExportPkcs8PrivateKey();
             var bag = new KeyBag(pkcs8PrivateKey, skipCopy: true);
+            AddSafeBag(bag);
+            return bag;
+        }
+
+        public SafeContentsBag AddNestedContents(Pkcs12SafeContents safeContents)
+        {
+            if (safeContents == null)
+                throw new ArgumentNullException(nameof(safeContents));
+            if (safeContents.DataConfidentialityMode != ConfidentialityMode.None)
+                throw new ArgumentException(SR.Cryptography_Pkcs12_CannotProcessEncryptedSafeContents, nameof(safeContents));
+            if (IsReadOnly)
+                throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
+
+            var bag = SafeContentsBag.Create(safeContents);
             AddSafeBag(bag);
             return bag;
         }
@@ -380,12 +401,7 @@ namespace System.Security.Cryptography.Pkcs
 
             Debug.Assert(DataConfidentialityMode == ConfidentialityMode.None);
 
-            // A shrouded key bag for RSA-1024 comes in at just under 1000 bytes.
-            // Most certificates are in the 1000-2300 byte range.
-            // Ideally we don't need to re-rent with 4kb.
-            byte[] rentedBuf = ArrayPool<byte>.Shared.Rent(4096);
             writer = new AsnWriter(AsnEncodingRules.BER);
-            int maxBytesWritten = 0;
 
             try
             {
@@ -395,19 +411,7 @@ namespace System.Security.Cryptography.Pkcs
                 {
                     foreach (Pkcs12SafeBag safeBag in _bags)
                     {
-                        int bytesWritten;
-
-                        while (!safeBag.TryEncode(rentedBuf, out bytesWritten))
-                        {
-                            CryptographicOperations.ZeroMemory(rentedBuf.AsSpan(0, maxBytesWritten));
-                            byte[] newRent = ArrayPool<byte>.Shared.Rent(rentedBuf.Length * 2);
-                            ArrayPool<byte>.Shared.Return(rentedBuf);
-                            rentedBuf = newRent;
-                            maxBytesWritten = 0;
-                        }
-
-                        maxBytesWritten = Math.Max(maxBytesWritten, bytesWritten);
-                        writer.WriteEncodedValue(rentedBuf.AsMemory(0, bytesWritten));
+                        safeBag.EncodeTo(writer);
                     }
                 }
 
@@ -418,11 +422,6 @@ namespace System.Security.Cryptography.Pkcs
             {
                 writer.Dispose();
                 throw;
-            }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(rentedBuf.AsSpan(0, maxBytesWritten));
-                ArrayPool<byte>.Shared.Return(rentedBuf);
             }
         }
 

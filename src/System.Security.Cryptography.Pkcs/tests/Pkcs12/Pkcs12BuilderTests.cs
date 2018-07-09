@@ -22,6 +22,11 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             HashAlgorithmName.SHA384,
             0x1001);
 
+        private static readonly PbeParameters s_win7Pbe = new PbeParameters(
+            PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
+            HashAlgorithmName.SHA1,
+            2048);
+
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
@@ -55,7 +60,10 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.Equal(1, authSafe.Count);
 
             Pkcs12SafeContents readContents = authSafe[0];
-            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.Password, readContents.DataConfidentialityMode);
+
+            Assert.Equal(
+                Pkcs12SafeContents.ConfidentialityMode.Password,
+                readContents.DataConfidentialityMode);
 
             if (encryptBytes)
             {
@@ -66,7 +74,9 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 readContents.Decrypt(passwordUtf8Bytes);
             }
 
-            Assert.Equal(Pkcs12SafeContents.ConfidentialityMode.None, readContents.DataConfidentialityMode);
+            Assert.Equal(
+                Pkcs12SafeContents.ConfidentialityMode.None,
+                readContents.DataConfidentialityMode);
 
             List<Pkcs12SafeBag> bags = readContents.GetBags().ToList();
             Assert.Equal(1, bags.Count);
@@ -85,11 +95,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Pkcs12Builder builder = new Pkcs12Builder();
 
             Assert.ThrowsAny<CryptographicException>(
-                () =>
-                    builder.AddSafeContentsEncrypted(
-                        contents,
-                        s_derNull.Span,
-                        new PbeParameters(PbeEncryptionAlgorithm.TripleDes3KeyPkcs12, HashAlgorithmName.SHA1, 1)));
+                () => builder.AddSafeContentsEncrypted(contents, s_derNull.Span, s_win7Pbe));
         }
 
         [Fact]
@@ -226,6 +232,38 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             byte[] encoded2 = builder2.Encode();
             Assert.Equal(encoded1.ByteArrayToHex(), encoded2.ByteArrayToHex());
+        }
+
+        [Fact]
+        public static void EncryptEncryptedSafeContents()
+        {
+            Pkcs12Builder builder1 = new Pkcs12Builder();
+            Pkcs12Builder builder2 = new Pkcs12Builder();
+
+            Pkcs12SafeContents contents = new Pkcs12SafeContents();
+            contents.AddSecret(s_zeroOid, s_derNull);
+
+            builder1.AddSafeContentsEncrypted(contents, ReadOnlySpan<byte>.Empty, s_pbkdf2Parameters);
+            builder1.SealWithoutIntegrity();
+
+            byte[] encoded = builder1.Encode();
+            Pkcs12Info info = Pkcs12Info.Decode(encoded, out _, skipCopy: true);
+            Assert.Equal(Pkcs12Info.IntegrityMode.None, info.DataIntegrityMode);
+            Assert.Equal(1, info.AuthenticatedSafe.Count);
+
+            AssertExtensions.Throws<ArgumentException>(
+                "safeContents",
+                () => builder2.AddSafeContentsEncrypted(
+                    info.AuthenticatedSafe[0],
+                    "nope",
+                    s_pbkdf2Parameters));
+
+            AssertExtensions.Throws<ArgumentException>(
+                "safeContents",
+                () => builder2.AddSafeContentsEncrypted(
+                    info.AuthenticatedSafe[0],
+                    s_derNull.Span,
+                    s_pbkdf2Parameters));
         }
 
         [Fact]

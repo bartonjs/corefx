@@ -11,6 +11,9 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 {
     public static class Pkcs12SafeContentsTests
     {
+        private static readonly Oid s_zeroOid = new Oid("0.0", "0.0");
+        private static readonly ReadOnlyMemory<byte> s_derNull = new byte[] { 0x05, 0x00 };
+
         private static readonly PbeParameters s_pbeParameters = new PbeParameters(
             PbeEncryptionAlgorithm.TripleDes3KeyPkcs12,
             HashAlgorithmName.SHA1,
@@ -45,7 +48,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         public static void AddBagDisallowedInReadOnly()
         {
             Pkcs12SafeContents contents = MakeReadonly(new Pkcs12SafeContents());
-            CertBag certBag = new CertBag(new Oid("0.0", "0.0"), new byte[] { 5, 0 });
+            CertBag certBag = new CertBag(s_zeroOid, s_derNull);
 
             Assert.True(contents.IsReadOnly);
             Assert.Throws<InvalidOperationException>(() => contents.AddSafeBag(certBag));
@@ -103,6 +106,45 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             {
                 Assert.Throws<InvalidOperationException>(() => contents.AddKeyUnencrypted(rsa));
             }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public static void AddNestedContentsDisallowsNull(bool forReadOnly)
+        {
+            Pkcs12SafeContents contents = new Pkcs12SafeContents();
+
+            if (forReadOnly)
+            {
+                contents = MakeReadonly(contents);
+            }
+
+            AssertExtensions.Throws<ArgumentNullException>(
+                "safeContents",
+                () => contents.AddNestedContents(null));
+        }
+
+        [Fact]
+        public static void AddEncryptedNestedContents()
+        {
+            Pkcs12Builder builder = new Pkcs12Builder();
+            Pkcs12SafeContents contents = new Pkcs12SafeContents();
+            contents.AddSecret(s_zeroOid, s_derNull);
+
+            builder.AddSafeContentsEncrypted(contents, "hi", s_pbeParameters);
+            builder.SealWithoutIntegrity();
+
+            byte[] encoded = builder.Encode();
+            Pkcs12Info info = Pkcs12Info.Decode(encoded, out _, skipCopy: true);
+            Assert.Equal(Pkcs12Info.IntegrityMode.None, info.DataIntegrityMode);
+            Assert.Equal(1, info.AuthenticatedSafe.Count);
+
+            Pkcs12SafeContents newContents = new Pkcs12SafeContents();
+
+            AssertExtensions.Throws<ArgumentException>(
+                "safeContents",
+                () => newContents.AddNestedContents(info.AuthenticatedSafe[0]));
         }
 
         [Theory]
@@ -218,7 +260,6 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         {
             Pkcs12Builder builder = new Pkcs12Builder();
             Pkcs12SafeContents contents = new Pkcs12SafeContents();
-            Oid oid = new Oid("0.0", "0.0");
             byte[] bigBuf = new byte[16 * 1024 + 4];
             bigBuf[0] = 0x04;
             bigBuf[1] = 0x82;
@@ -229,7 +270,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             {
                 lower = (byte)size;
                 upper = (byte)(size >> 8);
-                contents.AddSecret(oid, bigBuf.AsMemory(0, 4 + size));
+                contents.AddSecret(s_zeroOid, bigBuf.AsMemory(0, 4 + size));
             }
            
             builder.AddSafeContentsUnencrypted(contents);

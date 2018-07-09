@@ -241,6 +241,9 @@
   <data name="Cryptography_NotValidPublicOrPrivateKey" xml:space="preserve">
     <value>Key is not a valid public or private key.</value>
   </data>
+  <data name="Cryptography_Pkcs12_CannotProcessEncryptedSafeContents" xml:space="preserve">
+    <value>This operation is not valid on an encrypted or enveloped Pkcs12SafeContents.</value>
+  </data>
   <data name="Cryptography_Pkcs12_CertBagNotX509" xml:space="preserve">
     <value>The CertBag contents are not an X.509 certificate.</value>
   </data>
@@ -251,7 +254,7 @@
     <value>The Pkcs12Builder must be sealed before it can be encoded.</value>
   </data>
   <data name="Cryptography_Pkcs12_SafeContentsIsEncrypted" xml:space="preserve">
-    <value>Cannot enumerate the contents of an encrypted or enveloped SafeContents.</value>
+    <value>Cannot enumerate the contents of an encrypted or enveloped Pkcs12SafeContents.</value>
   </data>
   <data name="Cryptography_Pkcs12_SafeContentsIsReadOnly" xml:space="preserve">
     <value>New SafeBag values cannot be added to a Pkcs12SafeContents that was read from existing data.</value>
