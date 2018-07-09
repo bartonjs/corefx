@@ -32,7 +32,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             builtContents.AddSecret(s_zeroOid, new byte[] { 4, 1, 3 });
 
-            SafeContentsBag safeContentsBag = container.AddNestedContents(builtContents);
+            Pkcs12SafeContentsBag safeContentsBag = container.AddNestedContents(builtContents);
 
             builtContents.AddSecret(s_zeroOid, new byte[] { 4, 1, 4 });
 
@@ -99,7 +99,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             }
 
             Pkcs12SafeBag onlyBag = onlySafe.GetBags().Single();
-            SafeContentsBag safeContentsBag = Assert.IsType<SafeContentsBag>(onlyBag);
+            Pkcs12SafeContentsBag safeContentsBag = Assert.IsType<Pkcs12SafeContentsBag>(onlyBag);
             Pkcs12SafeContents readContents = safeContentsBag.SafeContents;
 
             Assert.Equal(

@@ -96,7 +96,7 @@ namespace System.Security.Cryptography.Pkcs
             return bag;
         }
 
-        public SafeContentsBag AddNestedContents(Pkcs12SafeContents safeContents)
+        public Pkcs12SafeContentsBag AddNestedContents(Pkcs12SafeContents safeContents)
         {
             if (safeContents == null)
                 throw new ArgumentNullException(nameof(safeContents));
@@ -105,7 +105,7 @@ namespace System.Security.Cryptography.Pkcs
             if (IsReadOnly)
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
 
-            var bag = SafeContentsBag.Create(safeContents);
+            var bag = Pkcs12SafeContentsBag.Create(safeContents);
             AddSafeBag(bag);
             return bag;
         }
@@ -281,7 +281,7 @@ namespace System.Security.Cryptography.Pkcs
                             bag = SecretBag.DecodeValue(bagValue);
                             break;
                         case Oids.Pkcs12SafeContentsBag:
-                            bag = SafeContentsBag.Decode(bagValue);
+                            bag = Pkcs12SafeContentsBag.Decode(bagValue);
                             break;
                     }
                 }

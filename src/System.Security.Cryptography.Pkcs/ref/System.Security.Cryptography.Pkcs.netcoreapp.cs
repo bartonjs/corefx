@@ -66,7 +66,7 @@ namespace System.Security.Cryptography.Pkcs
         public void AddSafeBag(Pkcs12SafeBag safeBag) => throw null;
         public Pkcs12CertBag AddCertificate(X509Certificate2 certificate) => throw null;
         public Pkcs12KeyBag AddKeyUnencrypted(AsymmetricAlgorithm key) => throw null;
-        public SafeContentsBag AddNestedContents(Pkcs12SafeContents safeContents) => throw null;
+        public Pkcs12SafeContentsBag AddNestedContents(Pkcs12SafeContents safeContents) => throw null;
         public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<byte> passwordBytes, PbeParameters pbeParameters) => throw null;
         public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue) => throw null;
@@ -80,6 +80,11 @@ namespace System.Security.Cryptography.Pkcs
             Password = 2,
             PublicKey = 3,
         }
+    }
+    public sealed partial class Pkcs12SafeContentsBag : Pkcs12SafeBag
+    {
+        private Pkcs12SafeContentsBag() : base(null, default) { }
+        public Pkcs12SafeContents SafeContents { get; }
     }
     public sealed partial class Pkcs8PrivateKeyInfo
     {
@@ -154,11 +159,6 @@ namespace System.Security.Cryptography.Pkcs
         public byte[] Encode() => throw null;
         public bool TryEncode(Span<byte> destination, out int bytesWritten) => throw null;
         public static bool TryDecode(ReadOnlyMemory<byte> encodedBytes, out Rfc3161TimestampTokenInfo timestampTokenInfo, out int bytesConsumed) { throw null; }
-    }
-    public sealed partial class SafeContentsBag : Pkcs12SafeBag
-    {
-        private SafeContentsBag() : base(null, default) { }
-        public Pkcs12SafeContents SafeContents { get; }
     }
     public sealed partial class SecretBag : Pkcs12SafeBag
     {

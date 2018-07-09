@@ -7,16 +7,16 @@ using System.Security.Cryptography.Asn1;
 
 namespace System.Security.Cryptography.Pkcs
 {
-    public sealed class SafeContentsBag : Pkcs12SafeBag
+    public sealed class Pkcs12SafeContentsBag : Pkcs12SafeBag
     {
         public Pkcs12SafeContents SafeContents { get; private set; }
 
-        private SafeContentsBag(ReadOnlyMemory<byte> encoded)
+        private Pkcs12SafeContentsBag(ReadOnlyMemory<byte> encoded)
             : base(Oids.Pkcs12SafeContentsBag, encoded)
         {
         }
 
-        internal static SafeContentsBag Create(Pkcs12SafeContents copyFrom)
+        internal static Pkcs12SafeContentsBag Create(Pkcs12SafeContents copyFrom)
         {
             Debug.Assert(copyFrom != null);
             Debug.Assert(copyFrom.DataConfidentialityMode == Pkcs12SafeContents.ConfidentialityMode.None);
@@ -27,11 +27,11 @@ namespace System.Security.Cryptography.Pkcs
             }
         }
 
-        internal static SafeContentsBag Decode(ReadOnlyMemory<byte> encodedValue)
+        internal static Pkcs12SafeContentsBag Decode(ReadOnlyMemory<byte> encodedValue)
         {
             Pkcs12SafeContents contents = new Pkcs12SafeContents(encodedValue);
 
-            return new SafeContentsBag(encodedValue)
+            return new Pkcs12SafeContentsBag(encodedValue)
             {
                 SafeContents = contents
             };
