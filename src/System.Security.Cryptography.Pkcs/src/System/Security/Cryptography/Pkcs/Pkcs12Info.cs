@@ -16,7 +16,7 @@ namespace System.Security.Cryptography.Pkcs
         private ReadOnlyMemory<byte> _authSafeContents;
 
         public ReadOnlyCollection<Pkcs12SafeContents> AuthenticatedSafe { get; private set; }
-        public IntegrityMode DataIntegrityMode { get; private set; }
+        public Pkcs12IntegrityMode IntegrityMode { get; private set; }
 
         private Pkcs12Info()
         {
@@ -24,7 +24,7 @@ namespace System.Security.Cryptography.Pkcs
 
         public bool VerifyMac(ReadOnlySpan<char> password)
         {
-            if (DataIntegrityMode != IntegrityMode.Password)
+            if (IntegrityMode != Pkcs12IntegrityMode.Password)
             {
                 return false;
             }
@@ -116,7 +116,7 @@ namespace System.Security.Cryptography.Pkcs
             }
 
             ReadOnlyMemory<byte> authSafeBytes = ReadOnlyMemory<byte>.Empty;
-            IntegrityMode mode = IntegrityMode.Unknown;
+            Pkcs12IntegrityMode mode = Pkcs12IntegrityMode.Unknown;
 
             if (pfx.AuthSafe.ContentType == Oids.Pkcs7Data)
             {
@@ -124,11 +124,11 @@ namespace System.Security.Cryptography.Pkcs
 
                 if (pfx.MacData.HasValue)
                 {
-                    mode = IntegrityMode.Password;
+                    mode = Pkcs12IntegrityMode.Password;
                 }
                 else
                 {
-                    mode = IntegrityMode.None;
+                    mode = Pkcs12IntegrityMode.None;
                 }
             }
             else if (pfx.AuthSafe.ContentType == Oids.Pkcs7Signed)
@@ -136,7 +136,7 @@ namespace System.Security.Cryptography.Pkcs
                 SignedDataAsn signedData =
                     AsnSerializer.Deserialize<SignedDataAsn>(pfx.AuthSafe.Content, AsnEncodingRules.BER);
 
-                mode = IntegrityMode.PublicKey;
+                mode = Pkcs12IntegrityMode.PublicKey;
 
                 if (signedData.EncapContentInfo.ContentType == Oids.Pkcs7Data)
                 {
@@ -149,7 +149,7 @@ namespace System.Security.Cryptography.Pkcs
                 }
             }
 
-            if (mode == IntegrityMode.Unknown)
+            if (mode == Pkcs12IntegrityMode.Unknown)
             {
                 throw new CryptographicException(SR.Cryptography_Der_Invalid_Encoding);
             }
@@ -180,18 +180,10 @@ namespace System.Security.Cryptography.Pkcs
             return new Pkcs12Info
             {
                 AuthenticatedSafe = authSafe,
-                DataIntegrityMode = mode,
+                IntegrityMode = mode,
                 _decoded = pfx,
                 _authSafeContents = authSafeBytes,
             };
-        }
-
-        public enum IntegrityMode
-        {
-            Unknown,
-            None,
-            Password,
-            PublicKey,
         }
     }
 }

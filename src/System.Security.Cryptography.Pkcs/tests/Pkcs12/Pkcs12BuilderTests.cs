@@ -108,9 +108,9 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         }
 
         [Theory]
-        [InlineData(Pkcs12Info.IntegrityMode.Password)]
-        [InlineData(Pkcs12Info.IntegrityMode.None)]
-        public static void EncodeAndTryEncode(Pkcs12Info.IntegrityMode mode)
+        [InlineData(Pkcs12IntegrityMode.Password)]
+        [InlineData(Pkcs12IntegrityMode.None)]
+        public static void EncodeAndTryEncode(Pkcs12IntegrityMode mode)
         {
             Pkcs12Builder builder1 = new Pkcs12Builder();
             Pkcs12Builder builder2 = new Pkcs12Builder();
@@ -123,7 +123,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             int macTrailerLength = 0;
 
-            if (mode == Pkcs12Info.IntegrityMode.Password)
+            if (mode == Pkcs12IntegrityMode.Password)
             {
                 builder1.SealAndMac(ReadOnlySpan<char>.Empty, HashAlgorithmName.SHA1, 2);
                 builder2.SealAndMac(ReadOnlySpan<char>.Empty, HashAlgorithmName.SHA1, 2);
@@ -131,7 +131,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 // Two OCTET STRINGs of 20 bytes, and the INTEGER 2
                 macTrailerLength = 2 + 20 + 2 + 20 + 2 + 3;
             }
-            else if (mode == Pkcs12Info.IntegrityMode.None)
+            else if (mode == Pkcs12IntegrityMode.None)
             {
                 builder1.SealWithoutIntegrity();
                 builder2.SealWithoutIntegrity();
@@ -155,7 +155,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.Equal(0xCA, buf[0]);
             Assert.Equal(0xCA, buf[bytesWritten + 1]);
 
-            if (mode == Pkcs12Info.IntegrityMode.Password)
+            if (mode == Pkcs12IntegrityMode.Password)
             {
                 Assert.Equal(0x02, buf[bytesWritten]);
             }
@@ -180,7 +180,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.Equal(0xCA, buf[1]);
             Assert.Equal(0xCA, buf[bytesWritten + 2]);
 
-            if (mode == Pkcs12Info.IntegrityMode.Password)
+            if (mode == Pkcs12IntegrityMode.Password)
             {
                 Assert.Equal(0x02, buf[bytesWritten + 1]);
             }
@@ -224,7 +224,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             byte[] encoded1 = builder1.Encode();
             Pkcs12Info info = Pkcs12Info.Decode(encoded1, out _, skipCopy: true);
-            Assert.Equal(Pkcs12Info.IntegrityMode.None, info.DataIntegrityMode);
+            Assert.Equal(Pkcs12IntegrityMode.None, info.IntegrityMode);
             Assert.Equal(1, info.AuthenticatedSafe.Count);
 
             builder2.AddSafeContentsUnencrypted(info.AuthenticatedSafe[0]);
@@ -248,7 +248,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             byte[] encoded = builder1.Encode();
             Pkcs12Info info = Pkcs12Info.Decode(encoded, out _, skipCopy: true);
-            Assert.Equal(Pkcs12Info.IntegrityMode.None, info.DataIntegrityMode);
+            Assert.Equal(Pkcs12IntegrityMode.None, info.IntegrityMode);
             Assert.Equal(1, info.AuthenticatedSafe.Count);
 
             AssertExtensions.Throws<ArgumentException>(

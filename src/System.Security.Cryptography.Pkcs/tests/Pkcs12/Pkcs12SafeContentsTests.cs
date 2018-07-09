@@ -137,7 +137,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             byte[] encoded = builder.Encode();
             Pkcs12Info info = Pkcs12Info.Decode(encoded, out _, skipCopy: true);
-            Assert.Equal(Pkcs12Info.IntegrityMode.None, info.DataIntegrityMode);
+            Assert.Equal(Pkcs12IntegrityMode.None, info.IntegrityMode);
             Assert.Equal(1, info.AuthenticatedSafe.Count);
 
             Pkcs12SafeContents newContents = new Pkcs12SafeContents();

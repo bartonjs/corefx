@@ -21,7 +21,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 Pkcs12Info.Decode(Pkcs12Documents.EmptyPfx, out int bytesRead, skipCopy: true);
 
             Assert.Equal(Pkcs12Documents.EmptyPfx.Length, bytesRead);
-            Assert.Equal(Pkcs12Info.IntegrityMode.Password, info.DataIntegrityMode);
+            Assert.Equal(Pkcs12IntegrityMode.Password, info.IntegrityMode);
 
             Assert.False(info.VerifyMac("hello"), "Wrong password");
             Assert.True(info.VerifyMac(ReadOnlySpan<char>.Empty), "null password");
@@ -45,7 +45,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 skipCopy: true);
 
             Assert.Equal(Pkcs12Documents.IndefiniteEncodingNoMac.Length, bytesRead);
-            Assert.Equal(Pkcs12Info.IntegrityMode.None, info.DataIntegrityMode);
+            Assert.Equal(Pkcs12IntegrityMode.None, info.IntegrityMode);
 
             ReadOnlyCollection<Pkcs12SafeContents> safes = info.AuthenticatedSafe;
             Assert.Equal(2, safes.Count);
@@ -123,7 +123,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 out int bytesRead,
                 skipCopy: true);
 
-            Assert.Equal(Pkcs12Info.IntegrityMode.Password, info.DataIntegrityMode);
+            Assert.Equal(Pkcs12IntegrityMode.Password, info.IntegrityMode);
             Assert.False(info.VerifyMac(ReadOnlySpan<char>.Empty), "VerifyMac(no password)");
             Assert.False(info.VerifyMac(""), "VerifyMac(empty password)");
             Assert.True(info.VerifyMac(Pkcs12Documents.OracleWalletPassword), "VerifyMac(correct password)");

@@ -41,7 +41,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 "F70D010701A00E040C300A3008060100A003040102").HexToByteArray();
 
             Pkcs12Info info = Pkcs12Info.Decode(input, out _, skipCopy: true);
-            Assert.Equal(Pkcs12Info.IntegrityMode.None, info.DataIntegrityMode);
+            Assert.Equal(Pkcs12IntegrityMode.None, info.IntegrityMode);
 
             ReadOnlyCollection<Pkcs12SafeContents> allContents = info.AuthenticatedSafe;
             Assert.Equal(1, allContents.Count);

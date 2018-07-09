@@ -329,6 +329,7 @@
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12CertBag.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12ConfidentialityMode.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12Info.cs" />
+    <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12IntegrityMode.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12KeyBag.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12SafeBag.cs" />
     <Compile Include="System\Security\Cryptography\Pkcs\Pkcs12SafeContents.cs" />

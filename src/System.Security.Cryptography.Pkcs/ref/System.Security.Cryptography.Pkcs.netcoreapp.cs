@@ -41,16 +41,16 @@ namespace System.Security.Cryptography.Pkcs
     {
         private Pkcs12Info() { }
         public ReadOnlyCollection<Pkcs12SafeContents> AuthenticatedSafe { get; }
-        public IntegrityMode DataIntegrityMode { get; }
+        public Pkcs12IntegrityMode IntegrityMode { get; }
         public bool VerifyMac(ReadOnlySpan<char> password) => throw null;
         public static Pkcs12Info Decode(ReadOnlyMemory<byte> encodedBytes, out int bytesConsumed, bool skipCopy=false) => throw null;
-        public enum IntegrityMode
-        {
-            Unknown = 0,
-            None = 1,
-            Password = 2,
-            PublicKey = 3,
-        }
+    }
+    public enum Pkcs12IntegrityMode
+    {
+        Unknown = 0,
+        None = 1,
+        Password = 2,
+        PublicKey = 3,
     }
     public sealed partial class Pkcs12KeyBag : Pkcs12SafeBag
     {

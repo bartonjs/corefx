@@ -22,7 +22,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Pkcs12Info info = Pkcs12Info.Decode(pfxData, out int bytesConsumed);
             Assert.Equal(pfxData.Length, bytesConsumed);
 
-            Assert.Equal(Pkcs12Info.IntegrityMode.Password, info.DataIntegrityMode);
+            Assert.Equal(Pkcs12IntegrityMode.Password, info.IntegrityMode);
             CheckMac(info, loader.Password);
 
             ReadOnlyCollection<Pkcs12SafeContents> authSafe = info.AuthenticatedSafe;
@@ -108,7 +108,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Pkcs12Info info = Pkcs12Info.Decode(pfxData, out int bytesConsumed);
             Assert.Equal(pfxData.Length, bytesConsumed);
 
-            Assert.Equal(Pkcs12Info.IntegrityMode.Password, info.DataIntegrityMode);
+            Assert.Equal(Pkcs12IntegrityMode.Password, info.IntegrityMode);
             CheckMac(info, loader.Password);
 
             ReadOnlyCollection<Pkcs12SafeContents> authSafe = info.AuthenticatedSafe;
