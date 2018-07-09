@@ -112,6 +112,18 @@ namespace System.Security.Cryptography.Pkcs
 
         public Pkcs12ShroudedKeyBag AddShroudedKey(
             AsymmetricAlgorithm key,
+            byte[] passwordBytes,
+            PbeParameters pbeParameters)
+        {
+            return AddShroudedKey(
+                key,
+                // Allows null
+                new ReadOnlySpan<byte>(passwordBytes),
+                pbeParameters);
+        }
+
+        public Pkcs12ShroudedKeyBag AddShroudedKey(
+            AsymmetricAlgorithm key,
             ReadOnlySpan<byte> passwordBytes,
             PbeParameters pbeParameters)
         {
@@ -124,6 +136,18 @@ namespace System.Security.Cryptography.Pkcs
             var bag = new Pkcs12ShroudedKeyBag(encryptedPkcs8, skipCopy: true);
             AddSafeBag(bag);
             return bag;
+        }
+
+        public Pkcs12ShroudedKeyBag AddShroudedKey(
+            AsymmetricAlgorithm key,
+            string password,
+            PbeParameters pbeParameters)
+        {
+            return AddShroudedKey(
+                key,
+                // This extension method invoke allows null.
+                password.AsSpan(),
+                pbeParameters);
         }
 
         public Pkcs12ShroudedKeyBag AddShroudedKey(
@@ -157,9 +181,21 @@ namespace System.Security.Cryptography.Pkcs
             return bag;
         }
 
+        public void Decrypt(byte[] passwordBytes)
+        {
+            // Null is permitted
+            Decrypt(new ReadOnlySpan<byte>(passwordBytes));
+        }
+
         public void Decrypt(ReadOnlySpan<byte> passwordBytes)
         {
             Decrypt(ReadOnlySpan<char>.Empty, passwordBytes);
+        }
+
+        public void Decrypt(string password)
+        {
+            // The string.AsSpan extension method allows null.
+            Decrypt(password.AsSpan());
         }
 
         public void Decrypt(ReadOnlySpan<char> password)

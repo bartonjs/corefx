@@ -16,6 +16,12 @@ namespace System.Security.Cryptography.Pkcs
         {
         }
 
+        public Pkcs9LocalKeyId(byte[] keyId)
+            // The ReadOnlySpan constructor permits null
+            : this(new ReadOnlySpan<byte>(keyId))
+        {
+        }
+
         public Pkcs9LocalKeyId(ReadOnlySpan<byte> keyId)
             : this()
         {

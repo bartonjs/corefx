@@ -20,6 +20,18 @@ namespace System.Security.Cryptography.Pkcs
 
         public void AddSafeContentsEncrypted(
             Pkcs12SafeContents safeContents,
+            byte[] passwordBytes,
+            PbeParameters pbeParameters)
+        {
+            AddSafeContentsEncrypted(
+                safeContents,
+                // Allows null.
+                new ReadOnlySpan<byte>(passwordBytes), 
+                pbeParameters);
+        }
+
+        public void AddSafeContentsEncrypted(
+            Pkcs12SafeContents safeContents,
             ReadOnlySpan<byte> passwordBytes,
             PbeParameters pbeParameters)
         {
@@ -52,6 +64,18 @@ namespace System.Security.Cryptography.Pkcs
                     ContentType = Oids.Pkcs7Encrypted,
                     Content = encrypted,
                 });
+        }
+
+        public void AddSafeContentsEncrypted(
+            Pkcs12SafeContents safeContents,
+            string password,
+            PbeParameters pbeParameters)
+        {
+            AddSafeContentsEncrypted(
+                safeContents,
+                // This extension invoke allows null
+                password.AsSpan(),
+                pbeParameters);
         }
 
         public void AddSafeContentsEncrypted(
@@ -113,6 +137,18 @@ namespace System.Security.Cryptography.Pkcs
             }
 
             return _sealedData.ToArray();
+        }
+
+        public void SealWithMac(
+            string password,
+            HashAlgorithmName hashAlgorithm,
+            int iterationCount)
+        {
+            SealWithMac(
+                // This extension invoke allows null
+                password.AsSpan(),
+                hashAlgorithm,
+                iterationCount);
         }
 
         public void SealWithMac(

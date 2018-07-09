@@ -22,6 +22,12 @@ namespace System.Security.Cryptography.Pkcs
         {
         }
 
+        public bool VerifyMac(string password)
+        {
+            // This extension-method call allows null.
+            return VerifyMac(password.AsSpan());
+        }
+
         public bool VerifyMac(ReadOnlySpan<char> password)
         {
             if (IntegrityMode != Pkcs12IntegrityMode.Password)
