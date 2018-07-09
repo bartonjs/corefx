@@ -80,7 +80,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             List<Pkcs12SafeBag> bags = readContents.GetBags().ToList();
             Assert.Equal(1, bags.Count);
-            SecretBag secretBag = Assert.IsType<SecretBag>(bags[0]);
+            Pkcs12SecretBag secretBag = Assert.IsType<Pkcs12SecretBag>(bags[0]);
 
             Assert.Equal(s_zeroOid.Value, secretBag.GetSecretType().Value);
             Assert.Equal(s_derNull.ByteArrayToHex(), secretBag.SecretValue.ByteArrayToHex());

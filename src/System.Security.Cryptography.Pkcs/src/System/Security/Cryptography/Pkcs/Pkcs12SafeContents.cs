@@ -142,7 +142,7 @@ namespace System.Security.Cryptography.Pkcs
             return bag;
         }
 
-        public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue)
+        public Pkcs12SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue)
         {
             if (secretType == null)
                 throw new ArgumentNullException(nameof(secretType));
@@ -152,7 +152,7 @@ namespace System.Security.Cryptography.Pkcs
             reader.GetEncodedValue();
             reader.ThrowIfNotEmpty();
 
-            var bag = new SecretBag(secretType, secretValue);
+            var bag = new Pkcs12SecretBag(secretType, secretValue);
             AddSafeBag(bag);
             return bag;
         }
@@ -278,7 +278,7 @@ namespace System.Security.Cryptography.Pkcs
                             // Known, but no first-class support currently.
                             break;
                         case Oids.Pkcs12SecretBag:
-                            bag = SecretBag.DecodeValue(bagValue);
+                            bag = Pkcs12SecretBag.DecodeValue(bagValue);
                             break;
                         case Oids.Pkcs12SafeContentsBag:
                             bag = Pkcs12SafeContentsBag.Decode(bagValue);

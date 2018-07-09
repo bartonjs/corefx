@@ -87,7 +87,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             string payloadHex = "0C1353776F7264666973682E20436C6561726C792E";
 
             Pkcs12SafeContents contents = new Pkcs12SafeContents();
-            SecretBag bag = contents.AddSecret(new Oid("0.0", "0.0"), payloadHex.HexToByteArray());
+            Pkcs12SecretBag bag = contents.AddSecret(new Oid("0.0", "0.0"), payloadHex.HexToByteArray());
 
             if (withAttribute)
             {

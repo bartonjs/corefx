@@ -172,7 +172,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             string value,
             string keyId)
         {
-            SecretBag secretBag = Assert.IsType<SecretBag>(safeBag);
+            Pkcs12SecretBag secretBag = Assert.IsType<Pkcs12SecretBag>(safeBag);
             Assert.Equal("1.2.840.113549.1.16.12.12", secretBag.GetSecretType().Value);
 
             Assert.Equal(

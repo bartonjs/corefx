@@ -8,19 +8,19 @@ using System.Security.Cryptography.Pkcs.Asn1;
 
 namespace System.Security.Cryptography.Pkcs
 {
-    public sealed class SecretBag : Pkcs12SafeBag
+    public sealed class Pkcs12SecretBag : Pkcs12SafeBag
     {
         private Oid _secretTypeOid;
         private readonly SecretBagAsn _decoded;
 
         public ReadOnlyMemory<byte> SecretValue => _decoded.SecretValue;
 
-        private SecretBag(ReadOnlyMemory<byte> encodedBagValue)
+        private Pkcs12SecretBag(ReadOnlyMemory<byte> encodedBagValue)
             : base(Oids.Pkcs12SecretBag, encodedBagValue, skipCopy: true)
         {
         }
 
-        internal SecretBag(Oid secretTypeOid, ReadOnlyMemory<byte> secretValue)
+        internal Pkcs12SecretBag(Oid secretTypeOid, ReadOnlyMemory<byte> secretValue)
             : this(EncodeBagValue(secretTypeOid, secretValue))
         {
             _secretTypeOid = new Oid(secretTypeOid);
@@ -28,7 +28,7 @@ namespace System.Security.Cryptography.Pkcs
             _decoded = AsnSerializer.Deserialize<SecretBagAsn>(EncodedBagValue, AsnEncodingRules.BER);
         }
 
-        private SecretBag(SecretBagAsn secretBagAsn, ReadOnlyMemory<byte> encodedBagValue)
+        private Pkcs12SecretBag(SecretBagAsn secretBagAsn, ReadOnlyMemory<byte> encodedBagValue)
             : this(encodedBagValue)
         {
             _decoded = secretBagAsn;
@@ -60,10 +60,10 @@ namespace System.Security.Cryptography.Pkcs
             }
         }
 
-        internal static SecretBag DecodeValue(ReadOnlyMemory<byte> bagValue)
+        internal static Pkcs12SecretBag DecodeValue(ReadOnlyMemory<byte> bagValue)
         {
             SecretBagAsn decoded = AsnSerializer.Deserialize<SecretBagAsn>(bagValue, AsnEncodingRules.BER);
-            return new SecretBag(decoded, bagValue);
+            return new Pkcs12SecretBag(decoded, bagValue);
         }
     }
 }

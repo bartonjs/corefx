@@ -69,7 +69,7 @@ namespace System.Security.Cryptography.Pkcs
         public Pkcs12SafeContentsBag AddNestedContents(Pkcs12SafeContents safeContents) => throw null;
         public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<char> password, PbeParameters pbeParameters) => throw null;
         public ShroudedKeyBag AddShroudedKey(AsymmetricAlgorithm key, ReadOnlySpan<byte> passwordBytes, PbeParameters pbeParameters) => throw null;
-        public SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue) => throw null;
+        public Pkcs12SecretBag AddSecret(Oid secretType, ReadOnlyMemory<byte> secretValue) => throw null;
         public void Decrypt(ReadOnlySpan<byte> passwordBytes) => throw null;
         public void Decrypt(ReadOnlySpan<char> password) => throw null;
         public IEnumerable<Pkcs12SafeBag> GetBags() => throw null;
@@ -85,6 +85,12 @@ namespace System.Security.Cryptography.Pkcs
     {
         private Pkcs12SafeContentsBag() : base(null, default) { }
         public Pkcs12SafeContents SafeContents { get; }
+    }
+    public sealed partial class Pkcs12SecretBag : Pkcs12SafeBag
+    {
+        private Pkcs12SecretBag() : base(null, default) { }
+        public Oid GetSecretType() => throw null;
+        public ReadOnlyMemory<byte> SecretValue { get; }
     }
     public sealed partial class Pkcs8PrivateKeyInfo
     {
@@ -159,12 +165,6 @@ namespace System.Security.Cryptography.Pkcs
         public byte[] Encode() => throw null;
         public bool TryEncode(Span<byte> destination, out int bytesWritten) => throw null;
         public static bool TryDecode(ReadOnlyMemory<byte> encodedBytes, out Rfc3161TimestampTokenInfo timestampTokenInfo, out int bytesConsumed) { throw null; }
-    }
-    public sealed partial class SecretBag : Pkcs12SafeBag
-    {
-        private SecretBag() : base(null, default) { }
-        public Oid GetSecretType() => throw null;
-        public ReadOnlyMemory<byte> SecretValue { get; }
     }
     public sealed partial class ShroudedKeyBag : Pkcs12SafeBag
     {
