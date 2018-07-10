@@ -28,9 +28,11 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             2048);
 
         [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public static void EncryptDecryptMixBytesAndChars(bool encryptBytes)
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public static void EncryptDecryptMixBytesAndChars(bool encryptBytes, bool withSpan)
         {
             Pkcs12SafeContents contents = new Pkcs12SafeContents();
             contents.AddSecret(s_zeroOid, s_derNull);
@@ -67,11 +69,25 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             if (encryptBytes)
             {
-                readContents.Decrypt(password);
+                if (withSpan)
+                {
+                    readContents.Decrypt(password.AsSpan());
+                }
+                else
+                {
+                    readContents.Decrypt(password);
+                }
             }
             else
             {
-                readContents.Decrypt(passwordUtf8Bytes);
+                if (withSpan)
+                {
+                    readContents.Decrypt(passwordUtf8Bytes);
+                }
+                else
+                {
+                    readContents.Decrypt(passwordUtf8Bytes.ToArray());
+                }
             }
 
             Assert.Equal(
@@ -210,8 +226,10 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 () => builder.SealWithMac(ReadOnlySpan<char>.Empty, HashAlgorithmName.SHA1, 2));
         }
 
-        [Fact]
-        public static void CopyEncryptedSafeContents()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public static void CopyEncryptedSafeContents(bool withSpan)
         {
             Pkcs12Builder builder1 = new Pkcs12Builder();
             Pkcs12Builder builder2 = new Pkcs12Builder();
@@ -219,7 +237,15 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Pkcs12SafeContents contents = new Pkcs12SafeContents();
             contents.AddSecret(s_zeroOid, s_derNull);
 
-            builder1.AddSafeContentsEncrypted(contents, ReadOnlySpan<byte>.Empty, s_pbkdf2Parameters);
+            if (withSpan)
+            {
+                builder1.AddSafeContentsEncrypted(contents, ReadOnlySpan<byte>.Empty, s_pbkdf2Parameters);
+            }
+            else
+            {
+                builder1.AddSafeContentsEncrypted(contents, (byte[])null, s_pbkdf2Parameters);
+            }
+
             builder1.SealWithoutIntegrity();
 
             byte[] encoded1 = builder1.Encode();
@@ -279,7 +305,13 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
                 () => builder.AddSafeContentsUnencrypted(contents));
 
             Assert.Throws<InvalidOperationException>(
+                () => builder.AddSafeContentsEncrypted(contents, Array.Empty<byte>(), s_pbkdf2Parameters));
+
+            Assert.Throws<InvalidOperationException>(
                 () => builder.AddSafeContentsEncrypted(contents, ReadOnlySpan<byte>.Empty, s_pbkdf2Parameters));
+
+            Assert.Throws<InvalidOperationException>(
+                () => builder.AddSafeContentsEncrypted(contents, string.Empty, s_pbkdf2Parameters));
 
             Assert.Throws<InvalidOperationException>(
                 () => builder.AddSafeContentsEncrypted(contents, ReadOnlySpan<char>.Empty, s_pbkdf2Parameters));
@@ -296,7 +328,15 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             AssertExtensions.Throws<ArgumentNullException>(
                 "safeContents",
+                () => builder.AddSafeContentsEncrypted(null, Array.Empty<byte>(), s_pbkdf2Parameters));
+
+            AssertExtensions.Throws<ArgumentNullException>(
+                "safeContents",
                 () => builder.AddSafeContentsEncrypted(null, ReadOnlySpan<byte>.Empty, s_pbkdf2Parameters));
+
+            AssertExtensions.Throws<ArgumentNullException>(
+                "safeContents",
+                () => builder.AddSafeContentsEncrypted(null, string.Empty, s_pbkdf2Parameters));
 
             AssertExtensions.Throws<ArgumentNullException>(
                 "safeContents",
@@ -311,7 +351,15 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
 
             AssertExtensions.Throws<ArgumentNullException>(
                 "pbeParameters",
+                () => builder.AddSafeContentsEncrypted(contents, Array.Empty<byte>(), null));
+
+            AssertExtensions.Throws<ArgumentNullException>(
+                "pbeParameters",
                 () => builder.AddSafeContentsEncrypted(contents, ReadOnlySpan<byte>.Empty, null));
+
+            AssertExtensions.Throws<ArgumentNullException>(
+                "pbeParameters",
+                () => builder.AddSafeContentsEncrypted(contents, string.Empty, null));
 
             AssertExtensions.Throws<ArgumentNullException>(
                 "pbeParameters",

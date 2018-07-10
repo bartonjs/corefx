@@ -24,8 +24,10 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             Assert.Equal(Pkcs12IntegrityMode.Password, info.IntegrityMode);
 
             Assert.False(info.VerifyMac("hello"), "Wrong password");
-            Assert.True(info.VerifyMac(ReadOnlySpan<char>.Empty), "null password");
-            Assert.False(info.VerifyMac(""), "empty password");
+            Assert.True(info.VerifyMac(ReadOnlySpan<char>.Empty), "null password (ReadOnlySpan)");
+            Assert.True(info.VerifyMac(null), "null password (string)");
+            Assert.False(info.VerifyMac("".AsSpan()), "empty password (ReadOnlySpan)");
+            Assert.False(info.VerifyMac(""), "empty password (string)");
             Assert.False(info.VerifyMac("hello".AsSpan(5)), "sliced out");
             Assert.False(info.VerifyMac("hello".AsSpan(0, 0)), "zero-sliced");
             Assert.False(info.VerifyMac(new char[0]), "empty array");

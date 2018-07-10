@@ -62,7 +62,7 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             using (RSA rsa = RSA.Create(512))
             {
                 Pkcs12SafeContents contents = new Pkcs12SafeContents();
-                Span<byte> encryptionKey = new byte[] { 1, 2, 3, 4, 5 };
+                byte[] encryptionKey = new byte[] { 1, 2, 3, 4, 5 };
 
                 Pkcs12ShroudedKeyBag keyBag = contents.AddShroudedKey(rsa, encryptionKey, s_pbkdf2Pbe);
 

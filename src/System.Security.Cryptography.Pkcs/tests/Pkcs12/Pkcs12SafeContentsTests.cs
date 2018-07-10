@@ -126,6 +126,17 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
         }
 
         [Fact]
+        public static void AddNestedContentsDisallowedInReadOnly()
+        {
+            Pkcs12SafeContents outerContents = MakeReadonly(new Pkcs12SafeContents());
+
+            Pkcs12SafeContents innerContents = new Pkcs12SafeContents();
+
+            Assert.Throws<InvalidOperationException>(
+                () => outerContents.AddNestedContents(innerContents));
+        }
+
+        [Fact]
         public static void AddEncryptedNestedContents()
         {
             Pkcs12Builder builder = new Pkcs12Builder();
@@ -162,6 +173,10 @@ namespace System.Security.Cryptography.Pkcs.Tests.Pkcs12
             AssertExtensions.Throws<ArgumentNullException>(
                 "key",
                 () => contents.AddShroudedKey(null, ReadOnlySpan<byte>.Empty, s_pbeParameters));
+
+            AssertExtensions.Throws<ArgumentNullException>(
+                "key",
+                () => contents.AddShroudedKey(null, Array.Empty<byte>(), s_pbeParameters));
         }
 
         [Theory]
