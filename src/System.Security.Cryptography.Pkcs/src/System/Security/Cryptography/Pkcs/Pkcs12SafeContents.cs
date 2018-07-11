@@ -78,7 +78,7 @@ namespace System.Security.Cryptography.Pkcs
             if (IsReadOnly)
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
 
-            var bag = new Pkcs12CertBag(certificate);
+            Pkcs12CertBag bag = new Pkcs12CertBag(certificate);
             AddSafeBag(bag);
             return bag;
         }
@@ -91,7 +91,7 @@ namespace System.Security.Cryptography.Pkcs
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
 
             byte[] pkcs8PrivateKey = key.ExportPkcs8PrivateKey();
-            var bag = new Pkcs12KeyBag(pkcs8PrivateKey, skipCopy: true);
+            Pkcs12KeyBag bag = new Pkcs12KeyBag(pkcs8PrivateKey, skipCopy: true);
             AddSafeBag(bag);
             return bag;
         }
@@ -105,7 +105,7 @@ namespace System.Security.Cryptography.Pkcs
             if (IsReadOnly)
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
 
-            var bag = Pkcs12SafeContentsBag.Create(safeContents);
+            Pkcs12SafeContentsBag bag = Pkcs12SafeContentsBag.Create(safeContents);
             AddSafeBag(bag);
             return bag;
         }
@@ -133,7 +133,7 @@ namespace System.Security.Cryptography.Pkcs
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
 
             byte[] encryptedPkcs8 = key.ExportEncryptedPkcs8PrivateKey(passwordBytes, pbeParameters);
-            var bag = new Pkcs12ShroudedKeyBag(encryptedPkcs8, skipCopy: true);
+            Pkcs12ShroudedKeyBag bag = new Pkcs12ShroudedKeyBag(encryptedPkcs8, skipCopy: true);
             AddSafeBag(bag);
             return bag;
         }
@@ -161,7 +161,7 @@ namespace System.Security.Cryptography.Pkcs
                 throw new InvalidOperationException(SR.Cryptography_Pkcs12_SafeContentsIsReadOnly);
 
             byte[] encryptedPkcs8 = key.ExportEncryptedPkcs8PrivateKey(password, pbeParameters);
-            var bag = new Pkcs12ShroudedKeyBag(encryptedPkcs8, skipCopy: true);
+            Pkcs12ShroudedKeyBag bag = new Pkcs12ShroudedKeyBag(encryptedPkcs8, skipCopy: true);
             AddSafeBag(bag);
             return bag;
         }
@@ -176,7 +176,7 @@ namespace System.Security.Cryptography.Pkcs
             reader.GetEncodedValue();
             reader.ThrowIfNotEmpty();
 
-            var bag = new Pkcs12SecretBag(secretType, secretValue);
+            Pkcs12SecretBag bag = new Pkcs12SecretBag(secretType, secretValue);
             AddSafeBag(bag);
             return bag;
         }
