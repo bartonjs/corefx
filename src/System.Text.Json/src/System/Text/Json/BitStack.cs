@@ -114,15 +114,17 @@ namespace System.Text.Json
             }
             else
             {
-                inObject = PopFromArray();
+                inObject = ReadFromArray(_currentDepth);
             }
             return inObject;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private bool PopFromArray()
+        private bool ReadFromArray(int currentDepth)
         {
-            int index = _currentDepth - AllocationFreeMaxDepth - 1;
+            Debug.Assert(currentDepth == _currentDepth || currentDepth == _currentDepth - 1);
+
+            int index = currentDepth - AllocationFreeMaxDepth - 1;
             Debug.Assert(_array != null);
             Debug.Assert(index >= 0, $"Get - Negative - index: {index}, arrayLength: {_array.Length}");
 
@@ -131,6 +133,28 @@ namespace System.Text.Json
             Debug.Assert(elementIndex < _array.Length, $"Get - index: {index}, elementIndex: {elementIndex}, arrayLength: {_array.Length}, extraBits: {extraBits}");
 
             return (_array[elementIndex] & (1 << extraBits)) != 0;
+        }
+
+
+        internal bool Peek()
+        {
+            int depth = _currentDepth - 1;
+
+            if (depth < AllocationFreeMaxDepth)
+            {
+                // Pop would shift, then return the least significant bit.
+                // So Peek needs to check the unshifted position.
+                return (_allocationFreeContainer & 0b0010) != 0;
+            }
+
+            if (depth == AllocationFreeMaxDepth)
+            {
+                // Pop would not shift, but just return the least significant bit.
+                // So do that.
+                return (_allocationFreeContainer & 1) != 0;
+            }
+
+            return ReadFromArray(depth);
         }
 
         private void DoubleArray(int minSize)

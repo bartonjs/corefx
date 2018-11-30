@@ -12,6 +12,14 @@
     <Compile Include="System\Text\Json\ConsumeTokenResult.cs" />
     <Compile Include="System\Text\Json\JsonCommentHandling.cs" />
     <Compile Include="System\Text\Json\JsonConstants.cs" />
+    <Compile Include="System\Text\Json\JsonDocument.cs" />
+    <Compile Include="System\Text\Json\JsonDocument.CustomDb.cs" />
+    <Compile Include="System\Text\Json\JsonDocument.CustomStack.cs" />
+    <Compile Include="System\Text\Json\JsonDocument.DbRow.cs" />
+    <Compile Include="System\Text\Json\JsonDocument.JsonType.cs" />
+    <Compile Include="System\Text\Json\JsonDocument.StackRow.cs" />
+    <Compile Include="System\Text\Json\JsonDocument.TryGetProperty.cs" />
+    <Compile Include="System\Text\Json\JsonElement.cs" />
     <Compile Include="System\Text\Json\JsonReaderException.cs" />
     <Compile Include="System\Text\Json\JsonReaderHelper.cs" />
     <Compile Include="System\Text\Json\JsonReaderOptions.cs" />

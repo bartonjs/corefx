@@ -71,6 +71,8 @@ namespace System.Text.Json
         /// </summary>
         public int CurrentDepth => _bitStack.CurrentDepth;
 
+        internal bool IsInArray => _bitStack.CurrentDepth != 0 && !_bitStack.Peek();
+
         /// <summary>
         /// Gets the type of the last processed JSON token in the UTF-8 encoded JSON text.
         /// </summary>

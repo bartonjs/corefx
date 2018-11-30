@@ -151,6 +151,12 @@ namespace System.Text.Json
             return Utf8Parser.TryParse(span, out value, out int bytesConsumed, standardFormat) && span.Length == bytesConsumed;
         }
 
+        internal static bool TryGetDoubleValue(ReadOnlySpan<byte> span, out double value)
+        {
+            char standardFormat = span.IndexOfAny((byte)'e', (byte)'E') >= 0 ? 'e' : default;
+            return Utf8Parser.TryParse(span, out value, out int bytesConsumed, standardFormat) && span.Length == bytesConsumed;
+        }
+
         /// <summary>
         /// Reads the next JSON token value from the source and parses it to a <see cref="decimal"/>.
         /// Returns true if the entire UTF-8 encoded token value can be successfully 

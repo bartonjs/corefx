@@ -13,6 +13,53 @@ namespace System.Text.Json
         Disallow = (byte)0,
         Skip = (byte)2,
     }
+    public sealed partial class JsonDocument : System.IDisposable
+    {
+        internal JsonDocument() { }
+        public System.Text.Json.JsonElement RootElement { get { throw null; } }
+        public void Dispose() { }
+        public static System.Text.Json.JsonDocument Parse(System.ReadOnlyMemory<byte> utf8Json, System.Text.Json.JsonReaderOptions readerOptions) { throw null; }
+    }
+    public partial struct JsonElement
+    {
+        private object _dummy;
+        public System.Text.Json.JsonElement this[int index] { get { throw null; } }
+        public System.Text.Json.JsonElement this[System.ReadOnlySpan<byte> utf8PropertyName] { get { throw null; } }
+        public System.Text.Json.JsonElement this[System.ReadOnlySpan<char> propertyName] { get { throw null; } }
+        public System.Text.Json.JsonElement this[string propertyName] { get { throw null; } }
+        public System.Text.Json.JsonTokenType Type { get { throw null; } }
+        public System.Text.Json.JsonElement.ChildEnumerator EnumerateChildren() { throw null; }
+        public bool GetBoolean() { throw null; }
+        public double GetDouble() { throw null; }
+        public int GetInt32() { throw null; }
+        public long GetInt64() { throw null; }
+        public string GetString() { throw null; }
+        [System.CLSCompliantAttribute(false)]
+        public ulong GetUInt64() { throw null; }
+        public static explicit operator bool (System.Text.Json.JsonElement element) { throw null; }
+        public static explicit operator double (System.Text.Json.JsonElement element) { throw null; }
+        public static explicit operator int (System.Text.Json.JsonElement element) { throw null; }
+        public static explicit operator long (System.Text.Json.JsonElement element) { throw null; }
+        public static explicit operator string (System.Text.Json.JsonElement element) { throw null; }
+        [System.CLSCompliantAttribute(false)]
+        public static explicit operator ulong (System.Text.Json.JsonElement element) { throw null; }
+        public override string ToString() { throw null; }
+        public bool TryGetProperty(System.ReadOnlySpan<byte> utf8PropertyName, out System.Text.Json.JsonElement value) { throw null; }
+        public bool TryGetProperty(System.ReadOnlySpan<char> propertyName, out System.Text.Json.JsonElement value) { throw null; }
+        public bool TryGetProperty(string propertyName, out System.Text.Json.JsonElement value) { throw null; }
+        public bool TryGetRawData<T>(out System.ReadOnlyMemory<T> rawData) where T : struct { throw null; }
+        public bool TryGetValue(out double value) { throw null; }
+        public bool TryGetValue(out int value) { throw null; }
+        public bool TryGetValue(out long value) { throw null; }
+        [System.CLSCompliantAttribute(false)]
+        public bool TryGetValue(out ulong value) { throw null; }
+        public partial struct ChildEnumerator
+        {
+            private object _dummy;
+            public System.Text.Json.JsonElement Current { get { throw null; } }
+            public bool MoveNext() { throw null; }
+        }
+    }
     public sealed partial class JsonReaderException : System.Exception
     {
         public JsonReaderException(string message, long lineNumber, long bytePositionInLine) { }
