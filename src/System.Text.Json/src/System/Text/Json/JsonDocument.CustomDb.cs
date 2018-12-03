@@ -155,7 +155,7 @@ namespace System.Text.Json
             {
                 Span<byte> data = _rentedBuffer.AsSpan(0, Length);
                
-                for (int i = Length - DbRow.Size; i >= DbRow.Size; i -= DbRow.Size)
+                for (int i = Length - DbRow.Size; i >= 0; i -= DbRow.Size)
                 {
                     DbRow row = MemoryMarshal.Read<DbRow>(data.Slice(i));
                     if (row.SizeOrLength == DbRow.UnknownSize && row.JsonType == lookupType)

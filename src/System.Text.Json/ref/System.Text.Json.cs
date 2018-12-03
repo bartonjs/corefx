@@ -29,6 +29,7 @@ namespace System.Text.Json
         public System.Text.Json.JsonElement this[string propertyName] { get { throw null; } }
         public System.Text.Json.JsonTokenType Type { get { throw null; } }
         public System.Text.Json.JsonElement.ChildEnumerator EnumerateChildren() { throw null; }
+        public int GetArrayLength() { throw null; }
         public bool GetBoolean() { throw null; }
         public double GetDouble() { throw null; }
         public int GetInt32() { throw null; }
@@ -57,6 +58,7 @@ namespace System.Text.Json
         {
             private object _dummy;
             public System.Text.Json.JsonElement Current { get { throw null; } }
+            public System.Text.Json.JsonElement.ChildEnumerator GetEnumerator() { throw null; }
             public bool MoveNext() { throw null; }
         }
     }

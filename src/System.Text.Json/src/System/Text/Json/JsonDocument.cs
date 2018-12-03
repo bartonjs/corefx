@@ -70,6 +70,21 @@ namespace System.Text.Json
             return _parsedData.GetJsonTokenType(index);
         }
 
+        internal int GetArrayLength(int index)
+        {
+            if (_utf8Json.IsEmpty)
+                throw new ObjectDisposedException(nameof(JsonDocument));
+
+            _parsedData.Get(index, out DbRow row);
+
+            if (row.JsonType != JsonType.StartArray)
+            {
+                throw new InvalidOperationException();
+            }
+
+            return row.SizeOrLength;
+        }
+
         internal JsonElement GetArrayIndexElement(int currentIndex, int arrayIndex)
         {
             if (_utf8Json.IsEmpty)

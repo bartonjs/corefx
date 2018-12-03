@@ -76,6 +76,16 @@ namespace System.Text.Json
             }
         }
 
+        public int GetArrayLength()
+        {
+            if (_parent == null)
+            {
+                throw new InvalidOperationException();
+            }
+
+            return _parent.GetArrayLength(_idx);
+        }
+
         public bool TryGetProperty(string propertyName, out JsonElement value)
         {
             if (propertyName == null)
@@ -276,6 +286,13 @@ namespace System.Text.Json
                 _target = target;
                 Current = default;
                 _endIdx = _target._parent.GetEndIndex(_target._idx);
+            }
+
+            public ChildEnumerator GetEnumerator()
+            {
+                ChildEnumerator ator = this;
+                ator.Current = default;
+                return ator;
             }
 
             public bool MoveNext()
