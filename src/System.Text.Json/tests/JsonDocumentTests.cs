@@ -298,9 +298,6 @@ namespace System.Text.Json.Tests
             {
                 string actual = doc.PrintJson();
 
-                //// Change casing to match what JSON.NET does.
-                //actual = actual.Replace("true", "True").Replace("false", "False");
-
                 TextReader reader = new StringReader(jsonString);
                 string expected = JsonTestHelper.NewtonsoftReturnStringHelper(reader);
 
@@ -363,7 +360,7 @@ namespace System.Text.Json.Tests
                 Assert.Equal("425-214-3151", phoneNumber);
                 Assert.Equal(25, age);
 
-                Assert.Throws<ArgumentOutOfRangeException>(() => root[2]);
+                Assert.Throws<IndexOutOfRangeException>(() => root[2]);
             }
         }
 
@@ -377,7 +374,7 @@ namespace System.Text.Json.Tests
                 JsonElement parsedObject = doc.RootElement;
 
                 var age = (int)parsedObject["age"];
-                var ageStrring = (string)parsedObject["age"];
+                var ageString = parsedObject["age"].ToString();
                 var first = (string)parsedObject["first"];
                 var last = (string)parsedObject["last"];
                 var phoneNumber = (string)parsedObject["phoneNumber"];
@@ -389,7 +386,7 @@ namespace System.Text.Json.Tests
                 Assert.Equal((int)age2, 30);
 
                 Assert.Equal(age, 30);
-                Assert.Equal(ageStrring, "30");
+                Assert.Equal(ageString, "30");
                 Assert.Equal(first, "John");
                 Assert.Equal(last, "Smith");
                 Assert.Equal(phoneNumber, "425-214-3151");

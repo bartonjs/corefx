@@ -16,7 +16,6 @@
     <Compile Include="System\Text\Json\JsonDocument.CustomDb.cs" />
     <Compile Include="System\Text\Json\JsonDocument.CustomStack.cs" />
     <Compile Include="System\Text\Json\JsonDocument.DbRow.cs" />
-    <Compile Include="System\Text\Json\JsonDocument.JsonType.cs" />
     <Compile Include="System\Text\Json\JsonDocument.StackRow.cs" />
     <Compile Include="System\Text\Json\JsonDocument.TryGetProperty.cs" />
     <Compile Include="System\Text\Json\JsonElement.cs" />

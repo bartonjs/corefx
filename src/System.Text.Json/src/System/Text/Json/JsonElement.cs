@@ -253,7 +253,7 @@ namespace System.Text.Json
                 case JsonTokenType.Comment:
                 {
                     // null parent should have hit the None case
-                    Debug.Assert(_parent == null);
+                    Debug.Assert(_parent != null);
                     return _parent.GetRawValueAsString(_idx);
                 }
                 case JsonTokenType.PropertyName:
@@ -285,7 +285,7 @@ namespace System.Text.Json
             {
                 _target = target;
                 Current = default;
-                _endIdx = _target._parent.GetEndIndex(_target._idx);
+                _endIdx = _target._parent.GetEndIndex(_target._idx, includeEndElement: false);
             }
 
             public ChildEnumerator GetEnumerator()
@@ -308,27 +308,13 @@ namespace System.Text.Json
                 }
                 else
                 {
-                    nextIdx = _target._parent.GetEndIndex(Current._idx);
+                    nextIdx = _target._parent.GetEndIndex(Current._idx, includeEndElement: true);
                 }
 
                 if (nextIdx >= _endIdx)
                 {
                     Current = default;
                     return false;
-                }
-
-                if (_target.Type == JsonTokenType.StartObject)
-                {
-                    // Property name
-                    Debug.Assert(_target._parent.GetJsonTokenType(nextIdx) == JsonTokenType.String);
-                    nextIdx += JsonDocument.DbRow.Size;
-
-                    if (nextIdx >= _endIdx)
-                    {
-                        Debug.Fail($"Unbalanced database, property had no value at {nextIdx}");
-                        Current = default;
-                        return false;
-                    }
                 }
 
                 Current = new JsonElement(_target._parent, nextIdx);

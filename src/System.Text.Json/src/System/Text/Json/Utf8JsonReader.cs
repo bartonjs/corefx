@@ -398,6 +398,7 @@ namespace System.Text.Json
             {
                 _bitStack.SetFirstBit();
                 _tokenType = JsonTokenType.StartObject;
+                ValueSpan = _buffer.Slice(_consumed, 1);
                 _consumed++;
                 _bytePositionInLine++;
                 _inObject = true;

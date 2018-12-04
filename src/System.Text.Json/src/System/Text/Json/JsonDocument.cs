@@ -77,7 +77,7 @@ namespace System.Text.Json
 
             _parsedData.Get(index, out DbRow row);
 
-            if (row.JsonType != JsonType.StartArray)
+            if (row.TokenType != JsonTokenType.StartArray)
             {
                 throw new InvalidOperationException();
             }
@@ -92,7 +92,7 @@ namespace System.Text.Json
 
             _parsedData.Get(currentIndex, out DbRow row);
 
-            if (row.JsonType != JsonType.StartArray)
+            if (row.TokenType != JsonTokenType.StartArray)
             {
                 throw new InvalidOperationException();
             }
@@ -129,7 +129,7 @@ namespace System.Text.Json
             throw new IndexOutOfRangeException();
         }
 
-        internal int GetEndIndex(int index)
+        internal int GetEndIndex(int index, bool includeEndElement)
         {
             if (_utf8Json.IsEmpty)
                 throw new ObjectDisposedException(nameof(JsonDocument));
@@ -142,7 +142,14 @@ namespace System.Text.Json
                 return index + DbRow.Size;
             }
 
-            return index + DbRow.Size * (row.NumberOfRows + 1);
+            int endIndex = index + DbRow.Size * row.NumberOfRows;
+
+            if (includeEndElement)
+            {
+                endIndex += DbRow.Size;
+            }
+
+            return endIndex;
         }
 
         internal bool TryGetRawData<T>(int index, out ReadOnlyMemory<T> rawData) where T : struct
@@ -174,12 +181,12 @@ namespace System.Text.Json
 
             _parsedData.Get(index, out DbRow row);
 
-            JsonType type = row.JsonType;
+            JsonTokenType type = row.TokenType;
 
             switch (type)
             {
-                case JsonType.String:
-                // PropertyName
+                case JsonTokenType.String:
+                case JsonTokenType.PropertyName:
                     break;
                 default:
                     throw new InvalidOperationException();
@@ -199,7 +206,7 @@ namespace System.Text.Json
 
             _parsedData.Get(index, out DbRow row);
 
-            if (row.JsonType != JsonType.Number)
+            if (row.TokenType != JsonTokenType.Number)
             {
                 throw new InvalidOperationException();
             }
@@ -225,7 +232,7 @@ namespace System.Text.Json
 
             _parsedData.Get(index, out DbRow row);
 
-            if (row.JsonType != JsonType.Number)
+            if (row.TokenType != JsonTokenType.Number)
             {
                 throw new InvalidOperationException();
             }
@@ -251,7 +258,7 @@ namespace System.Text.Json
 
             _parsedData.Get(index, out DbRow row);
 
-            if (row.JsonType != JsonType.Number)
+            if (row.TokenType != JsonTokenType.Number)
             {
                 throw new InvalidOperationException();
             }
@@ -277,7 +284,7 @@ namespace System.Text.Json
 
             _parsedData.Get(index, out DbRow row);
 
-            if (row.JsonType != JsonType.Number)
+            if (row.TokenType != JsonTokenType.Number)
             {
                 throw new InvalidOperationException();
             }
@@ -318,6 +325,7 @@ namespace System.Text.Json
             ref CustomDb database,
             ref CustomStack stack)
         {
+            bool inObject = false;
             bool inArray = false;
             int arrayItemsCount = 0;
             int numberOfRowsForMembers = 0;
@@ -349,7 +357,7 @@ namespace System.Text.Json
                     }
 
                     numberOfRowsForValues++;
-                    database.Append(JsonType.StartObject, tokenStart);
+                    database.Append(tokenType, tokenStart, DbRow.UnknownSize, inObject);
                     var row = new StackRow(numberOfRowsForMembers + 1);
                     stack.Push(row);
                     numberOfRowsForMembers = 0;
@@ -358,14 +366,14 @@ namespace System.Text.Json
                 {
                     parentLocation = -1;
 
-                    int rowIndex = database.FindIndexOfFirstUnsetSizeOrLength(JsonType.StartObject);
+                    int rowIndex = database.FindIndexOfFirstUnsetSizeOrLength(JsonTokenType.StartObject);
 
+                    numberOfRowsForValues++;
+                    numberOfRowsForMembers++;
                     database.SetLength(rowIndex, numberOfRowsForMembers);
 
-                    if (numberOfRowsForMembers != 0)
-                    {
-                        database.SetNumberOfRows(rowIndex, numberOfRowsForMembers);
-                    }
+                    database.Append(tokenType, tokenStart, reader.ValueSpan.Length, false);
+                    database.SetNumberOfRows(rowIndex, numberOfRowsForMembers);
 
                     StackRow row = stack.Pop();
                     numberOfRowsForMembers += row.SizeOrLength;
@@ -385,7 +393,7 @@ namespace System.Text.Json
                     }
 
                     numberOfRowsForMembers++;
-                    database.Append(JsonType.StartArray, tokenStart);
+                    database.Append(tokenType, tokenStart, DbRow.UnknownSize, inObject);
                     var row = new StackRow(arrayItemsCount, numberOfRowsForValues + 1);
                     stack.Push(row);
                     arrayItemsCount = 0;
@@ -395,16 +403,14 @@ namespace System.Text.Json
                 {
                     parentLocation = -1;
 
-                    int rowIndex = database.FindIndexOfFirstUnsetSizeOrLength(JsonType.StartArray);
+                    int rowIndex = database.FindIndexOfFirstUnsetSizeOrLength(JsonTokenType.StartArray);
 
+                    numberOfRowsForValues++;
+                    numberOfRowsForMembers++;
                     database.SetLength(rowIndex, arrayItemsCount);
+                    database.SetNumberOfRows(rowIndex, numberOfRowsForValues);
 
-                    if (numberOfRowsForValues != 0)
-                    {
-                        database.SetNumberOfRows(rowIndex, numberOfRowsForValues);
-                    }
-
-                    // TODO: Record EndArray.
+                    database.Append(tokenType, tokenStart, reader.ValueSpan.Length, false);
                     StackRow row = stack.Pop();
                     arrayItemsCount = row.SizeOrLength;
                     numberOfRowsForValues += row.NumberOfRows;
@@ -413,19 +419,16 @@ namespace System.Text.Json
                 {
                     numberOfRowsForValues++;
                     numberOfRowsForMembers++;
-                    database.Append(JsonType.String, tokenStart, reader.ValueSpan.Length);
+                    database.Append(tokenType, tokenStart, reader.ValueSpan.Length, false);
 
-                    if (inArray)
-                    {
-                        arrayItemsCount++;
-                    }
+                    Debug.Assert(!inArray);
                 }
                 else
                 {
                     Debug.Assert(tokenType >= JsonTokenType.String && tokenType <= JsonTokenType.Null);
                     numberOfRowsForValues++;
                     numberOfRowsForMembers++;
-                    database.Append((JsonType)(tokenType - 4), tokenStart, reader.ValueSpan.Length);
+                    database.Append(tokenType, tokenStart, reader.ValueSpan.Length, inObject);
 
                     if (inArray)
                     {
@@ -434,6 +437,7 @@ namespace System.Text.Json
                 }
 
                 inArray = reader.IsInArray;
+                inObject = reader.CurrentDepth != 0 && !inArray;
             }
 
             database.TrimExcess();

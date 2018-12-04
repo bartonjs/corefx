@@ -17,54 +17,69 @@ namespace System.Text.Json
         {
             internal const int Size = 12;
 
-            internal int Location; // index in JSON payload
-            internal int SizeOrLength; // length of text in JSON payload (or number of elements if its a JSON array)
+            // Sign bit is used for "IsPropertyValue"
+            private int _locationUnion;
+            // Sign bit is used for "HasChildren"
+            private int _sizeOrLengthUnion;
 
-            // The highest order bit indicates if the JSON element has children
-            // The next 3 bits indicate the json type (there are 2^3 = 8 such types)
-            // The last 28 bits indicate the number of rows.
-            // Since each row of the database is 12 bytes long, we can't exceed 2^31/12 = 178956971 total number of rows.
-            // Hence, we only need 28 bits (maximum value of 268435455).
-            private readonly int _union;
+            // Top nybble is JsonTokenType
+            // remaining nybbles are the number of rows to skip to get to the next value
+            // This isn't limiting on the number of rows, since Span.MaxLength / sizeof(DbRow) can't
+            // exceed that range.
+            private readonly int _numberOfRowsAndTypeUnion;
 
-            internal bool HasChildren =>
-                _union < 0; // True only if there are nested objects or arrays within the current JSON element
+            /// <summary>
+            /// Index into the payload
+            /// </summary>
+            internal int Location => _locationUnion & int.MaxValue;
 
-            internal JsonType JsonType =>
-                (JsonType)((_union & 0x70000000) >> 28); // type of JSON construct (e.g. Object, Array, Number)
+            /// <summary>
+            /// Whether the entry before this row is a property name.
+            /// </summary>
+            internal bool IsPropertyValue => _locationUnion < 0;
+
+            /// <summary>
+            /// length of text in JSON payload (or number of elements if its a JSON array)
+            /// </summary>
+            internal int SizeOrLength => _sizeOrLengthUnion & int.MaxValue;
+
+            internal bool IsUnknownSize => _sizeOrLengthUnion == UnknownSize;
+
+            // True only if there are nested objects or arrays within the current JSON element
+            internal bool HasChildren => _sizeOrLengthUnion < 0;
 
             internal int NumberOfRows =>
-                _union & 0x0FFFFFFF; // Number of rows that the current JSON element occupies within the database
+                _numberOfRowsAndTypeUnion & 0x0FFFFFFF; // Number of rows that the current JSON element occupies within the database
+
+            internal JsonTokenType TokenType => (JsonTokenType)(unchecked((uint)_numberOfRowsAndTypeUnion) >> 28);
 
             internal const int UnknownSize = -1;
 
-            internal DbRow(JsonType jsonType, int location, int sizeOrLength = UnknownSize, int numberOfRows = 1)
+#if DEBUG
+            static unsafe DbRow()
             {
-                Debug.Assert(jsonType >= JsonType.StartObject && jsonType <= JsonType.Null);
+                Debug.Assert(sizeof(DbRow) == Size);
+            }
+#endif
+
+            internal DbRow(JsonTokenType jsonTokenType, int location, int sizeOrLength, bool isPropertyValue)
+            {
+                Debug.Assert(jsonTokenType > JsonTokenType.None && jsonTokenType <= JsonTokenType.Comment);
+                Debug.Assert((byte)jsonTokenType < 1 << 4);
                 Debug.Assert(location >= 0);
                 Debug.Assert(sizeOrLength >= UnknownSize);
-                Debug.Assert(numberOfRows >= 1 && numberOfRows <= 0x0FFFFFFF);
 
-                Location = location;
-                SizeOrLength = sizeOrLength;
-                _union = numberOfRows | (int)jsonType << 28; // HasChildren is set to false by default
+                if (isPropertyValue)
+                {
+                    location |= unchecked((int)0x80000000);
+                }
+
+                _locationUnion = location;
+                _sizeOrLengthUnion = sizeOrLength;
+                _numberOfRowsAndTypeUnion = (int)jsonTokenType << 28;
             }
 
-            internal DbRow(JsonType jsonType, int location, bool hasChildren, int sizeOrLength, int numberOfRows)
-            {
-                Debug.Assert(jsonType >= JsonType.StartObject && jsonType <= JsonType.Null);
-                Debug.Assert(location >= 0);
-                Debug.Assert(sizeOrLength >= UnknownSize);
-                Debug.Assert(numberOfRows >= 1 && numberOfRows <= 0x0FFFFFFF);
-
-                Location = location;
-                SizeOrLength = sizeOrLength;
-                _union = numberOfRows | (int)jsonType << 28;
-                if (hasChildren)
-                    _union = _union | 1 << 31;
-            }
-
-            internal bool IsSimpleValue => JsonType > JsonType.StartArray;
+            internal bool IsSimpleValue => TokenType >= JsonTokenType.PropertyName;
         }
     }
 }

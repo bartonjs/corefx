@@ -12,6 +12,7 @@ namespace System.Text.Json
     {
         private struct CustomDb : IDisposable
         {
+            private const int SizeOrLengthOffset = 4;
             private const int NumberOfRowsOffset = 8;
 
             internal int Length;
@@ -56,19 +57,20 @@ namespace System.Text.Json
                 }
             }
 
-            internal void Append(JsonType jsonType, int startLocation, int LengthOrNumberOfRows = DbRow.UnknownSize)
+            internal void Append(JsonTokenType tokenType, int startLocation, int length, bool isPropertyValue)
             {
-                Debug.Assert(jsonType >= JsonType.StartObject && jsonType <= JsonType.Null);
-                Debug.Assert(startLocation >= 0);
-                Debug.Assert(LengthOrNumberOfRows >= DbRow.UnknownSize);
+                // StartArray or StartObject should have length -1, otherwise the length should not be -1.
+                Debug.Assert(
+                    (tokenType == JsonTokenType.StartArray || tokenType == JsonTokenType.StartObject) ==
+                    (length == DbRow.UnknownSize));
 
                 if (Length >= _rentedBuffer.Length - DbRow.Size)
                 {
                     Enlarge();
                 }
 
-                var dbRow = new DbRow(jsonType, startLocation, LengthOrNumberOfRows);
-                MemoryMarshal.Write(_rentedBuffer.AsSpan(Length), ref dbRow);
+                DbRow row = new DbRow(tokenType, startLocation, length, isPropertyValue);
+                MemoryMarshal.Write(_rentedBuffer.AsSpan(Length), ref row);
                 Length += DbRow.Size;
             }
 
@@ -93,7 +95,12 @@ namespace System.Text.Json
             {
                 AssertValidIndex(index);
                 Debug.Assert(length >= 0);
-                MemoryMarshal.Write(_rentedBuffer.AsSpan(index + 4), ref length);
+                Span<byte> destination = _rentedBuffer.AsSpan(index + 4);
+                int cur = MemoryMarshal.Read<int>(destination);
+                
+                // Persist the most significant bit
+                length |= (cur & unchecked((int)0x80000000));
+                MemoryMarshal.Write(destination, ref length);
             }
 
             internal void SetNumberOfRows(int index, int numberOfRows)
@@ -113,68 +120,37 @@ namespace System.Text.Json
             {
                 AssertValidIndex(index);
 
-                // The HasChildren bit is the most significant bit of "NumberOfRows"
-                Span<byte> dataPos = _rentedBuffer.AsSpan(index + NumberOfRowsOffset);
+                // The HasChildren bit is the most significant bit of "SizeOrLength"
+                Span<byte> dataPos = _rentedBuffer.AsSpan(index + SizeOrLengthOffset);
                 int current = MemoryMarshal.Read<int>(dataPos);
 
                 int value = current | unchecked((int)0x80000000);
                 MemoryMarshal.Write(dataPos, ref value);
             }
 
-            internal int FindIndexOfFirstUnsetSizeOrLength(JsonType lookupType)
+            internal int FindIndexOfFirstUnsetSizeOrLength(JsonTokenType lookupType)
             {
-                Debug.Assert(lookupType == JsonType.StartObject || lookupType == JsonType.StartArray);
-                return BackwardPass(lookupType);
+                Debug.Assert(lookupType == JsonTokenType.StartObject || lookupType == JsonTokenType.StartArray);
+                return FindOpenElement(lookupType);
             }
 
-            private int ForwardPass(JsonType lookupType)
-            {
-                Span<byte> data = _rentedBuffer.AsSpan(0, Length);
-
-                for (int i = 0; i < Length; i += DbRow.Size)
-                {
-                    DbRow row = MemoryMarshal.Read<DbRow>(data.Slice(i));
-
-                    if (row.SizeOrLength == DbRow.UnknownSize && row.JsonType == lookupType)
-                    {
-                        return i;
-                    }
-
-                    if (!row.IsSimpleValue)
-                    {
-                        i += row.NumberOfRows * DbRow.Size;
-                    }
-                }
-
-                // We should never reach here.
-                Debug.Assert(false);
-                return -1;
-            }
-
-            private int BackwardPass(JsonType lookupType)
+            private int FindOpenElement(JsonTokenType lookupType)
             {
                 Span<byte> data = _rentedBuffer.AsSpan(0, Length);
                
                 for (int i = Length - DbRow.Size; i >= 0; i -= DbRow.Size)
                 {
                     DbRow row = MemoryMarshal.Read<DbRow>(data.Slice(i));
-                    if (row.SizeOrLength == DbRow.UnknownSize && row.JsonType == lookupType)
+
+                    if (row.IsUnknownSize && row.TokenType == lookupType)
                     {
                         return i;
                     }
                 }
 
                 // We should never reach here.
-                Debug.Assert(false);
+                Debug.Fail($"Unable to find expected {lookupType} token");
                 return -1;
-            }
-
-            internal DbRow Get() => MemoryMarshal.Read<DbRow>(_rentedBuffer.AsSpan());
-
-            internal DbRow Get(int index)
-            {
-                AssertValidIndex(index);
-                return MemoryMarshal.Read<DbRow>(_rentedBuffer.AsSpan(index));
             }
 
             internal void Get(int index, out DbRow row)
@@ -188,65 +164,43 @@ namespace System.Text.Json
             internal int GetLocation(int index)
             {
                 AssertValidIndex(index);
-                return MemoryMarshal.Read<int>(_rentedBuffer.AsSpan());
+                return MemoryMarshal.Read<int>(_rentedBuffer.AsSpan()) & int.MaxValue;
             }
 
             internal int GetSizeOrLength(int index)
             {
                 AssertValidIndex(index);
-                return MemoryMarshal.Read<int>(_rentedBuffer.AsSpan(index + 4));
+                return MemoryMarshal.Read<int>(_rentedBuffer.AsSpan(index + SizeOrLengthOffset)) & int.MaxValue;
             }
 
             internal JsonTokenType GetJsonTokenType(int index = 0)
             {
                 AssertValidIndex(index);
-                int union = MemoryMarshal.Read<int>(_rentedBuffer.AsSpan(index + NumberOfRowsOffset));
-                JsonType jsonType = (JsonType)((union & 0x70000000) >> 28);
+                uint union = MemoryMarshal.Read<uint>(_rentedBuffer.AsSpan(index + NumberOfRowsOffset));
 
-                JsonTokenType tokenType = (JsonTokenType)(jsonType + 4);
-                if (jsonType == JsonType.StartObject)
-                {
-                    tokenType = JsonTokenType.StartObject;
-                }
-                else if (jsonType == JsonType.StartArray)
-                {
-                    tokenType = JsonTokenType.StartArray;
-                }
-
-                return tokenType;
+                return (JsonTokenType)(union >> 28);
             }
 
-            internal bool GetHasChildren(int index = 0)
-            {
-                AssertValidIndex(index);
-                int union = MemoryMarshal.Read<int>(_rentedBuffer.AsSpan(index + NumberOfRowsOffset));
-                return union < 0;
-            }
-
-            internal int GetNumberOfRows(int index = 0)
-            {
-                AssertValidIndex(index);
-                int union = MemoryMarshal.Read<int>(_rentedBuffer.AsSpan(index + NumberOfRowsOffset));
-                return union & 0x0FFFFFFF;
-            }
-
+#if DIAGNOSTIC
             internal string PrintDatabase()
             {
                 StringBuilder sb = new StringBuilder();
-                sb.Append(nameof(DbRow.Location) + "\t" + nameof(DbRow.SizeOrLength) + "\t" + nameof(DbRow.JsonType) +
-                          "\t" + nameof(DbRow.HasChildren) + "\t" + nameof(DbRow.NumberOfRows) + "\r\n");
-
+                sb.AppendLine("Index  Offset  SizeOrLen  TokenType    Child IPV   NumRows");
                 Span<byte> data = _rentedBuffer;
 
                 for (int i = 0; i < Length; i += DbRow.Size)
                 {
                     DbRow record = MemoryMarshal.Read<DbRow>(data.Slice(i));
-                    sb.Append(record.Location + "\t" + record.SizeOrLength + "\t" + record.JsonType + "\t" +
-                              record.HasChildren + "\t" + record.NumberOfRows + "\r\n");
+                    sb.Append($"{i:D6} {record.Location:D7} {record.SizeOrLength:D10} ");
+                    sb.Append(record.TokenType.ToString().PadRight(13));
+                    sb.Append(record.HasChildren.ToString().PadRight(6));
+                    sb.Append(record.IsPropertyValue.ToString().PadRight(6));
+                    sb.AppendLine("" + record.NumberOfRows);
                 }
 
                 return sb.ToString();
             }
+#endif
         }
     }
 }

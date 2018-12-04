@@ -16,7 +16,7 @@ namespace System.Text.Json
 
             _parsedData.Get(index, out DbRow row);
 
-            if (row.JsonType != JsonType.StartObject)
+            if (row.TokenType != JsonTokenType.StartObject)
             {
                 throw new InvalidOperationException();
             }
@@ -52,7 +52,7 @@ namespace System.Text.Json
             while (candidateIndex < endIndex)
             {
                 _parsedData.Get(index, out row);
-                Debug.Assert(row.JsonType == JsonType.String);
+                Debug.Assert(row.TokenType == JsonTokenType.String);
 
                 if (row.SizeOrLength >= minBytes && row.SizeOrLength <= maxBytes)
                 {
@@ -104,7 +104,7 @@ namespace System.Text.Json
 
             _parsedData.Get(index, out DbRow row);
 
-            if (row.JsonType != JsonType.StartObject)
+            if (row.TokenType != JsonTokenType.StartObject)
             {
                 throw new InvalidOperationException();
             }
@@ -138,7 +138,7 @@ namespace System.Text.Json
             while (index < endIndex)
             {
                 _parsedData.Get(index, out row);
-                Debug.Assert(row.JsonType == JsonType.String);
+                Debug.Assert(row.TokenType == JsonTokenType.PropertyName);
 
                 ReadOnlySpan<byte> currentPropertyName = documentSpan.Slice(row.Location, row.SizeOrLength);
 
