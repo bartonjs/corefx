@@ -400,6 +400,34 @@ namespace System.Text.Json.Tests
             }
         }
 
+        [Fact]
+        public static void JsonArrayToString()
+        {
+            ArraySegment<byte> buffer = StringToUtf8BufferWithEmptySpace(SR.ParseJson);
+
+            using (JsonDocument doc = JsonDocument.Parse(buffer, default))
+            {
+                JsonElement root = doc.RootElement;
+
+                Assert.Equal(JsonTokenType.StartArray, root.Type);
+                Assert.Equal(SR.ParseJson, root.ToString());
+            }
+        }
+
+        [Fact]
+        public static void JsonObjectToString()
+        {
+            ArraySegment<byte> buffer = StringToUtf8BufferWithEmptySpace(SR.BasicJson);
+
+            using (JsonDocument doc = JsonDocument.Parse(buffer, default))
+            {
+                JsonElement root = doc.RootElement;
+
+                Assert.Equal(JsonTokenType.StartObject, root.Type);
+                Assert.Equal(SR.BasicJson, root.ToString());
+            }
+        }
+
         private static ArraySegment<byte> StringToUtf8BufferWithEmptySpace(string testString, int emptySpaceSize = 2048)
         {
             int expectedLength = Encoding.UTF8.GetByteCount(testString);

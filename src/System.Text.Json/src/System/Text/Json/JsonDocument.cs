@@ -309,14 +309,22 @@ namespace System.Text.Json
 
             _parsedData.Get(index, out DbRow row);
 
+            ReadOnlySpan<byte> data = _utf8Json.Span;
+            ReadOnlySpan<byte> segment;
+
             if (row.IsSimpleValue)
             {
-                ReadOnlySpan<byte> data = _utf8Json.Span;
-                ReadOnlySpan<byte> segment = data.Slice(row.Location, row.SizeOrLength);
-                return Encoding.UTF8.GetString(segment);
+                segment = data.Slice(row.Location, row.SizeOrLength);
+            }
+            else
+            {
+                int endElementIdx = GetEndIndex(index, includeEndElement: false);
+                int start = row.Location;
+                _parsedData.Get(endElementIdx, out row);
+                segment = data.Slice(start, row.Location - start + row.SizeOrLength);
             }
 
-            throw new NotImplementedException();
+            return Encoding.UTF8.GetString(segment);
         }
 
         private static void Parse(
