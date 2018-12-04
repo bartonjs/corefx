@@ -6,7 +6,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Xunit;
 
 namespace System.Text.Json.Tests
@@ -19,33 +18,33 @@ namespace System.Text.Json.Tests
             {
                 return new List<object[]>
                 {
-                    new object[] { true, Json.Tests.TestCaseType.Basic, SR.BasicJson},
-                    new object[] { true, Json.Tests.TestCaseType.BasicLargeNum, SR.BasicJsonWithLargeNum}, // Json.NET treats numbers starting with 0 as octal (0425 becomes 277)
-                    new object[] { true, Json.Tests.TestCaseType.BroadTree, SR.BroadTree}, // \r\n behavior is different between Json.NET and System.Text.Json
-                    new object[] { true, Json.Tests.TestCaseType.DeepTree, SR.DeepTree},
-                    new object[] { true, Json.Tests.TestCaseType.FullSchema1, SR.FullJsonSchema1},
-                    new object[] { true, Json.Tests.TestCaseType.HelloWorld, SR.HelloWorld},
-                    new object[] { true, Json.Tests.TestCaseType.LotsOfNumbers, SR.LotsOfNumbers},
-                    new object[] { true, Json.Tests.TestCaseType.LotsOfStrings, SR.LotsOfStrings},
-                    new object[] { true, Json.Tests.TestCaseType.ProjectLockJson, SR.ProjectLockJson},
-                    new object[] { true, Json.Tests.TestCaseType.Json400B, SR.Json400B},
-                    new object[] { true, Json.Tests.TestCaseType.Json4KB, SR.Json4KB},
-                    new object[] { true, Json.Tests.TestCaseType.Json40KB, SR.Json40KB},
-                    new object[] { true, Json.Tests.TestCaseType.Json400KB, SR.Json400KB},
+                    new object[] { true, Tests.TestCaseType.Basic, SR.BasicJson},
+                    new object[] { true, Tests.TestCaseType.BasicLargeNum, SR.BasicJsonWithLargeNum}, // Json.NET treats numbers starting with 0 as octal (0425 becomes 277)
+                    new object[] { true, Tests.TestCaseType.BroadTree, SR.BroadTree}, // \r\n behavior is different between Json.NET and System.Text.Json
+                    new object[] { true, Tests.TestCaseType.DeepTree, SR.DeepTree},
+                    new object[] { true, Tests.TestCaseType.FullSchema1, SR.FullJsonSchema1},
+                    new object[] { true, Tests.TestCaseType.HelloWorld, SR.HelloWorld},
+                    new object[] { true, Tests.TestCaseType.LotsOfNumbers, SR.LotsOfNumbers},
+                    new object[] { true, Tests.TestCaseType.LotsOfStrings, SR.LotsOfStrings},
+                    new object[] { true, Tests.TestCaseType.ProjectLockJson, SR.ProjectLockJson},
+                    new object[] { true, Tests.TestCaseType.Json400B, SR.Json400B},
+                    new object[] { true, Tests.TestCaseType.Json4KB, SR.Json4KB},
+                    new object[] { true, Tests.TestCaseType.Json40KB, SR.Json40KB},
+                    new object[] { true, Tests.TestCaseType.Json400KB, SR.Json400KB},
 
-                    new object[] { false, Json.Tests.TestCaseType.Basic, SR.BasicJson},
-                    new object[] { false, Json.Tests.TestCaseType.BasicLargeNum, SR.BasicJsonWithLargeNum}, // Json.NET treats numbers starting with 0 as octal (0425 becomes 277)
-                    new object[] { false, Json.Tests.TestCaseType.BroadTree, SR.BroadTree}, // \r\n behavior is different between Json.NET and System.Text.Json
-                    new object[] { false, Json.Tests.TestCaseType.DeepTree, SR.DeepTree},
-                    new object[] { false, Json.Tests.TestCaseType.FullSchema1, SR.FullJsonSchema1},
-                    new object[] { false, Json.Tests.TestCaseType.HelloWorld, SR.HelloWorld},
-                    new object[] { false, Json.Tests.TestCaseType.LotsOfNumbers, SR.LotsOfNumbers},
-                    new object[] { false, Json.Tests.TestCaseType.LotsOfStrings, SR.LotsOfStrings},
-                    new object[] { false, Json.Tests.TestCaseType.ProjectLockJson, SR.ProjectLockJson},
-                    new object[] { false, Json.Tests.TestCaseType.Json400B, SR.Json400B},
-                    new object[] { false, Json.Tests.TestCaseType.Json4KB, SR.Json4KB},
-                    new object[] { false, Json.Tests.TestCaseType.Json40KB, SR.Json40KB},
-                    new object[] { false, Json.Tests.TestCaseType.Json400KB, SR.Json400KB},
+                    new object[] { false, Tests.TestCaseType.Basic, SR.BasicJson},
+                    new object[] { false, Tests.TestCaseType.BasicLargeNum, SR.BasicJsonWithLargeNum}, // Json.NET treats numbers starting with 0 as octal (0425 becomes 277)
+                    new object[] { false, Tests.TestCaseType.BroadTree, SR.BroadTree}, // \r\n behavior is different between Json.NET and System.Text.Json
+                    new object[] { false, Tests.TestCaseType.DeepTree, SR.DeepTree},
+                    new object[] { false, Tests.TestCaseType.FullSchema1, SR.FullJsonSchema1},
+                    new object[] { false, Tests.TestCaseType.HelloWorld, SR.HelloWorld},
+                    new object[] { false, Tests.TestCaseType.LotsOfNumbers, SR.LotsOfNumbers},
+                    new object[] { false, Tests.TestCaseType.LotsOfStrings, SR.LotsOfStrings},
+                    new object[] { false, Tests.TestCaseType.ProjectLockJson, SR.ProjectLockJson},
+                    new object[] { false, Tests.TestCaseType.Json400B, SR.Json400B},
+                    new object[] { false, Tests.TestCaseType.Json4KB, SR.Json4KB},
+                    new object[] { false, Tests.TestCaseType.Json40KB, SR.Json40KB},
+                    new object[] { false, Tests.TestCaseType.Json400KB, SR.Json400KB},
                 };
             }
         }
@@ -217,27 +216,11 @@ namespace System.Text.Json.Tests
 
                 string actual = doc.PrintJson();
 
-                //// Change casing to match what JSON.NET does.
-                //actual = actual.Replace("true", "True").Replace("false", "False");
-
                 TextReader reader = new StringReader(jsonString);
                 string expected = JsonTestHelper.NewtonsoftReturnStringHelper(reader);
 
                 Assert.Equal(expected, actual);
 
-                //if (compactData)
-                //{
-                //    var output = new ArrayFormatterWrapper(1024, SymbolTable.InvariantUtf8);
-                //    var jsonUtf8 = new Utf8JsonWriter<ArrayFormatterWrapper>(output);
-
-                //    jsonUtf8.Write(obj);
-                //    jsonUtf8.Flush();
-
-                //    ArraySegment<byte> formatted = output.Formatted;
-                //    string actualStr = Encoding.UTF8.GetString(formatted.Array, formatted.Offset, formatted.Count);
-
-                //    Assert.Equal(jsonString, actualStr);
-                //}
             }
         }
 
@@ -304,44 +287,6 @@ namespace System.Text.Json.Tests
                 Assert.Equal(expected, actual);
             }
         }
-
-        //[Fact]
-        //public static void ChangeEntryPointLibraryName()
-        //{
-        //    string depsJson = SR.DepsJsonSignalR;
-        //    byte[] dataUtf8 = Encoding.UTF8.GetBytes(depsJson);
-
-        //    using (JsonDocument doc = JsonDocument.Parse(dataUtf8, default))
-        //    {
-        //        var targetsString = new Utf8Span("targets");
-        //        var librariesString = new Utf8Span("libraries");
-
-        //        JsonObject targets = obj[targetsString];
-
-        //        foreach (JsonObject target in targets)
-        //        {
-        //            Assert.True(target.TryGetChild(out JsonObject firstChild));
-        //            obj.Remove(firstChild);
-        //        }
-
-        //        JsonObject libraries = obj[librariesString];
-        //        Assert.True(libraries.TryGetChild(out JsonObject child));
-        //        obj.Remove(child);
-
-        //        string expected = ChangeEntryPointLibraryNameExpected();
-
-        //        var output = new ArrayFormatterWrapper(1024, SymbolTable.InvariantUtf8);
-        //        var jsonUtf8 = new Utf8JsonWriter<ArrayFormatterWrapper>(output);
-
-        //        jsonUtf8.Write(obj);
-        //        jsonUtf8.Flush();
-
-        //        ArraySegment<byte> formatted = output.Formatted;
-        //        string actualStr = Encoding.UTF8.GetString(formatted.Array, formatted.Offset, formatted.Count);
-
-        //        Assert.Equal(expected, actualStr);
-        //    }
-        //}
 
         [Fact]
         public static void ParseArray()
@@ -463,30 +408,5 @@ namespace System.Text.Json.Tests
             
             return new ArraySegment<byte>(buffer, 0, actualLength);
         }
-
-        //private static string ChangeEntryPointLibraryNameExpected()
-        //{
-        //    JToken deps = JObject.Parse(TestJson.DepsJsonSignalR);
-
-        //    foreach (JProperty target in deps["targets"])
-        //    {
-        //        JProperty targetLibrary = target.Value.Children<JProperty>().FirstOrDefault();
-        //        if (targetLibrary == null)
-        //        {
-        //            continue;
-        //        }
-        //        targetLibrary.Remove();
-        //    }
-
-        //    JProperty library = deps["libraries"].Children<JProperty>().First();
-        //    library.Remove();
-
-        //    using (var textWriter = new StringWriter())
-        //    using (var writer = new JsonTextWriter(textWriter))
-        //    {
-        //        deps.WriteTo(writer);
-        //        return textWriter.ToString();
-        //    }
-        //}
     }
 }
