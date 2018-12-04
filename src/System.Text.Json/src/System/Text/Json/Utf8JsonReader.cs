@@ -226,8 +226,8 @@ namespace System.Text.Json
 
             _bitStack.PushFalse();
 
-            _consumed++;
             ValueSpan = _buffer.Slice(_consumed, 1);
+            _consumed++;
             _bytePositionInLine++;
             _tokenType = JsonTokenType.StartArray;
             _inObject = false;
