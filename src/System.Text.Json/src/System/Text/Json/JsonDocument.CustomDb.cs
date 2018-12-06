@@ -17,12 +17,10 @@ namespace System.Text.Json
 
             internal int Length;
             private byte[] _rentedBuffer;
-            private ArrayPool<byte> _pool;
 
-            internal CustomDb(ArrayPool<byte> pool, int initialSize)
+            internal CustomDb(int initialSize)
             {
-                _pool = pool;
-                _rentedBuffer = _pool.Rent(initialSize);
+                _rentedBuffer = ArrayPool<byte>.Shared.Rent(initialSize);
                 Length = 0;
             }
 
@@ -33,9 +31,8 @@ namespace System.Text.Json
                     return;
                 }
 
-                _pool.Return(_rentedBuffer);
+                ArrayPool<byte>.Shared.Return(_rentedBuffer);
                 _rentedBuffer = null;
-                _pool = null;
                 Length = 0;
             }
 
@@ -43,7 +40,7 @@ namespace System.Text.Json
             {
                 if (Length <= _rentedBuffer.Length / 2)
                 {
-                    byte[] newRent = _pool.Rent(Length);
+                    byte[] newRent = ArrayPool<byte>.Shared.Rent(Length);
                     byte[] returnBuf = newRent;
 
                     if (newRent.Length < _rentedBuffer.Length)
@@ -53,7 +50,7 @@ namespace System.Text.Json
                         _rentedBuffer = newRent;
                     }
 
-                    _pool.Return(returnBuf);
+                    ArrayPool<byte>.Shared.Return(returnBuf);
                 }
             }
 
@@ -77,9 +74,9 @@ namespace System.Text.Json
             private void Enlarge()
             {
                 int size = _rentedBuffer.Length * 2;
-                byte[] newArray = _pool.Rent(size);
+                byte[] newArray = ArrayPool<byte>.Shared.Rent(size);
                 Buffer.BlockCopy(_rentedBuffer, 0, newArray, 0, Length);
-                _pool.Return(_rentedBuffer);
+                ArrayPool<byte>.Shared.Return(_rentedBuffer);
                 _rentedBuffer = newArray;
             }
 

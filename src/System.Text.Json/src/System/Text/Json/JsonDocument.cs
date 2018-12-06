@@ -42,7 +42,7 @@ namespace System.Text.Json
                 true,
                 new JsonReaderState(maxDepth: int.MaxValue, readerOptions));
 
-            var database = new CustomDb(ArrayPool<byte>.Shared, DbRow.Size + utf8Json.Length);
+            var database = new CustomDb(DbRow.Size + utf8Json.Length);
             var stack = new CustomStack(JsonReaderState.DefaultMaxDepth * StackRow.Size);
 
             try
