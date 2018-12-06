@@ -19,7 +19,7 @@ namespace System.Text.Json
 
             // Sign bit is used for "IsPropertyValue"
             private int _locationUnion;
-            // Sign bit is used for "HasChildren"
+            // Sign bit is used for "HasComplexChildren"
             private int _sizeOrLengthUnion;
 
             // Top nybble is JsonTokenType
@@ -46,7 +46,7 @@ namespace System.Text.Json
             internal bool IsUnknownSize => _sizeOrLengthUnion == UnknownSize;
 
             // True only if there are nested objects or arrays within the current JSON element
-            internal bool HasChildren => _sizeOrLengthUnion < 0;
+            internal bool HasComplexChildren => _sizeOrLengthUnion < 0;
 
             internal int NumberOfRows =>
                 _numberOfRowsAndTypeUnion & 0x0FFFFFFF; // Number of rows that the current JSON element occupies within the database

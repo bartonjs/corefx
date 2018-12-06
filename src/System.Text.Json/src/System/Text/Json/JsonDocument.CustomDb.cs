@@ -116,11 +116,11 @@ namespace System.Text.Json
                 MemoryMarshal.Write(dataPos, ref value);
             }
 
-            internal void SetHasChildren(int index)
+            internal void SetHasComplexChildren(int index)
             {
                 AssertValidIndex(index);
 
-                // The HasChildren bit is the most significant bit of "SizeOrLength"
+                // The HasComplexChildren bit is the most significant bit of "SizeOrLength"
                 Span<byte> dataPos = _rentedBuffer.AsSpan(index + SizeOrLengthOffset);
                 int current = MemoryMarshal.Read<int>(dataPos);
 

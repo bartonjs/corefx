@@ -104,6 +104,11 @@ namespace System.Text.Json
                 throw new IndexOutOfRangeException();
             }
 
+            if (!row.HasComplexChildren)
+            {
+                return new JsonElement(this, currentIndex + (arrayIndex * DbRow.Size));
+            }
+
             int elementCount = 0;
             int objectOffset = currentIndex + DbRow.Size;
 
@@ -354,7 +359,7 @@ namespace System.Text.Json
                 {
                     if (parentLocation != -1)
                     {
-                        database.SetHasChildren(parentLocation);
+                        database.SetHasComplexChildren(parentLocation);
                     }
 
                     parentLocation = database.Length;
@@ -390,7 +395,7 @@ namespace System.Text.Json
                 {
                     if (parentLocation != -1)
                     {
-                        database.SetHasChildren(parentLocation);
+                        database.SetHasComplexChildren(parentLocation);
                     }
 
                     parentLocation = database.Length;
