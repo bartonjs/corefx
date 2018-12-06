@@ -157,26 +157,22 @@ namespace System.Text.Json
             return endIndex;
         }
 
-        internal bool TryGetRawData<T>(int index, out ReadOnlyMemory<T> rawData) where T : struct
+        internal ReadOnlyMemory<byte> GetRawValue(int index)
         {
             if (_utf8Json.IsEmpty)
                 throw new ObjectDisposedException(nameof(JsonDocument));
-
-            if (typeof(T) != typeof(byte))
-            {
-                rawData = default;
-                return false;
-            }
 
             _parsedData.Get(index, out DbRow row);
 
             if (row.IsSimpleValue)
             {
-                rawData = (ReadOnlyMemory<T>)(object)_utf8Json.Slice(row.Location, row.SizeOrLength);
-                return true;
+                return _utf8Json.Slice(row.Location, row.SizeOrLength);
             }
 
-            throw new NotImplementedException();
+            int endElementIdx = GetEndIndex(index, includeEndElement: false);
+            int start = row.Location;
+            _parsedData.Get(endElementIdx, out row);
+            return _utf8Json.Slice(start, row.Location - start + row.SizeOrLength);
         }
 
         internal string GetString(int index)
@@ -309,27 +305,8 @@ namespace System.Text.Json
 
         internal string GetRawValueAsString(int index)
         {
-            if (_utf8Json.IsEmpty)
-                throw new ObjectDisposedException(nameof(JsonDocument));
-
-            _parsedData.Get(index, out DbRow row);
-
-            ReadOnlySpan<byte> data = _utf8Json.Span;
-            ReadOnlySpan<byte> segment;
-
-            if (row.IsSimpleValue)
-            {
-                segment = data.Slice(row.Location, row.SizeOrLength);
-            }
-            else
-            {
-                int endElementIdx = GetEndIndex(index, includeEndElement: false);
-                int start = row.Location;
-                _parsedData.Get(endElementIdx, out row);
-                segment = data.Slice(start, row.Location - start + row.SizeOrLength);
-            }
-
-            return Encoding.UTF8.GetString(segment);
+            ReadOnlyMemory<byte> segment = GetRawValue(index);
+            return Encoding.UTF8.GetString(segment.Span);
         }
 
         private static void Parse(
