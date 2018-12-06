@@ -67,21 +67,6 @@ namespace System.Text.Json
                 ArrayPool<byte>.Shared.Return(_rentedBuffer);
                 _rentedBuffer = newArray;
             }
-
-            internal string PrintStack()
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.Append(nameof(StackRow.SizeOrLength) + "\t" + nameof(StackRow.NumberOfRows) + "\r\n");
-                ReadOnlySpan<byte> stackSpace = _rentedBuffer;
-
-                for (int i = stackSpace.Length - StackRow.Size; i >= _topOfStack; i -= StackRow.Size)
-                {
-                    StackRow row = MemoryMarshal.Read<StackRow>(stackSpace.Slice(i));
-                    sb.Append(row.SizeOrLength + "\t" + row.NumberOfRows + "\r\n");
-                }
-
-                return sb.ToString();
-            }
         }
     }
 }
