@@ -267,14 +267,6 @@ namespace System.Text.Json
             }
         }
 
-        public static explicit operator bool(JsonElement element) => element.GetBoolean();
-        public static explicit operator string(JsonElement element) => element.GetString();
-        public static explicit operator int(JsonElement element) => element.GetInt32();
-        public static explicit operator long(JsonElement element) => element.GetInt64();
-        [CLSCompliant(false)]
-        public static explicit operator ulong(JsonElement element) => element.GetUInt64();
-        public static explicit operator double(JsonElement element) => element.GetDouble();
-
         public struct ChildEnumerator
         {
             private JsonElement _target;
