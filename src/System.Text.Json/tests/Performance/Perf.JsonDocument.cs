@@ -11,7 +11,7 @@ namespace System.Text.Json.Performance.Tests
 {
     public class Perf_JsonDocument
     {
-        private const int InnerIterCount = 1000;
+        private const int InnerIterCount = 300;
 
         [Benchmark(InnerIterationCount = InnerIterCount)]
         [InlineData(-2)]
@@ -77,6 +77,110 @@ namespace System.Text.Json.Performance.Tests
                 BasicJsonWithLargeNum,
                 repeatCount,
                 token => { token[index]["phoneNumbers"][1].ToString(); });
+        }
+
+        [Benchmark(InnerIterationCount = InnerIterCount)]
+        [InlineData(-2)]
+        [InlineData(-1)]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(21)]
+        [InlineData(2136)]
+        public void BasicJasonWithLargeNumTouchEveryElement(int repeatCount)
+        {
+            int len = Prepare(BasicJsonWithLargeNum, repeatCount, out byte[] rented);
+            ReadOnlyMemory<byte> buf = rented.AsMemory(0, len);
+
+            foreach (var iteration in Benchmark.Iterations)
+            {
+                using (iteration.StartMeasurement())
+                {
+                    for (int i = 0; i < Benchmark.InnerIterationCount; i++)
+                    {
+                        using (JsonDocument doc = JsonDocument.Parse(buf, default))
+                        {
+                            TouchEverything(doc.RootElement);
+                        }
+                    }
+                }
+            }
+        }
+
+        [Benchmark(InnerIterationCount = InnerIterCount)]
+        [InlineData(-2)]
+        [InlineData(-1)]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(21)]
+        [InlineData(2136)]
+        public void BasicJasonWithLargeNumTouchEveryElement_JsonNet(int repeatCount)
+        {
+            int len = Prepare(BasicJsonWithLargeNum, repeatCount, out byte[] rented);
+            ReadOnlyMemory<byte> buf = rented.AsMemory(0, len);
+            string str = Encoding.UTF8.GetString(buf.Span);
+
+            foreach (var iteration in Benchmark.Iterations)
+            {
+                using (iteration.StartMeasurement())
+                {
+                    for (int i = 0; i < Benchmark.InnerIterationCount; i++)
+                    {
+                        JToken token = JToken.Parse(str);
+                        TouchEverything(token);
+                    }
+                }
+            }
+        }
+
+        private static void TouchEverything(JsonElement element)
+        {
+            ReadOnlyMemory<byte> tmp = default;
+
+            switch (element.Type)
+            {
+                case JsonTokenType.StartArray:
+                case JsonTokenType.StartObject:
+                {
+                    foreach (JsonElement child in element.EnumerateChildren())
+                    {
+                        TouchEverything(child);
+                    }
+
+                    break;
+                }
+                default:
+                    element.TryGetRawData(out tmp);
+                    break;
+            }
+        }
+
+        private static void TouchEverything(JToken token)
+        {
+            object val;
+
+            switch (token.Type)
+            {
+                case JTokenType.Array:
+                case JTokenType.Object:
+                {
+                    foreach (JToken child in token.Children())
+                    {
+                        TouchEverything(child);
+                    }
+
+                    break;
+                }
+                case JTokenType.Property:
+                    JProperty prop = (JProperty)token;
+                    val = prop.Name;
+                    TouchEverything(prop.Value);
+                    break;
+                default:
+                    val = ((JValue)token).Value;
+                    break;
+            }
         }
 
         private static void ParseOnly(string seed, int repeatCount)
