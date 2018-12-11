@@ -9,17 +9,14 @@ namespace System.Text.Json
 {
     public partial class JsonDocument
     {
-        // Location - offset - 0 - size - 4
-        // SizeOrLength - offset - 4 - size - 4
-        // _union - HasChildren | JsonType | NumberOfRows - offset - 8 - size - 4
         [StructLayout(LayoutKind.Sequential)]
         internal struct DbRow
         {
             internal const int Size = 12;
 
-            // Sign bit is used for "IsPropertyValue"
-            private int _locationUnion;
-            // Sign bit is used for "HasComplexChildren"
+            // Sign bit is currently unassigned
+            private int _location;
+            // Sign bit is used for "HasComplexChildren" (StartArray)
             private int _sizeOrLengthUnion;
 
             // Top nybble is JsonTokenType
@@ -31,12 +28,7 @@ namespace System.Text.Json
             /// <summary>
             /// Index into the payload
             /// </summary>
-            internal int Location => _locationUnion & int.MaxValue;
-
-            /// <summary>
-            /// Whether the entry before this row is a property name.
-            /// </summary>
-            internal bool IsPropertyValue => _locationUnion < 0;
+            internal int Location => _location;
 
             /// <summary>
             /// length of text in JSON payload (or number of elements if its a JSON array)
@@ -62,19 +54,14 @@ namespace System.Text.Json
             }
 #endif
 
-            internal DbRow(JsonTokenType jsonTokenType, int location, int sizeOrLength, bool isPropertyValue)
+            internal DbRow(JsonTokenType jsonTokenType, int location, int sizeOrLength)
             {
                 Debug.Assert(jsonTokenType > JsonTokenType.None && jsonTokenType <= JsonTokenType.Comment);
                 Debug.Assert((byte)jsonTokenType < 1 << 4);
                 Debug.Assert(location >= 0);
                 Debug.Assert(sizeOrLength >= UnknownSize);
 
-                if (isPropertyValue)
-                {
-                    location |= unchecked((int)0x80000000);
-                }
-
-                _locationUnion = location;
+                _location = location;
                 _sizeOrLengthUnion = sizeOrLength;
                 _numberOfRowsAndTypeUnion = (int)jsonTokenType << 28;
             }

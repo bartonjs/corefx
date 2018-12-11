@@ -10,6 +10,53 @@ namespace System.Text.Json
 {
     partial class JsonDocument
     {
+        // The database for the parsed structure of a JSON document.
+        //
+        // Every token from the document gets a row, which has one of the following forms:
+        //
+        // Value types (String, Number, True, False, Null, PropertyName)
+        // * First int
+        //   * Top bit is unassigned / always clear
+        //   * 31 bits for token offset
+        // * Second int
+        //   * Top bit is unassigned / always clear
+        //   * 31 bits for the token length
+        // * Third int
+        //   * 4 bits JsonTokenType
+        //   * 28 bits unassigned / always clear
+        //
+        // EndObject / EndArray
+        // * First int
+        //   * Top bit is unassigned / always clear
+        //   * 31 bits for token offset
+        // * Second int
+        //   * Top bit is unassigned / always clear
+        //   * 31 bits for the token length (always 1, effectively unassigned)
+        // * Third int
+        //   * 4 bits JsonTokenType
+        //   * 28 bits unassigned / always clear
+        //
+        // StartObject
+        // * First int
+        //   * Top bit is unassigned / always clear
+        //   * 31 bits for token offset
+        // * Second int
+        //   * Top bit is unassigned / always clear
+        //   * 31 bits for the token length (always 1, effectively unassigned)
+        // * Third int
+        //   * 4 bits JsonTokenType
+        //   * 28 bits for the number of rows until the next value (never 0)
+        //
+        // StartArray
+        // * First int
+        //   * Top bit is unassigned / always clear
+        //   * 31 bits for token offset
+        // * Second int
+        //   * Top bit is set if the array contains other arrays or objects ("complex" types)
+        //   * 31 bits for the number of elements in this array
+        // * Third int
+        //   * 4 bits JsonTokenType
+        //   * 28 bits for the number of rows until the next value (never 0)
         private struct CustomDb : IDisposable
         {
             private const int SizeOrLengthOffset = 4;
@@ -54,7 +101,7 @@ namespace System.Text.Json
                 }
             }
 
-            internal void Append(JsonTokenType tokenType, int startLocation, int length, bool isPropertyValue)
+            internal void Append(JsonTokenType tokenType, int startLocation, int length)
             {
                 // StartArray or StartObject should have length -1, otherwise the length should not be -1.
                 Debug.Assert(
@@ -66,7 +113,7 @@ namespace System.Text.Json
                     Enlarge();
                 }
 
-                DbRow row = new DbRow(tokenType, startLocation, length, isPropertyValue);
+                DbRow row = new DbRow(tokenType, startLocation, length);
                 MemoryMarshal.Write(_rentedBuffer.AsSpan(Length), ref row);
                 Length += DbRow.Size;
             }
@@ -156,21 +203,7 @@ namespace System.Text.Json
                 row = MemoryMarshal.Read<DbRow>(_rentedBuffer.AsSpan(index));
             }
 
-            internal int GetLocation() => MemoryMarshal.Read<int>(_rentedBuffer.AsSpan());
-
-            internal int GetLocation(int index)
-            {
-                AssertValidIndex(index);
-                return MemoryMarshal.Read<int>(_rentedBuffer.AsSpan()) & int.MaxValue;
-            }
-
-            internal int GetSizeOrLength(int index)
-            {
-                AssertValidIndex(index);
-                return MemoryMarshal.Read<int>(_rentedBuffer.AsSpan(index + SizeOrLengthOffset)) & int.MaxValue;
-            }
-
-            internal JsonTokenType GetJsonTokenType(int index = 0)
+            internal JsonTokenType GetJsonTokenType(int index)
             {
                 AssertValidIndex(index);
                 uint union = MemoryMarshal.Read<uint>(_rentedBuffer.AsSpan(index + NumberOfRowsOffset));

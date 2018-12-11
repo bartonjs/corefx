@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Buffers;
 using System.Buffers.Text;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -347,7 +346,7 @@ namespace System.Text.Json
                     }
 
                     numberOfRowsForValues++;
-                    database.Append(tokenType, tokenStart, DbRow.UnknownSize, inObject);
+                    database.Append(tokenType, tokenStart, DbRow.UnknownSize);
                     var row = new StackRow(numberOfRowsForMembers + 1);
                     stack.Push(row);
                     numberOfRowsForMembers = 0;
@@ -362,7 +361,7 @@ namespace System.Text.Json
                     numberOfRowsForMembers++;
                     database.SetLength(rowIndex, numberOfRowsForMembers);
 
-                    database.Append(tokenType, tokenStart, reader.ValueSpan.Length, false);
+                    database.Append(tokenType, tokenStart, reader.ValueSpan.Length);
                     database.SetNumberOfRows(rowIndex, numberOfRowsForMembers);
 
                     StackRow row = stack.Pop();
@@ -383,7 +382,7 @@ namespace System.Text.Json
                     }
 
                     numberOfRowsForMembers++;
-                    database.Append(tokenType, tokenStart, DbRow.UnknownSize, inObject);
+                    database.Append(tokenType, tokenStart, DbRow.UnknownSize);
                     var row = new StackRow(arrayItemsCount, numberOfRowsForValues + 1);
                     stack.Push(row);
                     arrayItemsCount = 0;
@@ -400,7 +399,7 @@ namespace System.Text.Json
                     database.SetLength(rowIndex, arrayItemsCount);
                     database.SetNumberOfRows(rowIndex, numberOfRowsForValues);
 
-                    database.Append(tokenType, tokenStart, reader.ValueSpan.Length, false);
+                    database.Append(tokenType, tokenStart, reader.ValueSpan.Length);
                     StackRow row = stack.Pop();
                     arrayItemsCount = row.SizeOrLength;
                     numberOfRowsForValues += row.NumberOfRows;
@@ -409,7 +408,7 @@ namespace System.Text.Json
                 {
                     numberOfRowsForValues++;
                     numberOfRowsForMembers++;
-                    database.Append(tokenType, tokenStart, reader.ValueSpan.Length, false);
+                    database.Append(tokenType, tokenStart, reader.ValueSpan.Length);
 
                     Debug.Assert(!inArray);
                 }
@@ -418,7 +417,7 @@ namespace System.Text.Json
                     Debug.Assert(tokenType >= JsonTokenType.String && tokenType <= JsonTokenType.Null);
                     numberOfRowsForValues++;
                     numberOfRowsForMembers++;
-                    database.Append(tokenType, tokenStart, reader.ValueSpan.Length, inObject);
+                    database.Append(tokenType, tokenStart, reader.ValueSpan.Length);
 
                     if (inArray)
                     {
