@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace System.Text.Json
 {
-    public struct JsonElement
+    public readonly struct JsonElement
     {
         private readonly JsonDocument _parent;
         private readonly int _idx;

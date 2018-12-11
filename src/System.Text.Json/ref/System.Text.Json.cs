@@ -20,9 +20,9 @@ namespace System.Text.Json
         public void Dispose() { }
         public static System.Text.Json.JsonDocument Parse(System.ReadOnlyMemory<byte> utf8Json, System.Text.Json.JsonReaderOptions readerOptions) { throw null; }
     }
-    public partial struct JsonElement
+    public readonly partial struct JsonElement
     {
-        private object _dummy;
+        private readonly object _dummy;
         public System.Text.Json.JsonElement this[int index] { get { throw null; } }
         public System.Text.Json.JsonElement this[System.ReadOnlySpan<byte> utf8PropertyName] { get { throw null; } }
         public System.Text.Json.JsonElement this[System.ReadOnlySpan<char> propertyName] { get { throw null; } }
