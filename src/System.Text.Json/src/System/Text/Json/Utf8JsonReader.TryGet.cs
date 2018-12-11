@@ -11,7 +11,7 @@ namespace System.Text.Json
     public ref partial struct Utf8JsonReader
     {
         // Reject any invalid UTF-8 data rather than silently replacing.
-        private static readonly UTF8Encoding s_utf8Encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
+        internal static readonly UTF8Encoding Utf8Encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
         /// <summary>
         /// Reads the next JSON token value from the source transcoded as a <see cref="string"/>.
@@ -34,7 +34,7 @@ namespace System.Text.Json
             ReadOnlySpan<byte> span = HasValueSequence ? ValueSequence.ToArray() : ValueSpan;
 
             // TODO: https://github.com/dotnet/corefx/issues/33292
-            return s_utf8Encoding.GetString(span);
+            return Utf8Encoding.GetString(span);
         }
 
         /// <summary>

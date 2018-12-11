@@ -192,7 +192,7 @@ namespace System.Text.Json
             ReadOnlySpan<byte> segment = data.Slice(row.Location, row.SizeOrLength);
 
             // TODO(#33292): Unescape this.
-            return Encoding.UTF8.GetString(segment);
+            return Utf8JsonReader.Utf8Encoding.GetString(segment);
         }
 
         internal bool TryGetValue(int index, out int value)
@@ -301,7 +301,7 @@ namespace System.Text.Json
         internal string GetRawValueAsString(int index)
         {
             ReadOnlyMemory<byte> segment = GetRawValue(index);
-            return Encoding.UTF8.GetString(segment.Span);
+            return Utf8JsonReader.Utf8Encoding.GetString(segment.Span);
         }
 
         internal JsonElement GetPropertyValue(int idx)
