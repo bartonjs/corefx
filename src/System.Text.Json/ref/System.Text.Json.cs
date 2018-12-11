@@ -34,6 +34,8 @@ namespace System.Text.Json
         public double GetDouble() { throw null; }
         public int GetInt32() { throw null; }
         public long GetInt64() { throw null; }
+        public string GetPropertyName() { throw null; }
+        public System.Text.Json.JsonElement GetPropertyValue() { throw null; }
         public string GetString() { throw null; }
         [System.CLSCompliantAttribute(false)]
         public ulong GetUInt64() { throw null; }

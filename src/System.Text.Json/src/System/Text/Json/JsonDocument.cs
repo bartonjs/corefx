@@ -174,7 +174,7 @@ namespace System.Text.Json
             return _utf8Json.Slice(start, row.Location - start + row.SizeOrLength);
         }
 
-        internal string GetString(int index)
+        internal string GetString(int index, JsonTokenType expectedType)
         {
             if (_utf8Json.IsEmpty)
                 throw new ObjectDisposedException(nameof(JsonDocument));
@@ -183,13 +183,9 @@ namespace System.Text.Json
 
             JsonTokenType type = row.TokenType;
 
-            switch (type)
+            if (expectedType != type)
             {
-                case JsonTokenType.String:
-                case JsonTokenType.PropertyName:
-                    break;
-                default:
-                    throw new InvalidOperationException();
+                throw new InvalidOperationException();
             }
 
             ReadOnlySpan<byte> data = _utf8Json.Span;
@@ -306,6 +302,16 @@ namespace System.Text.Json
         {
             ReadOnlyMemory<byte> segment = GetRawValue(index);
             return Encoding.UTF8.GetString(segment.Span);
+        }
+
+        internal JsonElement GetPropertyValue(int idx)
+        {
+            if (GetJsonTokenType(idx) != JsonTokenType.PropertyName)
+            {
+                throw new InvalidOperationException();
+            }
+
+            return new JsonElement(this, idx + DbRow.Size);
         }
 
         private static void Parse(

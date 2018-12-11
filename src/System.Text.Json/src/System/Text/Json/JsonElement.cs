@@ -196,7 +196,7 @@ namespace System.Text.Json
                 throw new InvalidOperationException();
             }
 
-            return _parent.GetString(_idx);
+            return _parent.GetString(_idx, JsonTokenType.String);
         }
 
         public bool TryGetValue(out int value)
@@ -281,6 +281,26 @@ namespace System.Text.Json
             throw new FormatException();
         }
 
+        public string GetPropertyName()
+        {
+            if (_parent == null)
+            {
+                throw new InvalidOperationException();
+            }
+
+            return _parent.GetString(_idx, JsonTokenType.PropertyName);
+        }
+
+        public JsonElement GetPropertyValue()
+        {
+            if (_parent == null)
+            {
+                throw new InvalidOperationException();
+            }
+
+            return _parent.GetPropertyValue(_idx);
+        }
+
         public ChildEnumerator EnumerateChildren()
         {
             if (_parent == null)
@@ -312,6 +332,7 @@ namespace System.Text.Json
                     return _parent.GetRawValueAsString(_idx);
                 }
                 case JsonTokenType.PropertyName:
+                    return GetPropertyName();
                 case JsonTokenType.String:
                     return GetString();
                 case JsonTokenType.EndArray:
