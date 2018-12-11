@@ -38,7 +38,7 @@ namespace System.Text.Json
             ReadOnlySpan<byte> utf8JsonSpan = utf8Json.Span;
             Utf8JsonReader reader = new Utf8JsonReader(
                 utf8JsonSpan,
-                true,
+                isFinalBlock: true,
                 new JsonReaderState(maxDepth: int.MaxValue, readerOptions));
 
             var database = new CustomDb(DbRow.Size + utf8Json.Length);
@@ -48,7 +48,7 @@ namespace System.Text.Json
             {
                 Parse(utf8JsonSpan, reader, ref database, ref stack);
             }
-            catch (Exception)
+            catch
             {
                 database.Dispose();
                 throw;
@@ -320,7 +320,6 @@ namespace System.Text.Json
             ref CustomDb database,
             ref CustomStack stack)
         {
-            bool inObject = false;
             bool inArray = false;
             int arrayItemsCount = 0;
             int numberOfRowsForMembers = 0;
@@ -432,7 +431,6 @@ namespace System.Text.Json
                 }
 
                 inArray = reader.IsInArray;
-                inObject = reader.CurrentDepth != 0 && !inArray;
             }
 
             database.TrimExcess();
