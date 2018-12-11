@@ -151,7 +151,7 @@ namespace System.Text.Json.Performance.Tests
                     break;
                 }
                 default:
-                    element.TryGetRawData(out tmp);
+                    element.TryGetRawValue(out tmp);
                     break;
             }
         }
