@@ -247,9 +247,14 @@ namespace System.Text.Json.Tests
                 case JsonTokenType.String:
                 case JsonTokenType.Comment:
                 case JsonTokenType.Number:
-                case JsonTokenType.PropertyName:
                 {
                     buf.Append(element.ToString());
+                    buf.Append(", ");
+                    break;
+                }
+                case JsonTokenType.PropertyName:
+                {
+                    buf.Append(element.GetPropertyName());
                     buf.Append(", ");
                     break;
                 }

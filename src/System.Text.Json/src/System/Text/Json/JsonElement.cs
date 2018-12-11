@@ -332,7 +332,11 @@ namespace System.Text.Json
                     return _parent.GetRawValueAsString(_idx);
                 }
                 case JsonTokenType.PropertyName:
-                    return GetPropertyName();
+                {
+                    // null parent should have hit the None case
+                    Debug.Assert(_parent != null);
+                    return _parent.PrettyPrintProperty(_idx);
+                }
                 case JsonTokenType.String:
                     return GetString();
                 case JsonTokenType.EndArray:
