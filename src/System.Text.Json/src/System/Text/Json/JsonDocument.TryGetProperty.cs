@@ -72,7 +72,6 @@ namespace System.Text.Json
                     }
                     finally
                     {
-                        utf8Name.Clear();
                         ArrayPool<byte>.Shared.Return(tmpUtf8);
                     }
                 }
