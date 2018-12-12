@@ -107,7 +107,7 @@ namespace System.Text.Json
             Utf8JsonReader reader = new Utf8JsonReader(
                 utf8JsonSpan,
                 isFinalBlock: true,
-                new JsonReaderState(maxDepth: int.MaxValue, readerOptions));
+                new JsonReaderState(JsonReaderState.DefaultMaxDepth, readerOptions));
 
             var database = new CustomDb(DbRow.Size + utf8Json.Length);
             var stack = new CustomStack(JsonReaderState.DefaultMaxDepth * StackRow.Size);
