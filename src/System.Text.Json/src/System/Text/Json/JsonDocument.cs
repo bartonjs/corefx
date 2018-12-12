@@ -247,7 +247,14 @@ namespace System.Text.Json
 
             _parsedData.Get(index, out DbRow row);
 
-            CheckExpectedType(expectedType, row.TokenType);
+            JsonTokenType tokenType = row.TokenType;
+
+            if (tokenType == JsonTokenType.Null)
+            {
+                return null;
+            }
+
+            CheckExpectedType(expectedType, tokenType);
 
             ReadOnlySpan<byte> data = _utf8Json.Span;
             ReadOnlySpan<byte> segment = data.Slice(row.Location, row.SizeOrLength);

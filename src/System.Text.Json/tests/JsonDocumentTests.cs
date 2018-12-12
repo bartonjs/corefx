@@ -857,6 +857,18 @@ namespace System.Text.Json.Tests
             Assert.Throws<EncoderFallbackException>(() => JsonDocument.Parse("{ \"unpaired\uDFFE\": true }", default));
         }
 
+        [Theory]
+        [InlineData("\"hello\"    ", "hello")]
+        [InlineData("    null     ", (string)null)]
+        // TODO(#33292) [InlineData("\"\\u0030\\u0031\"", "31")]
+        public static void ReadString(string json, string expectedValue)
+        {
+            using (JsonDocument doc = JsonDocument.Parse(json))
+            {
+                Assert.Equal(expectedValue, doc.RootElement.GetString());
+            }
+        }
+
         private static ArraySegment<byte> StringToUtf8BufferWithEmptySpace(string testString, int emptySpaceSize = 2048)
         {
             int expectedLength = Encoding.UTF8.GetByteCount(testString);
