@@ -48,11 +48,25 @@ namespace System.Text.Json
 
         public static JsonDocument Parse(ReadOnlyMemory<byte> utf8Json, JsonReaderOptions readerOptions)
         {
+            if (readerOptions.CommentHandling == JsonCommentHandling.Allow)
+            {
+                throw new ArgumentException(
+                    "Comments cannot be incorporated into JsonDocument, only comment handling modes Skip and Allow are supported.",
+                    nameof(readerOptions));
+            }
+
             return Parse(utf8Json, readerOptions, null);
         }
 
         public static JsonDocument Parse(ReadOnlyMemory<char> json, JsonReaderOptions readerOptions)
         {
+            if (readerOptions.CommentHandling == JsonCommentHandling.Allow)
+            {
+                throw new ArgumentException(
+                    "Comments cannot be incorporated into JsonDocument, only comment handling modes Skip and Allow are supported.",
+                    nameof(readerOptions));
+            }
+
             ReadOnlySpan<char> jsonChars = json.Span;
             int byteCount = Utf8JsonReader.Utf8Encoding.GetByteCount(jsonChars);
             byte[] utf8Bytes = ArrayPool<byte>.Shared.Rent(byteCount);
@@ -74,6 +88,13 @@ namespace System.Text.Json
 
         public static JsonDocument Parse(string json, JsonReaderOptions readerOptions)
         {
+            if (readerOptions.CommentHandling == JsonCommentHandling.Allow)
+            {
+                throw new ArgumentException(
+                    "Comments cannot be incorporated into JsonDocument, only comment handling modes Skip and Allow are supported.",
+                    nameof(readerOptions));
+            }
+
             return Parse(json.AsMemory(), readerOptions);
         }
 
