@@ -46,7 +46,7 @@ namespace System.Text.Json
             }
         }
 
-        public static JsonDocument Parse(ReadOnlyMemory<byte> utf8Json, JsonReaderOptions readerOptions)
+        public static JsonDocument Parse(ReadOnlyMemory<byte> utf8Json, JsonReaderOptions readerOptions = default)
         {
             if (readerOptions.CommentHandling == JsonCommentHandling.Allow)
             {
@@ -58,7 +58,7 @@ namespace System.Text.Json
             return Parse(utf8Json, readerOptions, null);
         }
 
-        public static JsonDocument Parse(ReadOnlyMemory<char> json, JsonReaderOptions readerOptions)
+        public static JsonDocument Parse(ReadOnlyMemory<char> json, JsonReaderOptions readerOptions = default)
         {
             if (readerOptions.CommentHandling == JsonCommentHandling.Allow)
             {
@@ -86,7 +86,7 @@ namespace System.Text.Json
             }
         }
 
-        public static JsonDocument Parse(string json, JsonReaderOptions readerOptions)
+        public static JsonDocument Parse(string json, JsonReaderOptions readerOptions = default)
         {
             if (readerOptions.CommentHandling == JsonCommentHandling.Allow)
             {
