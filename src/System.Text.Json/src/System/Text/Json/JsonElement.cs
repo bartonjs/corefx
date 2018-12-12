@@ -20,10 +20,7 @@ namespace System.Text.Json
         {
             get
             {
-                if (_parent == null)
-                {
-                    throw new InvalidOperationException();
-                }
+                CheckValidInstance();
 
                 return _parent.GetArrayIndexElement(_idx, index);
             }
@@ -44,10 +41,7 @@ namespace System.Text.Json
         {
             get
             {
-                if (_parent == null)
-                {
-                    throw new InvalidOperationException();
-                }
+                CheckValidInstance();
 
                 if (!_parent.TryGetNamedPropertyValue(_idx, propertyName, out JsonElement value))
                 {
@@ -62,10 +56,7 @@ namespace System.Text.Json
         {
             get
             {
-                if (_parent == null)
-                {
-                    throw new InvalidOperationException();
-                }
+                CheckValidInstance();
 
                 if (!_parent.TryGetNamedPropertyValue(_idx, utf8PropertyName, out JsonElement value))
                 {
@@ -78,10 +69,7 @@ namespace System.Text.Json
 
         public int GetArrayLength()
         {
-            if (_parent == null)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckValidInstance();
 
             return _parent.GetArrayLength(_idx);
         }
@@ -96,26 +84,23 @@ namespace System.Text.Json
 
         public bool TryGetProperty(ReadOnlySpan<char> propertyName, out JsonElement value)
         {
-            if (_parent == null)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckValidInstance();
 
             return _parent.TryGetNamedPropertyValue(_idx, propertyName, out value);
         }
 
         public bool TryGetProperty(ReadOnlySpan<byte> utf8PropertyName, out JsonElement value)
         {
-            if (_parent == null)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckValidInstance();
 
             return _parent.TryGetNamedPropertyValue(_idx, utf8PropertyName, out value);
         }
         
         public bool GetBoolean()
         {
+            // CheckValidInstance is redundant.  Asking for the type will
+            // return None, which then throws the same exception in the return statement.
+
             JsonTokenType type = Type;
 
             return
@@ -126,20 +111,14 @@ namespace System.Text.Json
 
         public string GetString()
         {
-            if (_parent == null)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckValidInstance();
 
             return _parent.GetString(_idx, JsonTokenType.String);
         }
 
         public bool TryGetValue(out int value)
         {
-            if (_parent == null)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckValidInstance();
 
             return _parent.TryGetValue(_idx, out value);
         }
@@ -156,10 +135,7 @@ namespace System.Text.Json
 
         public bool TryGetValue(out long value)
         {
-            if (_parent == null)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckValidInstance();
 
             return _parent.TryGetValue(_idx, out value);
         }
@@ -177,10 +153,7 @@ namespace System.Text.Json
         [CLSCompliant(false)]
         public bool TryGetValue(out ulong value)
         {
-            if (_parent == null)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckValidInstance();
 
             return _parent.TryGetValue(_idx, out value);
         }
@@ -198,10 +171,7 @@ namespace System.Text.Json
 
         public bool TryGetValue(out double value)
         {
-            if (_parent == null)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckValidInstance();
 
             return _parent.TryGetValue(_idx, out value);
         }
@@ -218,30 +188,21 @@ namespace System.Text.Json
 
         public string GetPropertyName()
         {
-            if (_parent == null)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckValidInstance();
 
             return _parent.GetString(_idx, JsonTokenType.PropertyName);
         }
 
         public JsonElement GetPropertyValue()
         {
-            if (_parent == null)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckValidInstance();
 
             return _parent.GetPropertyValue(_idx);
         }
 
         public ChildEnumerator EnumerateChildren()
         {
-            if (_parent == null)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckValidInstance();
 
             switch (Type)
             {
@@ -288,6 +249,14 @@ namespace System.Text.Json
                 default:
                     Debug.Fail($"No handler for {nameof(JsonTokenType)}.{Type}");
                     return string.Empty;
+            }
+        }
+
+        private void CheckValidInstance()
+        {
+            if (_parent == null)
+            {
+                throw new InvalidOperationException();
             }
         }
 
