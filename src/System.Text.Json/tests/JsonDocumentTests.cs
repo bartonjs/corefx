@@ -443,14 +443,17 @@ namespace System.Text.Json.Tests
         public static void ReadSmallInteger(int value)
         {
             double expectedDouble = value;
-            ArraySegment<byte> buffer = StringToUtf8BufferWithEmptySpace("    " + value + "  ", 0);
+            float expectedFloat = value;
 
-            using (JsonDocument doc = JsonDocument.Parse(buffer, default))
+            using (JsonDocument doc = JsonDocument.Parse("    " + value + "  "))
             {
                 JsonElement root = doc.RootElement;
 
                 Assert.Equal(JsonTokenType.Number, root.Type);
-                
+
+                Assert.True(root.TryGetSingle(out float floatVal));
+                Assert.Equal(expectedFloat, floatVal);
+
                 Assert.True(root.TryGetDouble(out double doubleVal));
                 Assert.Equal(expectedDouble, doubleVal);
 
@@ -460,23 +463,34 @@ namespace System.Text.Json.Tests
                 Assert.True(root.TryGetInt64(out long longVal));
                 Assert.Equal(value, longVal);
 
+                Assert.Equal(expectedFloat, root.GetSingle());
                 Assert.Equal(expectedDouble, root.GetDouble());
                 Assert.Equal(value, root.GetInt32());
                 Assert.Equal(value, root.GetInt64());
 
                 if (value >= 0)
                 {
+                    uint expectedUInt = (uint)value;
                     ulong expectedULong = (ulong)value;
+
+                    Assert.True(root.TryGetUInt32(out uint uintVal));
+                    Assert.Equal(expectedUInt, uintVal);
+
                     Assert.True(root.TryGetUInt64(out ulong ulongVal));
                     Assert.Equal(expectedULong, ulongVal);
 
+                    Assert.Equal(expectedUInt, root.GetUInt32());
                     Assert.Equal(expectedULong, root.GetUInt64());
                 }
                 else
                 {
+                    Assert.False(root.TryGetUInt32(out uint uintValue));
+                    Assert.Equal(0U, uintValue);
+
                     Assert.False(root.TryGetUInt64(out ulong ulongValue));
                     Assert.Equal(0UL, ulongValue);
 
+                    Assert.Throws<FormatException>(() => root.GetUInt32());
                     Assert.Throws<FormatException>(() => root.GetUInt64());
                 }
 
@@ -497,12 +511,16 @@ namespace System.Text.Json.Tests
         public static void ReadMediumInteger(long value)
         {
             double expectedDouble = value;
+            float expectedFloat = value;
 
-            using (JsonDocument doc = JsonDocument.Parse("    " + value + "  ", default))
+            using (JsonDocument doc = JsonDocument.Parse("    " + value + "  "))
             {
                 JsonElement root = doc.RootElement;
 
                 Assert.Equal(JsonTokenType.Number, root.Type);
+
+                Assert.True(root.TryGetSingle(out float floatVal));
+                Assert.Equal(expectedFloat, floatVal);
 
                 Assert.True(root.TryGetDouble(out double doubleVal));
                 Assert.Equal(expectedDouble, doubleVal);
@@ -513,12 +531,29 @@ namespace System.Text.Json.Tests
                 Assert.True(root.TryGetInt64(out long longVal));
                 Assert.Equal(value, longVal);
 
+                Assert.Equal(expectedFloat, root.GetSingle());
                 Assert.Equal(expectedDouble, root.GetDouble());
                 Assert.Throws<FormatException>(() => root.GetInt32());
                 Assert.Equal(value, root.GetInt64());
 
                 if (value >= 0)
                 {
+                    if (value <= uint.MaxValue)
+                    {
+                        uint expectedUInt = (uint)value;
+                        Assert.True(root.TryGetUInt32(out uint uintVal));
+                        Assert.Equal(expectedUInt, uintVal);
+
+                        Assert.Equal(expectedUInt, root.GetUInt64());
+                    }
+                    else
+                    {
+                        Assert.False(root.TryGetUInt32(out uint uintValue));
+                        Assert.Equal(0U, uintValue);
+
+                        Assert.Throws<FormatException>(() => root.GetUInt32());
+                    }
+
                     ulong expectedULong = (ulong)value;
                     Assert.True(root.TryGetUInt64(out ulong ulongVal));
                     Assert.Equal(expectedULong, ulongVal);
@@ -527,9 +562,13 @@ namespace System.Text.Json.Tests
                 }
                 else
                 {
+                    Assert.False(root.TryGetUInt32(out uint uintValue));
+                    Assert.Equal(0U, uintValue);
+
                     Assert.False(root.TryGetUInt64(out ulong ulongValue));
                     Assert.Equal(0UL, ulongValue);
 
+                    Assert.Throws<FormatException>(() => root.GetUInt32());
                     Assert.Throws<FormatException>(() => root.GetUInt64());
                 }
 
@@ -547,12 +586,16 @@ namespace System.Text.Json.Tests
         public static void ReadLargeInteger(ulong value)
         {
             double expectedDouble = value;
+            float expectedFloat = value;
 
-            using (JsonDocument doc = JsonDocument.Parse("    " + value + "  ", default))
+            using (JsonDocument doc = JsonDocument.Parse("    " + value + "  "))
             {
                 JsonElement root = doc.RootElement;
 
                 Assert.Equal(JsonTokenType.Number, root.Type);
+
+                Assert.True(root.TryGetSingle(out float floatVal));
+                Assert.Equal(expectedFloat, floatVal);
 
                 Assert.True(root.TryGetDouble(out double doubleVal));
                 Assert.Equal(expectedDouble, doubleVal);
@@ -560,11 +603,16 @@ namespace System.Text.Json.Tests
                 Assert.False(root.TryGetInt32(out int intVal));
                 Assert.Equal(0, intVal);
 
+                Assert.False(root.TryGetUInt32(out uint uintVal));
+                Assert.Equal(0U, uintVal);
+
                 Assert.False(root.TryGetInt64(out long longVal));
                 Assert.Equal(0L, longVal);
 
+                Assert.Equal(expectedFloat, root.GetSingle());
                 Assert.Equal(expectedDouble, root.GetDouble());
                 Assert.Throws<FormatException>(() => root.GetInt32());
+                Assert.Throws<FormatException>(() => root.GetUInt32());
                 Assert.Throws<FormatException>(() => root.GetInt64());
 
                 Assert.True(root.TryGetUInt64(out ulong ulongVal));
@@ -583,14 +631,66 @@ namespace System.Text.Json.Tests
         [Fact]
         public static void ReadTooLargeInteger()
         {
+            float expectedFloat = ulong.MaxValue;
             double expectedDouble = ulong.MaxValue;
             expectedDouble *= 10;
+            expectedFloat *= 10;
 
             using (JsonDocument doc = JsonDocument.Parse("    " + ulong.MaxValue + "0  ", default))
             {
                 JsonElement root = doc.RootElement;
 
                 Assert.Equal(JsonTokenType.Number, root.Type);
+
+                Assert.True(root.TryGetSingle(out float floatVal));
+                Assert.Equal(expectedFloat, floatVal);
+
+                Assert.True(root.TryGetDouble(out double doubleVal));
+                Assert.Equal(expectedDouble, doubleVal);
+
+                Assert.False(root.TryGetInt32(out int intVal));
+                Assert.Equal(0, intVal);
+
+                Assert.False(root.TryGetUInt32(out uint uintVal));
+                Assert.Equal(0U, uintVal);
+
+                Assert.False(root.TryGetInt64(out long longVal));
+                Assert.Equal(0L, longVal);
+
+                Assert.False(root.TryGetUInt64(out ulong ulongVal));
+                Assert.Equal(0UL, ulongVal);
+
+                Assert.Equal(expectedFloat, root.GetSingle());
+                Assert.Equal(expectedDouble, root.GetDouble());
+                Assert.Throws<FormatException>(() => root.GetInt32());
+                Assert.Throws<FormatException>(() => root.GetUInt32());
+                Assert.Throws<FormatException>(() => root.GetInt64());
+                Assert.Throws<FormatException>(() => root.GetUInt64());
+
+                Assert.Throws<InvalidOperationException>(() => root.GetString());
+                Assert.Throws<InvalidOperationException>(() => root.GetArrayLength());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateArray());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateObject());
+                Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
+            }
+        }
+
+        [Theory]
+        [InlineData("1e+1", 10.0, 10.0f)]
+        [InlineData("1.1e-0", 1.1, 1.1f)]
+        [InlineData("3.14159", 3.14159, 3.14159f)]
+        [InlineData("1e-10", 1e-10, 1e-10f)]
+        [InlineData("1234567.15", 1234567.15, 1234567.13f)]
+        public static void ReadNonInteger(string str, double expectedDouble, float expectedFloat)
+        {
+            using (JsonDocument doc = JsonDocument.Parse("    " + str + "  ", default))
+            {
+                JsonElement root = doc.RootElement;
+
+                Assert.Equal(JsonTokenType.Number, root.Type);
+
+                Assert.True(root.TryGetSingle(out float floatVal));
+                Assert.Equal(expectedFloat, floatVal);
 
                 Assert.True(root.TryGetDouble(out double doubleVal));
                 Assert.Equal(expectedDouble, doubleVal);
@@ -604,45 +704,8 @@ namespace System.Text.Json.Tests
                 Assert.False(root.TryGetUInt64(out ulong ulongVal));
                 Assert.Equal(0UL, ulongVal);
 
+                Assert.Equal(expectedFloat, root.GetSingle());
                 Assert.Equal(expectedDouble, root.GetDouble());
-                Assert.Throws<FormatException>(() => root.GetInt32());
-                Assert.Throws<FormatException>(() => root.GetInt64());
-                Assert.Throws<FormatException>(() => root.GetUInt64());
-
-                Assert.Throws<InvalidOperationException>(() => root.GetString());
-                Assert.Throws<InvalidOperationException>(() => root.GetArrayLength());
-                Assert.Throws<InvalidOperationException>(() => root.EnumerateArray());
-                Assert.Throws<InvalidOperationException>(() => root.EnumerateObject());
-                Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
-            }
-        }
-
-        [Theory]
-        [InlineData("1e+1", 10)]
-        [InlineData("1.1e-0", 1.1)]
-        [InlineData("3.14159", 3.14159)]
-        [InlineData("1e-10", 1e-10)]
-        public static void ReadNonInteger(string str, double val)
-        {
-            using (JsonDocument doc = JsonDocument.Parse("    " + str + "  ", default))
-            {
-                JsonElement root = doc.RootElement;
-
-                Assert.Equal(JsonTokenType.Number, root.Type);
-
-                Assert.True(root.TryGetDouble(out double doubleVal));
-                Assert.Equal(val, doubleVal);
-
-                Assert.False(root.TryGetInt32(out int intVal));
-                Assert.Equal(0, intVal);
-
-                Assert.False(root.TryGetInt64(out long longVal));
-                Assert.Equal(0L, longVal);
-
-                Assert.False(root.TryGetUInt64(out ulong ulongVal));
-                Assert.Equal(0UL, ulongVal);
-
-                Assert.Equal(val, root.GetDouble());
                 Assert.Throws<FormatException>(() => root.GetInt32());
                 Assert.Throws<FormatException>(() => root.GetInt64());
                 Assert.Throws<FormatException>(() => root.GetUInt64());
@@ -666,6 +729,9 @@ namespace System.Text.Json.Tests
 
                 Assert.Equal(JsonTokenType.Number, root.Type);
 
+                Assert.True(root.TryGetSingle(out float floatVal));
+                Assert.Equal(float.PositiveInfinity, floatVal);
+
                 Assert.True(root.TryGetDouble(out double doubleVal));
                 Assert.Equal(double.PositiveInfinity, doubleVal);
 
@@ -678,6 +744,7 @@ namespace System.Text.Json.Tests
                 Assert.False(root.TryGetUInt64(out ulong ulongVal));
                 Assert.Equal(0UL, ulongVal);
 
+                Assert.Equal(float.PositiveInfinity, root.GetSingle());
                 Assert.Equal(double.PositiveInfinity, root.GetDouble());
                 Assert.Throws<FormatException>(() => root.GetInt32());
                 Assert.Throws<FormatException>(() => root.GetInt64());

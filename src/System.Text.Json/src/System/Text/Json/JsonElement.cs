@@ -138,6 +138,25 @@ namespace System.Text.Json
             throw new FormatException();
         }
 
+        [CLSCompliant(false)]
+        public bool TryGetUInt32(out uint value)
+        {
+            CheckValidInstance();
+
+            return _parent.TryGetValue(_idx, out value);
+        }
+
+        [CLSCompliant(false)]
+        public uint GetUInt32()
+        {
+            if (TryGetUInt32(out uint value))
+            {
+                return value;
+            }
+
+            throw new FormatException();
+        }
+
         public bool TryGetInt64(out long value)
         {
             CheckValidInstance();
@@ -184,6 +203,23 @@ namespace System.Text.Json
         public double GetDouble()
         {
             if (TryGetDouble(out double value))
+            {
+                return value;
+            }
+
+            throw new FormatException();
+        }
+
+        public bool TryGetSingle(out float value)
+        {
+            CheckValidInstance();
+
+            return _parent.TryGetValue(_idx, out value);
+        }
+
+        public float GetSingle()
+        {
+            if (TryGetSingle(out float value))
             {
                 return value;
             }

@@ -274,6 +274,28 @@ namespace System.Text.Json
             return false;
         }
 
+        internal bool TryGetValue(int index, out uint value)
+        {
+            CheckNotDisposed();
+
+            _parsedData.Get(index, out DbRow row);
+
+            CheckExpectedType(JsonTokenType.Number, row.TokenType);
+
+            ReadOnlySpan<byte> data = _utf8Json.Span;
+            ReadOnlySpan<byte> segment = data.Slice(row.Location, row.SizeOrLength);
+
+            if (Utf8Parser.TryParse(segment, out uint tmp, out int consumed) &&
+                consumed == segment.Length)
+            {
+                value = tmp;
+                return true;
+            }
+
+            value = default;
+            return false;
+        }
+
         internal bool TryGetValue(int index, out long value)
         {
             CheckNotDisposed();
@@ -330,6 +352,27 @@ namespace System.Text.Json
             ReadOnlySpan<byte> segment = data.Slice(row.Location, row.SizeOrLength);
 
             if (Utf8JsonReader.TryGetDoubleValue(segment, out double tmp))
+            {
+                value = tmp;
+                return true;
+            }
+
+            value = default;
+            return false;
+        }
+
+        internal bool TryGetValue(int index, out float value)
+        {
+            CheckNotDisposed();
+
+            _parsedData.Get(index, out DbRow row);
+
+            CheckExpectedType(JsonTokenType.Number, row.TokenType);
+
+            ReadOnlySpan<byte> data = _utf8Json.Span;
+            ReadOnlySpan<byte> segment = data.Slice(row.Location, row.SizeOrLength);
+
+            if (Utf8JsonReader.TryGetSingleValue(segment, out float tmp))
             {
                 value = tmp;
                 return true;

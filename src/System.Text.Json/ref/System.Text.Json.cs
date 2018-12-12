@@ -37,7 +37,10 @@ namespace System.Text.Json
         public double GetDouble() { throw null; }
         public int GetInt32() { throw null; }
         public long GetInt64() { throw null; }
+        public float GetSingle() { throw null; }
         public string GetString() { throw null; }
+        [System.CLSCompliantAttribute(false)]
+        public uint GetUInt32() { throw null; }
         [System.CLSCompliantAttribute(false)]
         public ulong GetUInt64() { throw null; }
         public override string ToString() { throw null; }
@@ -47,6 +50,9 @@ namespace System.Text.Json
         public bool TryGetProperty(System.ReadOnlySpan<byte> utf8PropertyName, out System.Text.Json.JsonElement value) { throw null; }
         public bool TryGetProperty(System.ReadOnlySpan<char> propertyName, out System.Text.Json.JsonElement value) { throw null; }
         public bool TryGetProperty(string propertyName, out System.Text.Json.JsonElement value) { throw null; }
+        public bool TryGetSingle(out float value) { throw null; }
+        [System.CLSCompliantAttribute(false)]
+        public bool TryGetUInt32(out uint value) { throw null; }
         [System.CLSCompliantAttribute(false)]
         public bool TryGetUInt64(out ulong value) { throw null; }
         public partial struct ArrayEnumerator : System.Collections.Generic.IEnumerable<System.Text.Json.JsonElement>, System.Collections.Generic.IEnumerator<System.Text.Json.JsonElement>, System.Collections.IEnumerable, System.Collections.IEnumerator, System.IDisposable
