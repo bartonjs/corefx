@@ -65,8 +65,26 @@ namespace System.Text.Json
             internal int Length;
             private byte[] _rentedBuffer;
 
-            internal CustomDb(int initialSize)
+            internal CustomDb(int payloadLength)
             {
+                // Assume that a token happens approximately every 12 bytes.
+                // int estimatedTokens = payloadLength / 12
+                // now acknowledge that the number of bytes we need per token is 12.
+                // So that's just the payload length.
+                //
+                // Add one token's worth of data just because.
+                int initialSize = DbRow.Size + payloadLength;
+
+                // Stick with ArrayPool's rent/return range if it looks feasible.
+                // If it's wrong, we'll just grow and copy as we would if the tokens
+                // were more frequent anyways.
+                const int oneMegabyte = 1024 * 1024;
+                
+                if (initialSize > oneMegabyte && initialSize <= 4 * oneMegabyte)
+                {
+                    initialSize = oneMegabyte;
+                }
+
                 _rentedBuffer = ArrayPool<byte>.Shared.Rent(initialSize);
                 Length = 0;
             }
