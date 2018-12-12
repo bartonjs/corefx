@@ -405,55 +405,6 @@ namespace System.Text.Json
             return Utf8JsonReader.Utf8Encoding.GetString(segment.Span);
         }
 
-        internal JsonElement GetPropertyValue(int index)
-        {
-            // GetJsonTokenType calls CheckNotDisposed
-            CheckExpectedType(JsonTokenType.PropertyName, GetJsonTokenType(index));
-
-            return new JsonElement(this, index + DbRow.Size);
-        }
-
-        internal string PrettyPrintProperty(int index)
-        {
-            CheckNotDisposed();
-
-            _parsedData.Get(index, out DbRow row);
-            Debug.Assert(row.TokenType == JsonTokenType.PropertyName);
-
-            // The Location for the property name is where the name starts,
-            // the quote is one UTF-8 Code Unit (byte) before it
-            int propertyQuoteStart = row.Location - 1;
-            int valueEnd;
-
-            int valueIndex = index + DbRow.Size;
-            _parsedData.Get(valueIndex, out row);
-
-            JsonTokenType valueType = row.TokenType;
-
-            if (valueType == JsonTokenType.String)
-            {
-                // String start to string end plus the end quote
-                // (the open quote is included in the gap between the property name and value)
-                valueEnd = row.Location + row.SizeOrLength + 1;
-            }
-            else if (valueType == JsonTokenType.StartObject || valueType == JsonTokenType.StartArray)
-            {
-                int endIndex = GetEndIndex(valueIndex, includeEndElement: false);
-                _parsedData.Get(endIndex, out row);
-                Debug.Assert(row.SizeOrLength == 1);
-
-                valueEnd = row.Location + row.SizeOrLength;
-            }
-            else
-            {
-                valueEnd = row.Location + row.SizeOrLength;
-            }
-
-            // TODO(#33292): Unescape this.
-            return Utf8JsonReader.Utf8Encoding.GetString(
-                _utf8Json.Span.Slice(propertyQuoteStart, valueEnd - propertyQuoteStart));
-        }
-
         private static void Parse(
             ReadOnlySpan<byte> utf8JsonSpan,
             Utf8JsonReader reader,

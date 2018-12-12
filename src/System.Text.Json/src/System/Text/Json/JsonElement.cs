@@ -278,12 +278,6 @@ namespace System.Text.Json
                     Debug.Assert(_parent != null);
                     return _parent.GetRawValueAsString(_idx);
                 }
-                case JsonTokenType.PropertyName:
-                {
-                    // null parent should have hit the None case
-                    Debug.Assert(_parent != null);
-                    return _parent.PrettyPrintProperty(_idx);
-                }
                 case JsonTokenType.String:
                     return GetString();
                 case JsonTokenType.EndArray:
