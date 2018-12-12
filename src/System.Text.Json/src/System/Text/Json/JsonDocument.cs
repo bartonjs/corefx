@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Buffers;
 using System.Buffers.Text;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -13,13 +14,17 @@ namespace System.Text.Json
     {
         private ReadOnlyMemory<byte> _utf8Json;
         private CustomDb _parsedData;
+        private byte[] _extraRentedBytes;
 
         public JsonElement RootElement => new JsonElement(this, 0);
 
-        private JsonDocument(ReadOnlyMemory<byte> utf8Json, CustomDb parsedData)
+        private JsonDocument(ReadOnlyMemory<byte> utf8Json, CustomDb parsedData, byte[] extraRentedBytes)
         {
+            Debug.Assert(!utf8Json.IsEmpty);
+
             _utf8Json = utf8Json;
             _parsedData = parsedData;
+            _extraRentedBytes = extraRentedBytes;
         }
 
         public void Dispose()
@@ -29,11 +34,53 @@ namespace System.Text.Json
                 return;
             }
 
+            int length = _utf8Json.Length;
             _utf8Json = ReadOnlyMemory<byte>.Empty;
             _parsedData.Dispose();
+
+            if (_extraRentedBytes != null)
+            {
+                _extraRentedBytes.AsSpan(0, length).Clear();
+                ArrayPool<byte>.Shared.Return(_extraRentedBytes);
+                _extraRentedBytes = null;
+            }
         }
 
         public static JsonDocument Parse(ReadOnlyMemory<byte> utf8Json, JsonReaderOptions readerOptions)
+        {
+            return Parse(utf8Json, readerOptions, null);
+        }
+
+        public static JsonDocument Parse(ReadOnlyMemory<char> json, JsonReaderOptions readerOptions)
+        {
+            ReadOnlySpan<char> jsonChars = json.Span;
+            int byteCount = Utf8JsonReader.Utf8Encoding.GetByteCount(jsonChars);
+            byte[] utf8Bytes = ArrayPool<byte>.Shared.Rent(byteCount);
+
+            try
+            {
+                int byteCount2 = Utf8JsonReader.Utf8Encoding.GetBytes(jsonChars, utf8Bytes);
+                Debug.Assert(byteCount == byteCount2);
+
+                return Parse(utf8Bytes.AsMemory(0, byteCount2), readerOptions, utf8Bytes);
+            }
+            catch
+            {
+                utf8Bytes.AsSpan(0, byteCount).Clear();
+                ArrayPool<byte>.Shared.Return(utf8Bytes);
+                throw;
+            }
+        }
+
+        public static JsonDocument Parse(string json, JsonReaderOptions readerOptions)
+        {
+            return Parse(json.AsMemory(), readerOptions);
+        }
+
+        private static JsonDocument Parse(
+            ReadOnlyMemory<byte> utf8Json,
+            JsonReaderOptions readerOptions,
+            byte[] extraRentedBytes)
         {
             ReadOnlySpan<byte> utf8JsonSpan = utf8Json.Span;
             Utf8JsonReader reader = new Utf8JsonReader(
@@ -58,7 +105,7 @@ namespace System.Text.Json
                 stack.Dispose();
             }
 
-            return new JsonDocument(utf8Json, database);
+            return new JsonDocument(utf8Json, database, extraRentedBytes);
         }
 
         internal JsonTokenType GetJsonTokenType(int index)
