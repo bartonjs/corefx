@@ -451,13 +451,13 @@ namespace System.Text.Json.Tests
 
                 Assert.Equal(JsonTokenType.Number, root.Type);
                 
-                Assert.True(root.TryGetValue(out double doubleVal));
+                Assert.True(root.TryGetDouble(out double doubleVal));
                 Assert.Equal(expectedDouble, doubleVal);
 
-                Assert.True(root.TryGetValue(out int intVal));
+                Assert.True(root.TryGetInt32(out int intVal));
                 Assert.Equal(value, intVal);
 
-                Assert.True(root.TryGetValue(out long longVal));
+                Assert.True(root.TryGetInt64(out long longVal));
                 Assert.Equal(value, longVal);
 
                 Assert.Equal(expectedDouble, root.GetDouble());
@@ -467,14 +467,14 @@ namespace System.Text.Json.Tests
                 if (value >= 0)
                 {
                     ulong expectedULong = (ulong)value;
-                    Assert.True(root.TryGetValue(out ulong ulongVal));
+                    Assert.True(root.TryGetUInt64(out ulong ulongVal));
                     Assert.Equal(expectedULong, ulongVal);
 
                     Assert.Equal(expectedULong, root.GetUInt64());
                 }
                 else
                 {
-                    Assert.False(root.TryGetValue(out ulong ulongValue));
+                    Assert.False(root.TryGetUInt64(out ulong ulongValue));
                     Assert.Equal(0UL, ulongValue);
 
                     Assert.Throws<FormatException>(() => root.GetUInt64());
@@ -504,13 +504,13 @@ namespace System.Text.Json.Tests
 
                 Assert.Equal(JsonTokenType.Number, root.Type);
 
-                Assert.True(root.TryGetValue(out double doubleVal));
+                Assert.True(root.TryGetDouble(out double doubleVal));
                 Assert.Equal(expectedDouble, doubleVal);
 
-                Assert.False(root.TryGetValue(out int intVal));
+                Assert.False(root.TryGetInt32(out int intVal));
                 Assert.Equal(0, intVal);
 
-                Assert.True(root.TryGetValue(out long longVal));
+                Assert.True(root.TryGetInt64(out long longVal));
                 Assert.Equal(value, longVal);
 
                 Assert.Equal(expectedDouble, root.GetDouble());
@@ -520,14 +520,14 @@ namespace System.Text.Json.Tests
                 if (value >= 0)
                 {
                     ulong expectedULong = (ulong)value;
-                    Assert.True(root.TryGetValue(out ulong ulongVal));
+                    Assert.True(root.TryGetUInt64(out ulong ulongVal));
                     Assert.Equal(expectedULong, ulongVal);
 
                     Assert.Equal(expectedULong, root.GetUInt64());
                 }
                 else
                 {
-                    Assert.False(root.TryGetValue(out ulong ulongValue));
+                    Assert.False(root.TryGetUInt64(out ulong ulongValue));
                     Assert.Equal(0UL, ulongValue);
 
                     Assert.Throws<FormatException>(() => root.GetUInt64());
@@ -554,20 +554,20 @@ namespace System.Text.Json.Tests
 
                 Assert.Equal(JsonTokenType.Number, root.Type);
 
-                Assert.True(root.TryGetValue(out double doubleVal));
+                Assert.True(root.TryGetDouble(out double doubleVal));
                 Assert.Equal(expectedDouble, doubleVal);
 
-                Assert.False(root.TryGetValue(out int intVal));
+                Assert.False(root.TryGetInt32(out int intVal));
                 Assert.Equal(0, intVal);
 
-                Assert.False(root.TryGetValue(out long longVal));
+                Assert.False(root.TryGetInt64(out long longVal));
                 Assert.Equal(0L, longVal);
 
                 Assert.Equal(expectedDouble, root.GetDouble());
                 Assert.Throws<FormatException>(() => root.GetInt32());
                 Assert.Throws<FormatException>(() => root.GetInt64());
 
-                Assert.True(root.TryGetValue(out ulong ulongVal));
+                Assert.True(root.TryGetUInt64(out ulong ulongVal));
                 Assert.Equal(value, ulongVal);
 
                 Assert.Equal(value, root.GetUInt64());
@@ -592,16 +592,16 @@ namespace System.Text.Json.Tests
 
                 Assert.Equal(JsonTokenType.Number, root.Type);
 
-                Assert.True(root.TryGetValue(out double doubleVal));
+                Assert.True(root.TryGetDouble(out double doubleVal));
                 Assert.Equal(expectedDouble, doubleVal);
 
-                Assert.False(root.TryGetValue(out int intVal));
+                Assert.False(root.TryGetInt32(out int intVal));
                 Assert.Equal(0, intVal);
 
-                Assert.False(root.TryGetValue(out long longVal));
+                Assert.False(root.TryGetInt64(out long longVal));
                 Assert.Equal(0L, longVal);
 
-                Assert.False(root.TryGetValue(out ulong ulongVal));
+                Assert.False(root.TryGetUInt64(out ulong ulongVal));
                 Assert.Equal(0UL, ulongVal);
 
                 Assert.Equal(expectedDouble, root.GetDouble());
@@ -630,16 +630,16 @@ namespace System.Text.Json.Tests
 
                 Assert.Equal(JsonTokenType.Number, root.Type);
 
-                Assert.True(root.TryGetValue(out double doubleVal));
+                Assert.True(root.TryGetDouble(out double doubleVal));
                 Assert.Equal(val, doubleVal);
 
-                Assert.False(root.TryGetValue(out int intVal));
+                Assert.False(root.TryGetInt32(out int intVal));
                 Assert.Equal(0, intVal);
 
-                Assert.False(root.TryGetValue(out long longVal));
+                Assert.False(root.TryGetInt64(out long longVal));
                 Assert.Equal(0L, longVal);
 
-                Assert.False(root.TryGetValue(out ulong ulongVal));
+                Assert.False(root.TryGetUInt64(out ulong ulongVal));
                 Assert.Equal(0UL, ulongVal);
 
                 Assert.Equal(val, root.GetDouble());
@@ -666,16 +666,16 @@ namespace System.Text.Json.Tests
 
                 Assert.Equal(JsonTokenType.Number, root.Type);
 
-                Assert.True(root.TryGetValue(out double doubleVal));
+                Assert.True(root.TryGetDouble(out double doubleVal));
                 Assert.Equal(double.PositiveInfinity, doubleVal);
 
-                Assert.False(root.TryGetValue(out int intVal));
+                Assert.False(root.TryGetInt32(out int intVal));
                 Assert.Equal(0, intVal);
 
-                Assert.False(root.TryGetValue(out long longVal));
+                Assert.False(root.TryGetInt64(out long longVal));
                 Assert.Equal(0L, longVal);
 
-                Assert.False(root.TryGetValue(out ulong ulongVal));
+                Assert.False(root.TryGetUInt64(out ulong ulongVal));
                 Assert.Equal(0UL, ulongVal);
 
                 Assert.Equal(double.PositiveInfinity, root.GetDouble());
@@ -724,13 +724,13 @@ namespace System.Text.Json.Tests
                 }
 
                 Assert.Throws<InvalidOperationException>(() => root.GetDouble());
-                Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out double _));
+                Assert.Throws<InvalidOperationException>(() => root.TryGetDouble(out double _));
                 Assert.Throws<InvalidOperationException>(() => root.GetInt32());
-                Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out int _));
+                Assert.Throws<InvalidOperationException>(() => root.TryGetInt32(out int _));
                 Assert.Throws<InvalidOperationException>(() => root.GetInt64());
-                Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out long _));
+                Assert.Throws<InvalidOperationException>(() => root.TryGetInt64(out long _));
                 Assert.Throws<InvalidOperationException>(() => root.GetUInt64());
-                Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out ulong _));
+                Assert.Throws<InvalidOperationException>(() => root.TryGetUInt64(out ulong _));
                 Assert.Throws<InvalidOperationException>(() => root.GetString());
                 Assert.Throws<InvalidOperationException>(() => root.EnumerateObject());
                 Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
@@ -750,13 +750,13 @@ namespace System.Text.Json.Tests
                 Assert.Throws<ObjectDisposedException>(() => root.EnumerateArray());
                 Assert.Throws<ObjectDisposedException>(() => root.EnumerateObject());
                 Assert.Throws<ObjectDisposedException>(() => root.GetDouble());
-                Assert.Throws<ObjectDisposedException>(() => root.TryGetValue(out double _));
+                Assert.Throws<ObjectDisposedException>(() => root.TryGetDouble(out double _));
                 Assert.Throws<ObjectDisposedException>(() => root.GetInt32());
-                Assert.Throws<ObjectDisposedException>(() => root.TryGetValue(out int _));
+                Assert.Throws<ObjectDisposedException>(() => root.TryGetInt32(out int _));
                 Assert.Throws<ObjectDisposedException>(() => root.GetInt64());
-                Assert.Throws<ObjectDisposedException>(() => root.TryGetValue(out long _));
+                Assert.Throws<ObjectDisposedException>(() => root.TryGetInt64(out long _));
                 Assert.Throws<ObjectDisposedException>(() => root.GetUInt64());
-                Assert.Throws<ObjectDisposedException>(() => root.TryGetValue(out ulong _));
+                Assert.Throws<ObjectDisposedException>(() => root.TryGetUInt64(out ulong _));
                 Assert.Throws<ObjectDisposedException>(() => root.GetString());
                 Assert.Throws<ObjectDisposedException>(() => root.GetBoolean());
             }
@@ -773,13 +773,13 @@ namespace System.Text.Json.Tests
             Assert.Throws<InvalidOperationException>(() => root.EnumerateArray());
             Assert.Throws<InvalidOperationException>(() => root.EnumerateObject());
             Assert.Throws<InvalidOperationException>(() => root.GetDouble());
-            Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out double _));
+            Assert.Throws<InvalidOperationException>(() => root.TryGetDouble(out double _));
             Assert.Throws<InvalidOperationException>(() => root.GetInt32());
-            Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out int _));
+            Assert.Throws<InvalidOperationException>(() => root.TryGetInt32(out int _));
             Assert.Throws<InvalidOperationException>(() => root.GetInt64());
-            Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out long _));
+            Assert.Throws<InvalidOperationException>(() => root.TryGetInt64(out long _));
             Assert.Throws<InvalidOperationException>(() => root.GetUInt64());
-            Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out ulong _));
+            Assert.Throws<InvalidOperationException>(() => root.TryGetUInt64(out ulong _));
             Assert.Throws<InvalidOperationException>(() => root.GetString());
             Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
         }

@@ -121,7 +121,7 @@ namespace System.Text.Json
             return _parent.GetString(_idx, JsonTokenType.String);
         }
 
-        public bool TryGetValue(out int value)
+        public bool TryGetInt32(out int value)
         {
             CheckValidInstance();
 
@@ -130,7 +130,7 @@ namespace System.Text.Json
 
         public int GetInt32()
         {
-            if (TryGetValue(out int value))
+            if (TryGetInt32(out int value))
             {
                 return value;
             }
@@ -138,7 +138,7 @@ namespace System.Text.Json
             throw new FormatException();
         }
 
-        public bool TryGetValue(out long value)
+        public bool TryGetInt64(out long value)
         {
             CheckValidInstance();
 
@@ -147,7 +147,7 @@ namespace System.Text.Json
 
         public long GetInt64()
         {
-            if (TryGetValue(out long value))
+            if (TryGetInt64(out long value))
             {
                 return value;
             }
@@ -156,7 +156,7 @@ namespace System.Text.Json
         }
 
         [CLSCompliant(false)]
-        public bool TryGetValue(out ulong value)
+        public bool TryGetUInt64(out ulong value)
         {
             CheckValidInstance();
 
@@ -166,7 +166,7 @@ namespace System.Text.Json
         [CLSCompliant(false)]
         public ulong GetUInt64()
         {
-            if (TryGetValue(out ulong value))
+            if (TryGetUInt64(out ulong value))
             {
                 return value;
             }
@@ -174,7 +174,7 @@ namespace System.Text.Json
             throw new FormatException();
         }
 
-        public bool TryGetValue(out double value)
+        public bool TryGetDouble(out double value)
         {
             CheckValidInstance();
 
@@ -183,7 +183,7 @@ namespace System.Text.Json
 
         public double GetDouble()
         {
-            if (TryGetValue(out double value))
+            if (TryGetDouble(out double value))
             {
                 return value;
             }
