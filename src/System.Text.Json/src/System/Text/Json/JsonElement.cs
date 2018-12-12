@@ -113,72 +113,7 @@ namespace System.Text.Json
 
             return _parent.TryGetNamedPropertyValue(_idx, utf8PropertyName, out value);
         }
-
-        /// <summary>
-        ///   Attempts to get the unprocessed memory contributing to the value of this element.
-        /// </summary>
-        /// <param name="rawValue">
-        ///   Receives the unprocessed memory contributing to the value of this element.
-        /// </param>
-        /// <returns>
-        ///   <c>true</c> if the parent <see cref="JsonDocument"/> was built from UTF-8 data,
-        ///   and the entirety of the value for this element is in contiguous memory.
-        /// </returns>
-        /// <seealso cref="Utf8JsonReader.ValueSpan"/>
-        public bool TryGetRawValue(out ReadOnlyMemory<byte> rawValue)
-        {
-            if (_parent == null)
-            {
-                throw new InvalidOperationException();
-            }
-
-            // This method is try, but calls a non-try, because in the future
-            // JsonDocument and JsonElement may support non-contiguous and/or
-            // differently-encoded data.  JsonDocument's version of this method
-            // would likewise become Try when that happens.
-            rawValue = _parent.GetRawValue(_idx);
-            return true;
-        }
-
-        /// <summary>
-        ///   Attempt to copy the uninterpreted memory contributing to the value of this element
-        ///   into <paramref name="destination"/> as UTF-8 code units.
-        /// </summary>
-        /// <param name="destination">
-        ///   Buffer into which the uninterpreted value should be copied.
-        /// </param>
-        /// <param name="bytesWritten">
-        ///   Receives the number of bytes written to <paramref name="destination"/>.
-        /// </param>
-        /// <returns>
-        ///   <c>true</c> if <paramref name="destination"/> was big enough to receive the UTF-8
-        ///   version of the uninterpreted element value, <c>false</c> otherwise.
-        /// </returns>
-        public bool TryCopyRawValue(Span<byte> destination, out int bytesWritten)
-        {
-            if (_parent == null)
-            {
-                throw new InvalidOperationException();
-            }
-
-            // If non-contiguous memory is supported by JsonDocument, this method should determine
-            // the total byte count and then write to destination.
-            //
-            // If non-UTF-8 encodings are supported by JsonDocument, this method should transcode.
-
-            ReadOnlyMemory<byte> rawData = _parent.GetRawValue(_idx);
-
-            if (rawData.Length > destination.Length)
-            {
-                bytesWritten = 0;
-                return false;
-            }
-
-            rawData.Span.CopyTo(destination);
-            bytesWritten = rawData.Length;
-            return true;
-        }
-
+        
         public bool GetBoolean()
         {
             JsonTokenType type = Type;

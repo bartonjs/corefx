@@ -42,11 +42,9 @@ namespace System.Text.Json
         [System.CLSCompliantAttribute(false)]
         public ulong GetUInt64() { throw null; }
         public override string ToString() { throw null; }
-        public bool TryCopyRawValue(System.Span<byte> destination, out int bytesWritten) { throw null; }
         public bool TryGetProperty(System.ReadOnlySpan<byte> utf8PropertyName, out System.Text.Json.JsonElement value) { throw null; }
         public bool TryGetProperty(System.ReadOnlySpan<char> propertyName, out System.Text.Json.JsonElement value) { throw null; }
         public bool TryGetProperty(string propertyName, out System.Text.Json.JsonElement value) { throw null; }
-        public bool TryGetRawValue(out System.ReadOnlyMemory<byte> rawValue) { throw null; }
         public bool TryGetValue(out double value) { throw null; }
         public bool TryGetValue(out int value) { throw null; }
         public bool TryGetValue(out long value) { throw null; }

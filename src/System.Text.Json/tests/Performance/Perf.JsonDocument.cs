@@ -136,8 +136,7 @@ namespace System.Text.Json.Performance.Tests
 
         private static void TouchEverything(JsonElement element)
         {
-            ReadOnlyMemory<byte> tmp = default;
-
+            // Reading the type touched it.
             switch (element.Type)
             {
                 case JsonTokenType.StartArray:
@@ -150,9 +149,6 @@ namespace System.Text.Json.Performance.Tests
 
                     break;
                 }
-                default:
-                    element.TryGetRawValue(out tmp);
-                    break;
             }
         }
 
