@@ -308,6 +308,15 @@ namespace System.Text.Json
                 throw new InvalidOperationException();
             }
 
+            switch (Type)
+            {
+                case JsonTokenType.StartObject:
+                case JsonTokenType.StartArray:
+                    break;
+                default:
+                    throw new InvalidOperationException();
+            }
+
             return new ChildEnumerator(this);
         }
 

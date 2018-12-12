@@ -433,6 +433,369 @@ namespace System.Text.Json.Tests
             }
         }
 
+        [Theory]
+        [InlineData(0)]
+        [InlineData(int.MaxValue)]
+        [InlineData(int.MinValue)]
+        public static void ReadSmallInteger(int value)
+        {
+            double expectedDouble = value;
+            ArraySegment<byte> buffer = StringToUtf8BufferWithEmptySpace("    " + value + "  ", 0);
+
+            using (JsonDocument doc = JsonDocument.Parse(buffer, default))
+            {
+                JsonElement root = doc.RootElement;
+
+                Assert.Equal(JsonTokenType.Number, root.Type);
+                
+                Assert.True(root.TryGetValue(out double doubleVal));
+                Assert.Equal(expectedDouble, doubleVal);
+
+                Assert.True(root.TryGetValue(out int intVal));
+                Assert.Equal(value, intVal);
+
+                Assert.True(root.TryGetValue(out long longVal));
+                Assert.Equal(value, longVal);
+
+                Assert.Equal(expectedDouble, root.GetDouble());
+                Assert.Equal(value, root.GetInt32());
+                Assert.Equal(value, root.GetInt64());
+
+                if (value >= 0)
+                {
+                    ulong expectedULong = (ulong)value;
+                    Assert.True(root.TryGetValue(out ulong ulongVal));
+                    Assert.Equal(expectedULong, ulongVal);
+
+                    Assert.Equal(expectedULong, root.GetUInt64());
+                }
+                else
+                {
+                    Assert.False(root.TryGetValue(out ulong ulongValue));
+                    Assert.Equal(0UL, ulongValue);
+
+                    Assert.Throws<FormatException>(() => root.GetUInt64());
+                }
+
+                Assert.Throws<InvalidOperationException>(() => root.GetString());
+                Assert.Throws<InvalidOperationException>(() => root.GetPropertyName());
+                Assert.Throws<InvalidOperationException>(() => root.GetPropertyValue());
+                Assert.Throws<InvalidOperationException>(() => root.GetArrayLength());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateChildren());
+                Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
+            }
+        }
+
+        [Theory]
+        [InlineData((long)int.MaxValue + 1)]
+        [InlineData((long)uint.MaxValue)]
+        [InlineData(long.MaxValue)]
+        [InlineData((long)int.MinValue - 1)]
+        [InlineData(long.MinValue)]
+        public static void ReadMediumInteger(long value)
+        {
+            double expectedDouble = value;
+
+            using (JsonDocument doc = JsonDocument.Parse("    " + value + "  ", default))
+            {
+                JsonElement root = doc.RootElement;
+
+                Assert.Equal(JsonTokenType.Number, root.Type);
+
+                Assert.True(root.TryGetValue(out double doubleVal));
+                Assert.Equal(expectedDouble, doubleVal);
+
+                Assert.False(root.TryGetValue(out int intVal));
+                Assert.Equal(0, intVal);
+
+                Assert.True(root.TryGetValue(out long longVal));
+                Assert.Equal(value, longVal);
+
+                Assert.Equal(expectedDouble, root.GetDouble());
+                Assert.Throws<FormatException>(() => root.GetInt32());
+                Assert.Equal(value, root.GetInt64());
+
+                if (value >= 0)
+                {
+                    ulong expectedULong = (ulong)value;
+                    Assert.True(root.TryGetValue(out ulong ulongVal));
+                    Assert.Equal(expectedULong, ulongVal);
+
+                    Assert.Equal(expectedULong, root.GetUInt64());
+                }
+                else
+                {
+                    Assert.False(root.TryGetValue(out ulong ulongValue));
+                    Assert.Equal(0UL, ulongValue);
+
+                    Assert.Throws<FormatException>(() => root.GetUInt64());
+                }
+
+                Assert.Throws<InvalidOperationException>(() => root.GetString());
+                Assert.Throws<InvalidOperationException>(() => root.GetPropertyName());
+                Assert.Throws<InvalidOperationException>(() => root.GetPropertyValue());
+                Assert.Throws<InvalidOperationException>(() => root.GetArrayLength());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateChildren());
+                Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
+            }
+        }
+
+        [Theory]
+        [InlineData((ulong)long.MaxValue + 1)]
+        [InlineData(ulong.MaxValue)]
+        public static void ReadLargeInteger(ulong value)
+        {
+            double expectedDouble = value;
+
+            using (JsonDocument doc = JsonDocument.Parse("    " + value + "  ", default))
+            {
+                JsonElement root = doc.RootElement;
+
+                Assert.Equal(JsonTokenType.Number, root.Type);
+
+                Assert.True(root.TryGetValue(out double doubleVal));
+                Assert.Equal(expectedDouble, doubleVal);
+
+                Assert.False(root.TryGetValue(out int intVal));
+                Assert.Equal(0, intVal);
+
+                Assert.False(root.TryGetValue(out long longVal));
+                Assert.Equal(0L, longVal);
+
+                Assert.Equal(expectedDouble, root.GetDouble());
+                Assert.Throws<FormatException>(() => root.GetInt32());
+                Assert.Throws<FormatException>(() => root.GetInt64());
+
+                Assert.True(root.TryGetValue(out ulong ulongVal));
+                Assert.Equal(value, ulongVal);
+
+                Assert.Equal(value, root.GetUInt64());
+
+                Assert.Throws<InvalidOperationException>(() => root.GetString());
+                Assert.Throws<InvalidOperationException>(() => root.GetPropertyName());
+                Assert.Throws<InvalidOperationException>(() => root.GetPropertyValue());
+                Assert.Throws<InvalidOperationException>(() => root.GetArrayLength());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateChildren());
+                Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
+            }
+        }
+
+        [Fact]
+        public static void ReadTooLargeInteger()
+        {
+            double expectedDouble = ulong.MaxValue;
+            expectedDouble *= 10;
+
+            using (JsonDocument doc = JsonDocument.Parse("    " + ulong.MaxValue + "0  ", default))
+            {
+                JsonElement root = doc.RootElement;
+
+                Assert.Equal(JsonTokenType.Number, root.Type);
+
+                Assert.True(root.TryGetValue(out double doubleVal));
+                Assert.Equal(expectedDouble, doubleVal);
+
+                Assert.False(root.TryGetValue(out int intVal));
+                Assert.Equal(0, intVal);
+
+                Assert.False(root.TryGetValue(out long longVal));
+                Assert.Equal(0L, longVal);
+
+                Assert.False(root.TryGetValue(out ulong ulongVal));
+                Assert.Equal(0UL, ulongVal);
+
+                Assert.Equal(expectedDouble, root.GetDouble());
+                Assert.Throws<FormatException>(() => root.GetInt32());
+                Assert.Throws<FormatException>(() => root.GetInt64());
+                Assert.Throws<FormatException>(() => root.GetUInt64());
+
+                Assert.Throws<InvalidOperationException>(() => root.GetString());
+                Assert.Throws<InvalidOperationException>(() => root.GetPropertyName());
+                Assert.Throws<InvalidOperationException>(() => root.GetPropertyValue());
+                Assert.Throws<InvalidOperationException>(() => root.GetArrayLength());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateChildren());
+                Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
+            }
+        }
+
+        [Theory]
+        [InlineData("1e+1", 10)]
+        [InlineData("1.1e-0", 1.1)]
+        [InlineData("3.14159", 3.14159)]
+        [InlineData("1e-10", 1e-10)]
+        public static void ReadNonInteger(string str, double val)
+        {
+            using (JsonDocument doc = JsonDocument.Parse("    " + str + "  ", default))
+            {
+                JsonElement root = doc.RootElement;
+
+                Assert.Equal(JsonTokenType.Number, root.Type);
+
+                Assert.True(root.TryGetValue(out double doubleVal));
+                Assert.Equal(val, doubleVal);
+
+                Assert.False(root.TryGetValue(out int intVal));
+                Assert.Equal(0, intVal);
+
+                Assert.False(root.TryGetValue(out long longVal));
+                Assert.Equal(0L, longVal);
+
+                Assert.False(root.TryGetValue(out ulong ulongVal));
+                Assert.Equal(0UL, ulongVal);
+
+                Assert.Equal(val, root.GetDouble());
+                Assert.Throws<FormatException>(() => root.GetInt32());
+                Assert.Throws<FormatException>(() => root.GetInt64());
+                Assert.Throws<FormatException>(() => root.GetUInt64());
+
+                Assert.Throws<InvalidOperationException>(() => root.GetString());
+                Assert.Throws<InvalidOperationException>(() => root.GetPropertyName());
+                Assert.Throws<InvalidOperationException>(() => root.GetPropertyValue());
+                Assert.Throws<InvalidOperationException>(() => root.GetArrayLength());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateChildren());
+                Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
+            }
+        }
+
+        [Fact]
+        public static void ReadTooPreciseDouble()
+        {
+            // If https://github.com/dotnet/corefx/issues/33997 gets resolved as the reader throwing,
+            // this test would need to expect FormatException from GetDouble, and false from TryGet.
+            using (JsonDocument doc = JsonDocument.Parse("    1e+100000002", default))
+            {
+                JsonElement root = doc.RootElement;
+
+                Assert.Equal(JsonTokenType.Number, root.Type);
+
+                Assert.True(root.TryGetValue(out double doubleVal));
+                Assert.Equal(double.PositiveInfinity, doubleVal);
+
+                Assert.False(root.TryGetValue(out int intVal));
+                Assert.Equal(0, intVal);
+
+                Assert.False(root.TryGetValue(out long longVal));
+                Assert.Equal(0L, longVal);
+
+                Assert.False(root.TryGetValue(out ulong ulongVal));
+                Assert.Equal(0UL, ulongVal);
+
+                Assert.Equal(double.PositiveInfinity, root.GetDouble());
+                Assert.Throws<FormatException>(() => root.GetInt32());
+                Assert.Throws<FormatException>(() => root.GetInt64());
+                Assert.Throws<FormatException>(() => root.GetUInt64());
+
+                Assert.Throws<InvalidOperationException>(() => root.GetString());
+                Assert.Throws<InvalidOperationException>(() => root.GetPropertyName());
+                Assert.Throws<InvalidOperationException>(() => root.GetPropertyValue());
+                Assert.Throws<InvalidOperationException>(() => root.GetArrayLength());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateChildren());
+                Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
+            }
+        }
+
+        [Fact]
+        public static void ReadArrayWithComments()
+        {
+            // If https://github.com/dotnet/corefx/issues/33997 gets resolved as the reader throwing,
+            // this test would need to expect FormatException from GetDouble, and false from TryGet.
+            JsonReaderOptions options = new JsonReaderOptions
+            {
+                CommentHandling = JsonCommentHandling.Skip,
+            };
+
+            using (JsonDocument doc = JsonDocument.Parse(
+                "[ 0, 1, 2, 3/*.14159*/           , /* 42, 11, hut, hut, hike! */ 4 ]",
+                options))
+            {
+                JsonElement root = doc.RootElement;
+
+                Assert.Equal(JsonTokenType.StartArray, root.Type);
+                Assert.Equal(5, root.GetArrayLength());
+
+                for (int i = root.GetArrayLength() - 1; i >= 0; i--)
+                {
+                    Assert.Equal(i, root[i].GetInt32());
+                }
+
+                int val = 0;
+
+                foreach (JsonElement element in root.EnumerateChildren())
+                {
+                    Assert.Equal(val, element.GetInt32());
+                    val++;
+                }
+
+                Assert.Throws<InvalidOperationException>(() => root.GetDouble());
+                Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out double _));
+                Assert.Throws<InvalidOperationException>(() => root.GetInt32());
+                Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out int _));
+                Assert.Throws<InvalidOperationException>(() => root.GetInt64());
+                Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out long _));
+                Assert.Throws<InvalidOperationException>(() => root.GetUInt64());
+                Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out ulong _));
+                Assert.Throws<InvalidOperationException>(() => root.GetString());
+                Assert.Throws<InvalidOperationException>(() => root.GetPropertyName());
+                Assert.Throws<InvalidOperationException>(() => root.GetPropertyValue());
+                Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
+            }
+        }
+
+        [Fact]
+        public static void CheckUseAfterDispose()
+        {
+            using (JsonDocument doc = JsonDocument.Parse("true", default))
+            {
+                JsonElement root = doc.RootElement;
+                doc.Dispose();
+
+                Assert.Throws<ObjectDisposedException>(() => root.Type);
+                Assert.Throws<ObjectDisposedException>(() => root.GetArrayLength());
+                Assert.Throws<ObjectDisposedException>(() => root.EnumerateChildren());
+                Assert.Throws<ObjectDisposedException>(() => root.GetDouble());
+                Assert.Throws<ObjectDisposedException>(() => root.TryGetValue(out double _));
+                Assert.Throws<ObjectDisposedException>(() => root.GetInt32());
+                Assert.Throws<ObjectDisposedException>(() => root.TryGetValue(out int _));
+                Assert.Throws<ObjectDisposedException>(() => root.GetInt64());
+                Assert.Throws<ObjectDisposedException>(() => root.TryGetValue(out long _));
+                Assert.Throws<ObjectDisposedException>(() => root.GetUInt64());
+                Assert.Throws<ObjectDisposedException>(() => root.TryGetValue(out ulong _));
+                Assert.Throws<ObjectDisposedException>(() => root.GetString());
+                Assert.Throws<ObjectDisposedException>(() => root.GetPropertyName());
+                Assert.Throws<ObjectDisposedException>(() => root.GetPropertyValue());
+                Assert.Throws<ObjectDisposedException>(() => root.GetBoolean());
+            }
+        }
+
+        [Fact]
+        public static void CheckUseDefault()
+        {
+            JsonElement root = default;
+
+            Assert.Equal(JsonTokenType.None, root.Type);
+
+            Assert.Throws<InvalidOperationException>(() => root.GetArrayLength());
+            Assert.Throws<InvalidOperationException>(() => root.EnumerateChildren());
+            Assert.Throws<InvalidOperationException>(() => root.GetDouble());
+            Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out double _));
+            Assert.Throws<InvalidOperationException>(() => root.GetInt32());
+            Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out int _));
+            Assert.Throws<InvalidOperationException>(() => root.GetInt64());
+            Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out long _));
+            Assert.Throws<InvalidOperationException>(() => root.GetUInt64());
+            Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out ulong _));
+            Assert.Throws<InvalidOperationException>(() => root.GetString());
+            Assert.Throws<InvalidOperationException>(() => root.GetPropertyName());
+            Assert.Throws<InvalidOperationException>(() => root.GetPropertyValue());
+            Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
+        }
+
+        [Fact]
+        public static void CheckInvalidString()
+        {
+            Assert.Throws<EncoderFallbackException>(() => JsonDocument.Parse("{ \"unpaired\uDFFE\": true }", default));
+        }
+
         private static ArraySegment<byte> StringToUtf8BufferWithEmptySpace(string testString, int emptySpaceSize = 2048)
         {
             int expectedLength = Encoding.UTF8.GetByteCount(testString);
