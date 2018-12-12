@@ -48,24 +48,39 @@ namespace System.Text.Json
 
         public static JsonDocument Parse(ReadOnlyMemory<byte> utf8Json, JsonReaderOptions readerOptions = default)
         {
-            if (readerOptions.CommentHandling == JsonCommentHandling.Allow)
-            {
-                throw new ArgumentException(
-                    "Comments cannot be incorporated into JsonDocument, only comment handling modes Skip and Allow are supported.",
-                    nameof(readerOptions));
-            }
+            CheckSupportedOptions(readerOptions);
 
             return Parse(utf8Json, readerOptions, null);
         }
 
+        public static JsonDocument Parse(ReadOnlySequence<byte> utf8Json, JsonReaderOptions readerOptions = default)
+        {
+            CheckSupportedOptions(readerOptions);
+
+            if (utf8Json.IsSingleSegment)
+            {
+                return Parse(utf8Json.First, readerOptions, null);
+            }
+
+            int length = checked((int)utf8Json.Length);
+            byte[] utf8Bytes = ArrayPool<byte>.Shared.Rent(length);
+
+            try
+            {
+                utf8Bytes.CopyTo(utf8Bytes.AsSpan());
+                return Parse(utf8Bytes.AsMemory(0, length), readerOptions, utf8Bytes);
+            }
+            catch
+            {
+                utf8Bytes.AsSpan(0, length).Clear();
+                ArrayPool<byte>.Shared.Return(utf8Bytes);
+                throw;
+            }
+        }
+
         public static JsonDocument Parse(ReadOnlyMemory<char> json, JsonReaderOptions readerOptions = default)
         {
-            if (readerOptions.CommentHandling == JsonCommentHandling.Allow)
-            {
-                throw new ArgumentException(
-                    "Comments cannot be incorporated into JsonDocument, only comment handling modes Skip and Allow are supported.",
-                    nameof(readerOptions));
-            }
+            CheckSupportedOptions(readerOptions);
 
             ReadOnlySpan<char> jsonChars = json.Span;
             int byteCount = Utf8JsonReader.Utf8Encoding.GetByteCount(jsonChars);
@@ -88,12 +103,7 @@ namespace System.Text.Json
 
         public static JsonDocument Parse(string json, JsonReaderOptions readerOptions = default)
         {
-            if (readerOptions.CommentHandling == JsonCommentHandling.Allow)
-            {
-                throw new ArgumentException(
-                    "Comments cannot be incorporated into JsonDocument, only comment handling modes Skip and Allow are supported.",
-                    nameof(readerOptions));
-            }
+            CheckSupportedOptions(readerOptions);
 
             return Parse(json.AsMemory(), readerOptions);
         }
@@ -572,6 +582,16 @@ namespace System.Text.Json
             if (expected != actual)
             {
                 throw new InvalidOperationException();
+            }
+        }
+
+        private static void CheckSupportedOptions(JsonReaderOptions readerOptions)
+        {
+            if (readerOptions.CommentHandling == JsonCommentHandling.Allow)
+            {
+                throw new ArgumentException(
+                    "Comments cannot be incorporated into JsonDocument, only comment handling modes Skip and Allow are supported.",
+                    nameof(readerOptions));
             }
         }
     }

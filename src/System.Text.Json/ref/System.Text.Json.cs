@@ -18,6 +18,7 @@ namespace System.Text.Json
         internal JsonDocument() { }
         public System.Text.Json.JsonElement RootElement { get { throw null; } }
         public void Dispose() { }
+        public static System.Text.Json.JsonDocument Parse(System.Buffers.ReadOnlySequence<byte> utf8Json, System.Text.Json.JsonReaderOptions readerOptions = default(System.Text.Json.JsonReaderOptions)) { throw null; }
         public static System.Text.Json.JsonDocument Parse(System.ReadOnlyMemory<byte> utf8Json, System.Text.Json.JsonReaderOptions readerOptions = default(System.Text.Json.JsonReaderOptions)) { throw null; }
         public static System.Text.Json.JsonDocument Parse(System.ReadOnlyMemory<char> json, System.Text.Json.JsonReaderOptions readerOptions = default(System.Text.Json.JsonReaderOptions)) { throw null; }
         public static System.Text.Json.JsonDocument Parse(string json, System.Text.Json.JsonReaderOptions readerOptions = default(System.Text.Json.JsonReaderOptions)) { throw null; }
