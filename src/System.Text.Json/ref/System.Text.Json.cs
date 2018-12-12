@@ -30,14 +30,13 @@ namespace System.Text.Json
         public System.Text.Json.JsonElement this[System.ReadOnlySpan<char> propertyName] { get { throw null; } }
         public System.Text.Json.JsonElement this[string propertyName] { get { throw null; } }
         public System.Text.Json.JsonTokenType Type { get { throw null; } }
-        public System.Text.Json.JsonElement.ChildEnumerator EnumerateChildren() { throw null; }
+        public System.Text.Json.JsonElement.ArrayEnumerator EnumerateArray() { throw null; }
+        public System.Text.Json.JsonElement.ObjectEnumerator EnumerateObject() { throw null; }
         public int GetArrayLength() { throw null; }
         public bool GetBoolean() { throw null; }
         public double GetDouble() { throw null; }
         public int GetInt32() { throw null; }
         public long GetInt64() { throw null; }
-        public string GetPropertyName() { throw null; }
-        public System.Text.Json.JsonElement GetPropertyValue() { throw null; }
         public string GetString() { throw null; }
         [System.CLSCompliantAttribute(false)]
         public ulong GetUInt64() { throw null; }
@@ -50,13 +49,36 @@ namespace System.Text.Json
         public bool TryGetValue(out long value) { throw null; }
         [System.CLSCompliantAttribute(false)]
         public bool TryGetValue(out ulong value) { throw null; }
-        public partial struct ChildEnumerator
+        public partial struct ArrayEnumerator : System.Collections.Generic.IEnumerable<System.Text.Json.JsonElement>, System.Collections.Generic.IEnumerator<System.Text.Json.JsonElement>, System.Collections.IEnumerable, System.Collections.IEnumerator, System.IDisposable
         {
             private object _dummy;
             public System.Text.Json.JsonElement Current { get { throw null; } }
-            public System.Text.Json.JsonElement.ChildEnumerator GetEnumerator() { throw null; }
+            object System.Collections.IEnumerator.Current { get { throw null; } }
+            public void Dispose() { }
+            public System.Text.Json.JsonElement.ArrayEnumerator GetEnumerator() { throw null; }
             public bool MoveNext() { throw null; }
+            public void Reset() { }
+            System.Collections.Generic.IEnumerator<System.Text.Json.JsonElement> System.Collections.Generic.IEnumerable<System.Text.Json.JsonElement>.GetEnumerator() { throw null; }
+            System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() { throw null; }
         }
+        public partial struct ObjectEnumerator : System.Collections.Generic.IEnumerable<System.Text.Json.JsonProperty>, System.Collections.Generic.IEnumerator<System.Text.Json.JsonProperty>, System.Collections.IEnumerable, System.Collections.IEnumerator, System.IDisposable
+        {
+            private object _dummy;
+            public System.Text.Json.JsonProperty Current { get { throw null; } }
+            object System.Collections.IEnumerator.Current { get { throw null; } }
+            public void Dispose() { }
+            public System.Text.Json.JsonElement.ObjectEnumerator GetEnumerator() { throw null; }
+            public bool MoveNext() { throw null; }
+            public void Reset() { }
+            System.Collections.Generic.IEnumerator<System.Text.Json.JsonProperty> System.Collections.Generic.IEnumerable<System.Text.Json.JsonProperty>.GetEnumerator() { throw null; }
+            System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() { throw null; }
+        }
+    }
+    public partial struct JsonProperty
+    {
+        private object _dummy;
+        public string Name { get { throw null; } }
+        public System.Text.Json.JsonElement Value { get { throw null; } }
     }
     public sealed partial class JsonReaderException : System.Exception
     {

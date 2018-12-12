@@ -246,6 +246,12 @@ namespace System.Text.Json
             return Utf8JsonReader.Utf8Encoding.GetString(segment);
         }
 
+        internal string GetNameOfPropertyValue(int index)
+        {
+            // The property name is one row before the property value
+            return GetString(index - DbRow.Size, JsonTokenType.PropertyName);
+        }
+
         internal bool TryGetValue(int index, out int value)
         {
             CheckNotDisposed();

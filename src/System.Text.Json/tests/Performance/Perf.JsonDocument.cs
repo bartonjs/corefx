@@ -140,11 +140,19 @@ namespace System.Text.Json.Performance.Tests
             switch (element.Type)
             {
                 case JsonTokenType.StartArray:
-                case JsonTokenType.StartObject:
                 {
-                    foreach (JsonElement child in element.EnumerateChildren())
+                    foreach (JsonElement child in element.EnumerateArray())
                     {
                         TouchEverything(child);
+                    }
+
+                    break;
+                }
+                case JsonTokenType.StartObject:
+                {
+                    foreach (JsonProperty child in element.EnumerateObject())
+                    {
+                        TouchEverything(child.Value);
                     }
 
                     break;

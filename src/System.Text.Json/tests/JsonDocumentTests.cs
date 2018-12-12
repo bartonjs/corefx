@@ -245,23 +245,26 @@ namespace System.Text.Json.Tests
                 case JsonTokenType.False:
                 case JsonTokenType.True:
                 case JsonTokenType.String:
-                case JsonTokenType.Comment:
                 case JsonTokenType.Number:
                 {
                     buf.Append(element.ToString());
                     buf.Append(", ");
                     break;
                 }
-                case JsonTokenType.PropertyName:
+                case JsonTokenType.StartObject:
                 {
-                    buf.Append(element.GetPropertyName());
-                    buf.Append(", ");
+                    foreach (JsonProperty prop in element.EnumerateObject())
+                    {
+                        buf.Append(prop.Name);
+                        buf.Append(", ");
+                        DepthFirstAppend(buf, prop.Value);
+                    }
+
                     break;
                 }
                 case JsonTokenType.StartArray:
-                case JsonTokenType.StartObject:
                 {
-                    foreach (JsonElement child in element.EnumerateChildren())
+                    foreach (JsonElement child in element.EnumerateArray())
                     {
                         DepthFirstAppend(buf, child);
                     }
@@ -478,10 +481,9 @@ namespace System.Text.Json.Tests
                 }
 
                 Assert.Throws<InvalidOperationException>(() => root.GetString());
-                Assert.Throws<InvalidOperationException>(() => root.GetPropertyName());
-                Assert.Throws<InvalidOperationException>(() => root.GetPropertyValue());
                 Assert.Throws<InvalidOperationException>(() => root.GetArrayLength());
-                Assert.Throws<InvalidOperationException>(() => root.EnumerateChildren());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateArray());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateObject());
                 Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
             }
         }
@@ -532,10 +534,9 @@ namespace System.Text.Json.Tests
                 }
 
                 Assert.Throws<InvalidOperationException>(() => root.GetString());
-                Assert.Throws<InvalidOperationException>(() => root.GetPropertyName());
-                Assert.Throws<InvalidOperationException>(() => root.GetPropertyValue());
                 Assert.Throws<InvalidOperationException>(() => root.GetArrayLength());
-                Assert.Throws<InvalidOperationException>(() => root.EnumerateChildren());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateArray());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateObject());
                 Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
             }
         }
@@ -572,10 +573,9 @@ namespace System.Text.Json.Tests
                 Assert.Equal(value, root.GetUInt64());
 
                 Assert.Throws<InvalidOperationException>(() => root.GetString());
-                Assert.Throws<InvalidOperationException>(() => root.GetPropertyName());
-                Assert.Throws<InvalidOperationException>(() => root.GetPropertyValue());
                 Assert.Throws<InvalidOperationException>(() => root.GetArrayLength());
-                Assert.Throws<InvalidOperationException>(() => root.EnumerateChildren());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateArray());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateObject());
                 Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
             }
         }
@@ -610,10 +610,9 @@ namespace System.Text.Json.Tests
                 Assert.Throws<FormatException>(() => root.GetUInt64());
 
                 Assert.Throws<InvalidOperationException>(() => root.GetString());
-                Assert.Throws<InvalidOperationException>(() => root.GetPropertyName());
-                Assert.Throws<InvalidOperationException>(() => root.GetPropertyValue());
                 Assert.Throws<InvalidOperationException>(() => root.GetArrayLength());
-                Assert.Throws<InvalidOperationException>(() => root.EnumerateChildren());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateArray());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateObject());
                 Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
             }
         }
@@ -649,10 +648,9 @@ namespace System.Text.Json.Tests
                 Assert.Throws<FormatException>(() => root.GetUInt64());
 
                 Assert.Throws<InvalidOperationException>(() => root.GetString());
-                Assert.Throws<InvalidOperationException>(() => root.GetPropertyName());
-                Assert.Throws<InvalidOperationException>(() => root.GetPropertyValue());
                 Assert.Throws<InvalidOperationException>(() => root.GetArrayLength());
-                Assert.Throws<InvalidOperationException>(() => root.EnumerateChildren());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateArray());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateObject());
                 Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
             }
         }
@@ -686,10 +684,9 @@ namespace System.Text.Json.Tests
                 Assert.Throws<FormatException>(() => root.GetUInt64());
 
                 Assert.Throws<InvalidOperationException>(() => root.GetString());
-                Assert.Throws<InvalidOperationException>(() => root.GetPropertyName());
-                Assert.Throws<InvalidOperationException>(() => root.GetPropertyValue());
                 Assert.Throws<InvalidOperationException>(() => root.GetArrayLength());
-                Assert.Throws<InvalidOperationException>(() => root.EnumerateChildren());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateArray());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateObject());
                 Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
             }
         }
@@ -720,7 +717,7 @@ namespace System.Text.Json.Tests
 
                 int val = 0;
 
-                foreach (JsonElement element in root.EnumerateChildren())
+                foreach (JsonElement element in root.EnumerateArray())
                 {
                     Assert.Equal(val, element.GetInt32());
                     val++;
@@ -735,8 +732,7 @@ namespace System.Text.Json.Tests
                 Assert.Throws<InvalidOperationException>(() => root.GetUInt64());
                 Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out ulong _));
                 Assert.Throws<InvalidOperationException>(() => root.GetString());
-                Assert.Throws<InvalidOperationException>(() => root.GetPropertyName());
-                Assert.Throws<InvalidOperationException>(() => root.GetPropertyValue());
+                Assert.Throws<InvalidOperationException>(() => root.EnumerateObject());
                 Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
             }
         }
@@ -751,7 +747,8 @@ namespace System.Text.Json.Tests
 
                 Assert.Throws<ObjectDisposedException>(() => root.Type);
                 Assert.Throws<ObjectDisposedException>(() => root.GetArrayLength());
-                Assert.Throws<ObjectDisposedException>(() => root.EnumerateChildren());
+                Assert.Throws<ObjectDisposedException>(() => root.EnumerateArray());
+                Assert.Throws<ObjectDisposedException>(() => root.EnumerateObject());
                 Assert.Throws<ObjectDisposedException>(() => root.GetDouble());
                 Assert.Throws<ObjectDisposedException>(() => root.TryGetValue(out double _));
                 Assert.Throws<ObjectDisposedException>(() => root.GetInt32());
@@ -761,8 +758,6 @@ namespace System.Text.Json.Tests
                 Assert.Throws<ObjectDisposedException>(() => root.GetUInt64());
                 Assert.Throws<ObjectDisposedException>(() => root.TryGetValue(out ulong _));
                 Assert.Throws<ObjectDisposedException>(() => root.GetString());
-                Assert.Throws<ObjectDisposedException>(() => root.GetPropertyName());
-                Assert.Throws<ObjectDisposedException>(() => root.GetPropertyValue());
                 Assert.Throws<ObjectDisposedException>(() => root.GetBoolean());
             }
         }
@@ -775,7 +770,8 @@ namespace System.Text.Json.Tests
             Assert.Equal(JsonTokenType.None, root.Type);
 
             Assert.Throws<InvalidOperationException>(() => root.GetArrayLength());
-            Assert.Throws<InvalidOperationException>(() => root.EnumerateChildren());
+            Assert.Throws<InvalidOperationException>(() => root.EnumerateArray());
+            Assert.Throws<InvalidOperationException>(() => root.EnumerateObject());
             Assert.Throws<InvalidOperationException>(() => root.GetDouble());
             Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out double _));
             Assert.Throws<InvalidOperationException>(() => root.GetInt32());
@@ -785,8 +781,6 @@ namespace System.Text.Json.Tests
             Assert.Throws<InvalidOperationException>(() => root.GetUInt64());
             Assert.Throws<InvalidOperationException>(() => root.TryGetValue(out ulong _));
             Assert.Throws<InvalidOperationException>(() => root.GetString());
-            Assert.Throws<InvalidOperationException>(() => root.GetPropertyName());
-            Assert.Throws<InvalidOperationException>(() => root.GetPropertyValue());
             Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
         }
 

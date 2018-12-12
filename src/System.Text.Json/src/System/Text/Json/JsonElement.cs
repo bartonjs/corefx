@@ -1,4 +1,9 @@
-﻿using System.Collections.Generic;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace System.Text.Json
@@ -186,34 +191,35 @@ namespace System.Text.Json
             throw new FormatException();
         }
 
-        public string GetPropertyName()
+        internal string GetPropertyName()
         {
             CheckValidInstance();
 
-            return _parent.GetString(_idx, JsonTokenType.PropertyName);
+            return _parent.GetNameOfPropertyValue(_idx);
         }
 
-        public JsonElement GetPropertyValue()
+        public ArrayEnumerator EnumerateArray()
         {
             CheckValidInstance();
 
-            return _parent.GetPropertyValue(_idx);
-        }
-
-        public ChildEnumerator EnumerateChildren()
-        {
-            CheckValidInstance();
-
-            switch (Type)
+            if (Type != JsonTokenType.StartArray)
             {
-                case JsonTokenType.StartObject:
-                case JsonTokenType.StartArray:
-                    break;
-                default:
-                    throw new InvalidOperationException();
+                throw new InvalidOperationException();
             }
 
-            return new ChildEnumerator(this);
+            return new ArrayEnumerator(this);
+        }
+
+        public ObjectEnumerator EnumerateObject()
+        {
+            CheckValidInstance();
+
+            if (Type != JsonTokenType.StartObject)
+            {
+                throw new InvalidOperationException();
+            }
+
+            return new ObjectEnumerator(this);
         }
 
         public override string ToString()
@@ -260,50 +266,126 @@ namespace System.Text.Json
             }
         }
 
-        public struct ChildEnumerator
+        public struct ArrayEnumerator : IEnumerable<JsonElement>, IEnumerator<JsonElement>
         {
-            private JsonElement _target;
-            public JsonElement Current { get; private set; }
+            private readonly JsonElement _target;
+            private int _curIdx;
             private readonly int _endIdx;
 
-            internal ChildEnumerator(JsonElement target)
+            internal ArrayEnumerator(JsonElement target)
             {
+                Debug.Assert(target.Type == JsonTokenType.StartArray);
+
                 _target = target;
-                Current = default;
+                _curIdx = -1;
                 _endIdx = _target._parent.GetEndIndex(_target._idx, includeEndElement: false);
             }
 
-            public ChildEnumerator GetEnumerator()
+            public JsonElement Current =>
+                _curIdx < 0 ? default : new JsonElement(_target._parent, _curIdx);
+
+            public ArrayEnumerator GetEnumerator()
             {
-                ChildEnumerator ator = this;
-                ator.Current = default;
+                ArrayEnumerator ator = this;
+                ator._curIdx = -1;
                 return ator;
             }
 
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+            IEnumerator<JsonElement> IEnumerable<JsonElement>.GetEnumerator() => GetEnumerator();
+
+            public void Dispose()
+            {
+                _curIdx = _endIdx;
+            }
+
+            public void Reset()
+            {
+                _curIdx = -1;
+            }
+
+            object IEnumerator.Current => Current;
+
             public bool MoveNext()
             {
-                if (Current._idx >= _endIdx)
+                if (_curIdx >= _endIdx)
                     return false;
 
-                int nextIdx;
-
-                if (Current._parent == null)
+                if (_curIdx < 0)
                 {
-                    nextIdx = _target._idx + JsonDocument.DbRow.Size;
+                    _curIdx = _target._idx + JsonDocument.DbRow.Size;
                 }
                 else
                 {
-                    nextIdx = _target._parent.GetEndIndex(Current._idx, includeEndElement: true);
+                    _curIdx = _target._parent.GetEndIndex(_curIdx, includeEndElement: true);
                 }
 
-                if (nextIdx >= _endIdx)
-                {
-                    Current = default;
+                return _curIdx < _endIdx;
+            }
+        }
+
+        public struct ObjectEnumerator : IEnumerable<JsonProperty>, IEnumerator<JsonProperty>
+        {
+            private readonly JsonElement _target;
+            private int _curIdx;
+            private readonly int _endIdx;
+
+            internal ObjectEnumerator(JsonElement target)
+            {
+                Debug.Assert(target.Type == JsonTokenType.StartObject);
+
+                _target = target;
+                _curIdx = -1;
+                _endIdx = _target._parent.GetEndIndex(_target._idx, includeEndElement: false);
+            }
+
+            public JsonProperty Current =>
+                _curIdx < 0 ?
+                    default :
+                    new JsonProperty(new JsonElement(_target._parent, _curIdx));
+
+            public ObjectEnumerator GetEnumerator()
+            {
+                ObjectEnumerator ator = this;
+                ator._curIdx = -1;
+                return ator;
+            }
+
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+            IEnumerator<JsonProperty> IEnumerable<JsonProperty>.GetEnumerator() => GetEnumerator();
+
+            public void Dispose()
+            {
+                _curIdx = _endIdx;
+            }
+
+            public void Reset()
+            {
+                _curIdx = -1;
+            }
+
+            object IEnumerator.Current => Current;
+
+            public bool MoveNext()
+            {
+                if (_curIdx >= _endIdx)
                     return false;
+
+                if (_curIdx < 0)
+                {
+                    _curIdx = _target._idx + JsonDocument.DbRow.Size;
+                }
+                else
+                {
+                    _curIdx = _target._parent.GetEndIndex(_curIdx, includeEndElement: true);
                 }
 
-                Current = new JsonElement(_target._parent, nextIdx);
-                return true;
+                // _curIdx is now pointing at a property name, move one more to get the value
+                _curIdx += JsonDocument.DbRow.Size;
+
+                return _curIdx < _endIdx;
             }
         }
     }
