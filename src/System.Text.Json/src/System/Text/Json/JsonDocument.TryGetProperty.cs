@@ -11,15 +11,11 @@ namespace System.Text.Json
     {
         internal bool TryGetNamedPropertyValue(int index, ReadOnlySpan<char> propertyName, out JsonElement value)
         {
-            if (_utf8Json.IsEmpty)
-                throw new ObjectDisposedException(nameof(JsonDocument));
+            CheckNotDisposed();
 
             _parsedData.Get(index, out DbRow row);
 
-            if (row.TokenType != JsonTokenType.StartObject)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckExpectedType(JsonTokenType.StartObject, row.TokenType);
 
             if (row.NumberOfRows == 0)
             {
@@ -98,15 +94,11 @@ namespace System.Text.Json
 
         internal bool TryGetNamedPropertyValue(int index, ReadOnlySpan<byte> propertyName, out JsonElement value)
         {
-            if (_utf8Json.IsEmpty)
-                throw new ObjectDisposedException(nameof(JsonDocument));
+            CheckNotDisposed();
 
             _parsedData.Get(index, out DbRow row);
 
-            if (row.TokenType != JsonTokenType.StartObject)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckExpectedType(JsonTokenType.StartObject, row.TokenType);
 
             if (row.NumberOfRows == 0)
             {
