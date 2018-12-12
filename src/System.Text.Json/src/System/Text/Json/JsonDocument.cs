@@ -131,38 +131,29 @@ namespace System.Text.Json
 
         internal JsonTokenType GetJsonTokenType(int index)
         {
-            if (_utf8Json.IsEmpty)
-                throw new ObjectDisposedException(nameof(JsonDocument));
+            CheckNotDisposed();
 
             return _parsedData.GetJsonTokenType(index);
         }
 
         internal int GetArrayLength(int index)
         {
-            if (_utf8Json.IsEmpty)
-                throw new ObjectDisposedException(nameof(JsonDocument));
+            CheckNotDisposed();
 
             _parsedData.Get(index, out DbRow row);
 
-            if (row.TokenType != JsonTokenType.StartArray)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckExpectedType(JsonTokenType.StartArray, row.TokenType);
 
             return row.SizeOrLength;
         }
 
         internal JsonElement GetArrayIndexElement(int currentIndex, int arrayIndex)
         {
-            if (_utf8Json.IsEmpty)
-                throw new ObjectDisposedException(nameof(JsonDocument));
+            CheckNotDisposed();
 
             _parsedData.Get(currentIndex, out DbRow row);
 
-            if (row.TokenType != JsonTokenType.StartArray)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckExpectedType(JsonTokenType.StartArray, row.TokenType);
 
             int arrayLength = row.SizeOrLength;
 
@@ -203,8 +194,7 @@ namespace System.Text.Json
 
         internal int GetEndIndex(int index, bool includeEndElement)
         {
-            if (_utf8Json.IsEmpty)
-                throw new ObjectDisposedException(nameof(JsonDocument));
+            CheckNotDisposed();
 
             DbRow row;
             _parsedData.Get(index, out row);
@@ -226,8 +216,7 @@ namespace System.Text.Json
 
         internal ReadOnlyMemory<byte> GetRawValue(int index)
         {
-            if (_utf8Json.IsEmpty)
-                throw new ObjectDisposedException(nameof(JsonDocument));
+            CheckNotDisposed();
 
             _parsedData.Get(index, out DbRow row);
 
@@ -244,17 +233,11 @@ namespace System.Text.Json
 
         internal string GetString(int index, JsonTokenType expectedType)
         {
-            if (_utf8Json.IsEmpty)
-                throw new ObjectDisposedException(nameof(JsonDocument));
+            CheckNotDisposed();
 
             _parsedData.Get(index, out DbRow row);
 
-            JsonTokenType type = row.TokenType;
-
-            if (expectedType != type)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckExpectedType(expectedType, row.TokenType);
 
             ReadOnlySpan<byte> data = _utf8Json.Span;
             ReadOnlySpan<byte> segment = data.Slice(row.Location, row.SizeOrLength);
@@ -265,15 +248,11 @@ namespace System.Text.Json
 
         internal bool TryGetValue(int index, out int value)
         {
-            if (_utf8Json.IsEmpty)
-                throw new ObjectDisposedException(nameof(JsonDocument));
+            CheckNotDisposed();
 
             _parsedData.Get(index, out DbRow row);
 
-            if (row.TokenType != JsonTokenType.Number)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckExpectedType(JsonTokenType.Number, row.TokenType);
 
             ReadOnlySpan<byte> data = _utf8Json.Span;
             ReadOnlySpan<byte> segment = data.Slice(row.Location, row.SizeOrLength);
@@ -291,15 +270,11 @@ namespace System.Text.Json
 
         internal bool TryGetValue(int index, out long value)
         {
-            if (_utf8Json.IsEmpty)
-                throw new ObjectDisposedException(nameof(JsonDocument));
+            CheckNotDisposed();
 
             _parsedData.Get(index, out DbRow row);
 
-            if (row.TokenType != JsonTokenType.Number)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckExpectedType(JsonTokenType.Number, row.TokenType);
 
             ReadOnlySpan<byte> data = _utf8Json.Span;
             ReadOnlySpan<byte> segment = data.Slice(row.Location, row.SizeOrLength);
@@ -317,15 +292,11 @@ namespace System.Text.Json
 
         internal bool TryGetValue(int index, out ulong value)
         {
-            if (_utf8Json.IsEmpty)
-                throw new ObjectDisposedException(nameof(JsonDocument));
+            CheckNotDisposed();
 
             _parsedData.Get(index, out DbRow row);
 
-            if (row.TokenType != JsonTokenType.Number)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckExpectedType(JsonTokenType.Number, row.TokenType);
 
             ReadOnlySpan<byte> data = _utf8Json.Span;
             ReadOnlySpan<byte> segment = data.Slice(row.Location, row.SizeOrLength);
@@ -343,15 +314,11 @@ namespace System.Text.Json
 
         internal bool TryGetValue(int index, out double value)
         {
-            if (_utf8Json.IsEmpty)
-                throw new ObjectDisposedException(nameof(JsonDocument));
+            CheckNotDisposed();
 
             _parsedData.Get(index, out DbRow row);
 
-            if (row.TokenType != JsonTokenType.Number)
-            {
-                throw new InvalidOperationException();
-            }
+            CheckExpectedType(JsonTokenType.Number, row.TokenType);
 
             ReadOnlySpan<byte> data = _utf8Json.Span;
             ReadOnlySpan<byte> segment = data.Slice(row.Location, row.SizeOrLength);
@@ -374,18 +341,15 @@ namespace System.Text.Json
 
         internal JsonElement GetPropertyValue(int index)
         {
-            if (GetJsonTokenType(index) != JsonTokenType.PropertyName)
-            {
-                throw new InvalidOperationException();
-            }
+            // GetJsonTokenType calls CheckNotDisposed
+            CheckExpectedType(JsonTokenType.PropertyName, GetJsonTokenType(index));
 
             return new JsonElement(this, index + DbRow.Size);
         }
 
         internal string PrettyPrintProperty(int index)
         {
-            if (_utf8Json.IsEmpty)
-                throw new ObjectDisposedException(nameof(JsonDocument));
+            CheckNotDisposed();
 
             _parsedData.Get(index, out DbRow row);
             Debug.Assert(row.TokenType == JsonTokenType.PropertyName);
@@ -544,6 +508,22 @@ namespace System.Text.Json
             }
 
             database.TrimExcess();
+        }
+
+        private void CheckNotDisposed()
+        {
+            if (_utf8Json.IsEmpty)
+            {
+                throw new ObjectDisposedException(nameof(JsonDocument));
+            }
+        }
+
+        private void CheckExpectedType(JsonTokenType expected, JsonTokenType actual)
+        {
+            if (expected != actual)
+            {
+                throw new InvalidOperationException();
+            }
         }
     }
 }
