@@ -34,7 +34,7 @@ namespace System.Text.Json
         //   * 31 bits for the token length (always 1, effectively unassigned)
         // * Third int
         //   * 4 bits JsonTokenType
-        //   * 28 bits unassigned / always clear
+        //   * 28 bits for the number of rows until the previous value (never 0)
         //
         // StartObject
         // * First int

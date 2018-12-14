@@ -17,7 +17,8 @@ namespace System.Text.Json
 
             CheckExpectedType(JsonTokenType.StartObject, row.TokenType);
 
-            if (row.NumberOfRows == 0)
+            // Only one row means it was EndObject.
+            if (row.NumberOfRows == 1)
             {
                 value = default;
                 return false;
@@ -50,10 +51,25 @@ namespace System.Text.Json
             // and switch once one viable long property is found.
 
             int minBytes = propertyName.Length;
-            int candidateIndex = index + DbRow.Size;
+            // Move to the row before the EndObject
+            int candidateIndex = endIndex - DbRow.Size;
 
-            while (candidateIndex < endIndex)
+            while (candidateIndex > index)
             {
+                _parsedData.Get(candidateIndex, out row);
+                Debug.Assert(row.TokenType != JsonTokenType.PropertyName);
+
+                // Move before the value
+                if (row.IsSimpleValue)
+                {
+                    candidateIndex -= DbRow.Size;
+                }
+                else
+                {
+                    Debug.Assert(row.NumberOfRows > 0);
+                    candidateIndex -= DbRow.Size * (row.NumberOfRows + 1);
+                }
+
                 _parsedData.Get(candidateIndex, out row);
                 Debug.Assert(row.TokenType == JsonTokenType.PropertyName);
 
@@ -79,19 +95,8 @@ namespace System.Text.Json
                     }
                 }
 
-                // Move to the value
-                candidateIndex += DbRow.Size;
-                _parsedData.Get(candidateIndex, out row);
-
-                // Move past the value
-                if (row.IsSimpleValue)
-                {
-                    candidateIndex += DbRow.Size;
-                }
-                else
-                {
-                    candidateIndex += DbRow.Size * (row.NumberOfRows + 1);
-                }
+                // Move to the previous value
+                candidateIndex -= DbRow.Size;
             }
 
             // None of the property names were within the range that the UTF-8 encoding would have been.
@@ -107,7 +112,8 @@ namespace System.Text.Json
 
             CheckExpectedType(JsonTokenType.StartObject, row.TokenType);
 
-            if (row.NumberOfRows == 0)
+            // Only one row means it was EndObject.
+            if (row.NumberOfRows == 1)
             {
                 value = default;
                 return false;
@@ -131,10 +137,25 @@ namespace System.Text.Json
             DbRow row;
             ReadOnlySpan<byte> documentSpan = _utf8Json.Span;
 
-            int index = startIndex;
+            // Move to the row before the EndObject
+            int index = endIndex - DbRow.Size;
 
-            while (index < endIndex)
+            while (index > startIndex)
             {
+                _parsedData.Get(index, out row);
+                Debug.Assert(row.TokenType != JsonTokenType.PropertyName);
+
+                // Move before the value
+                if (row.IsSimpleValue)
+                {
+                    index -= DbRow.Size;
+                }
+                else
+                {
+                    Debug.Assert(row.NumberOfRows > 0);
+                    index -= DbRow.Size * (row.NumberOfRows + 1);
+                }
+
                 _parsedData.Get(index, out row);
                 Debug.Assert(row.TokenType == JsonTokenType.PropertyName);
 
@@ -147,19 +168,9 @@ namespace System.Text.Json
                     return true;
                 }
 
-                // Move to the value
-                index += DbRow.Size;
+                // Move to the previous value
+                index -= DbRow.Size;
                 _parsedData.Get(index, out row);
-
-                // Move past the value
-                if (row.IsSimpleValue)
-                {
-                    index += DbRow.Size;
-                }
-                else
-                {
-                    index += DbRow.Size * (row.NumberOfRows + 1);
-                }
             }
 
             value = default;

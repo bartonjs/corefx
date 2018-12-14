@@ -462,8 +462,10 @@ namespace System.Text.Json
                     numberOfRowsForMembers++;
                     database.SetLength(rowIndex, numberOfRowsForMembers);
 
+                    int newRowIndex = database.Length;
                     database.Append(tokenType, tokenStart, reader.ValueSpan.Length);
                     database.SetNumberOfRows(rowIndex, numberOfRowsForMembers);
+                    database.SetNumberOfRows(newRowIndex, numberOfRowsForMembers);
 
                     StackRow row = stack.Pop();
                     numberOfRowsForMembers += row.SizeOrLength;
@@ -500,7 +502,10 @@ namespace System.Text.Json
                     database.SetLength(rowIndex, arrayItemsCount);
                     database.SetNumberOfRows(rowIndex, numberOfRowsForValues);
 
+                    int newRowIndex = database.Length;
                     database.Append(tokenType, tokenStart, reader.ValueSpan.Length);
+                    database.SetNumberOfRows(newRowIndex, numberOfRowsForValues);
+
                     StackRow row = stack.Pop();
                     arrayItemsCount = row.SizeOrLength;
                     numberOfRowsForValues += row.NumberOfRows;

@@ -972,6 +972,23 @@ namespace System.Text.Json.Tests
             }
         }
 
+        [Theory]
+        [InlineData("short")]
+        [InlineData("thisValueIsLongerThan86CharsSoWeDeferTheTranscodingUntilWeFindAViableCandidateAsAPropertyMatch")]
+        public static void GetPropertyFindsLast(string propertyName)
+        {
+            string json = $"{{ \"{propertyName}\": 1, \"{propertyName}\": 2, \"nope\": -1, \"{propertyName}\": 3 }}";
+
+            using (JsonDocument doc = JsonDocument.Parse(json))
+            {
+                JsonElement root = doc.RootElement;
+
+                Assert.Equal(3, root[propertyName].GetInt32());
+                Assert.Equal(3, root[propertyName.AsSpan()].GetInt32());
+                Assert.Equal(3, root[Encoding.UTF8.GetBytes(propertyName)].GetInt32());
+            }
+        }
+
         private static ArraySegment<byte> StringToUtf8BufferWithEmptySpace(string testString, int emptySpaceSize = 2048)
         {
             int expectedLength = Encoding.UTF8.GetByteCount(testString);
