@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Buffers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
@@ -869,6 +870,108 @@ namespace System.Text.Json.Tests
             }
         }
 
+        [Fact]
+        public static void TryGetProperty_NoProperty()
+        {
+            using (JsonDocument doc = JsonDocument.Parse(" { \"hi\": \"there\" }"))
+            {
+                JsonElement root = doc.RootElement;
+
+                const string NotPresent = "Not Present";
+                byte[] notPresentUtf8 = Encoding.UTF8.GetBytes(NotPresent);
+
+                Assert.False(root.TryGetProperty(NotPresent, out _));
+                Assert.False(root.TryGetProperty(NotPresent.AsSpan(), out _));
+                Assert.False(root.TryGetProperty(notPresentUtf8, out _));
+                Assert.False(root.TryGetProperty(new string('z', 512), out _));
+
+                Assert.Throws<KeyNotFoundException>(() => root[NotPresent]);
+                Assert.Throws<KeyNotFoundException>(() => root[NotPresent.AsSpan()]);
+                Assert.Throws<KeyNotFoundException>(() => root[notPresentUtf8]);
+                Assert.Throws<KeyNotFoundException>(() => root[new string('z', 512)]);
+            }
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("    ")]
+        [InlineData("1 2")]
+        [InlineData("[ 1")]
+        public static void CheckUnparsable(string json)
+        {
+            Assert.Throws<JsonReaderException>(() => JsonDocument.Parse(json));
+
+            byte[] utf8 = Encoding.UTF8.GetBytes(json);
+            Assert.Throws<JsonReaderException>(() => JsonDocument.Parse(utf8));
+
+            ReadOnlySequence<byte> singleSeq = new ReadOnlySequence<byte>(utf8);
+            Assert.Throws<JsonReaderException>(() => JsonDocument.Parse(singleSeq));
+
+            ReadOnlySequence<byte> multiSegment = SegmentInto(utf8, 6);
+            Assert.Throws<JsonReaderException>(() => JsonDocument.Parse(multiSegment));
+        }
+
+        [Fact]
+        public static void CheckParseDepth()
+        {
+            const int OkayCount = 64;
+            string okayJson = new string('[', OkayCount) + "1" + new string(']', OkayCount);
+
+            using (JsonDocument doc = JsonDocument.Parse(okayJson))
+            {
+                JsonElement root = doc.RootElement;
+                Assert.Equal(JsonTokenType.StartArray, root.Type);
+            }
+
+            string badJson = $"[{okayJson}]";
+
+            Assert.Throws<JsonReaderException>(() => JsonDocument.Parse(badJson));
+        }
+
+        [Fact]
+        public static void EnableComments()
+        {
+            string json = "3";
+            JsonReaderOptions options = new JsonReaderOptions
+            {
+                CommentHandling = JsonCommentHandling.Allow,
+            };
+
+            AssertExtensions.Throws<ArgumentException>(
+                "readerOptions",
+                () => JsonDocument.Parse(json, options));
+
+            byte[] utf8 = Encoding.UTF8.GetBytes(json);
+            AssertExtensions.Throws<ArgumentException>(
+                "readerOptions",
+                () => JsonDocument.Parse(utf8, options));
+
+            ReadOnlySequence<byte> singleSeq = new ReadOnlySequence<byte>(utf8);
+            AssertExtensions.Throws<ArgumentException>(
+                "readerOptions",
+                () => JsonDocument.Parse(singleSeq, options));
+
+            ReadOnlySequence<byte> multiSegment = SegmentInto(utf8, 6);
+            AssertExtensions.Throws<ArgumentException>(
+                "readerOptions",
+                () => JsonDocument.Parse(multiSegment, options));
+        }
+
+        [Fact]
+        public static void GetPropertyByNullName()
+        {
+            using (JsonDocument doc = JsonDocument.Parse("{ }"))
+            {
+                AssertExtensions.Throws<ArgumentNullException>(
+                    "propertyName",
+                    () => doc.RootElement[(string)null]);
+
+                AssertExtensions.Throws<ArgumentNullException>(
+                    "propertyName",
+                    () => doc.RootElement.TryGetProperty((string)null, out _));
+            }
+        }
+
         private static ArraySegment<byte> StringToUtf8BufferWithEmptySpace(string testString, int emptySpaceSize = 2048)
         {
             int expectedLength = Encoding.UTF8.GetByteCount(testString);
@@ -876,6 +979,40 @@ namespace System.Text.Json.Tests
             int actualLength = Encoding.UTF8.GetBytes(testString, buffer.AsSpan());
             
             return new ArraySegment<byte>(buffer, 0, actualLength);
+        }
+
+        private static ReadOnlySequence<byte> SegmentInto(ReadOnlyMemory<byte> data, int segmentCount)
+        {
+            if (segmentCount < 2)
+                throw new ArgumentOutOfRangeException(nameof(segmentCount));
+
+            int perSegment = data.Length / segmentCount;
+            BufferSegment<byte> first;
+
+            if (perSegment == 0 && data.Length > 0)
+            {
+                first = new BufferSegment<byte>(data.Slice(0, 1));
+                data = data.Slice(1);
+            }
+            else
+            {
+                first = new BufferSegment<byte>(data.Slice(0, perSegment));
+                data = data.Slice(perSegment);
+            }
+
+            BufferSegment<byte> last = first;
+            segmentCount--;
+
+            while (segmentCount > 1)
+            {
+                perSegment = data.Length / segmentCount;
+                last = last.Append(data.Slice(0, perSegment));
+                data = data.Slice(perSegment);
+                segmentCount--;
+            }
+
+            last = last.Append(data);
+            return new ReadOnlySequence<byte>(first, 0, last, data.Length);
         }
     }
 }

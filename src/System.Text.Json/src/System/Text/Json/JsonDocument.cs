@@ -125,6 +125,11 @@ namespace System.Text.Json
             try
             {
                 Parse(utf8JsonSpan, reader, ref database, ref stack);
+
+                if (database.Length == 0)
+                {
+                    throw new JsonReaderException("Cannot load the empty document", -1, -1);
+                }
             }
             catch
             {

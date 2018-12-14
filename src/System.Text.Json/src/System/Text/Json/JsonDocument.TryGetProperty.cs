@@ -42,15 +42,22 @@ namespace System.Text.Json
                     out value);
             }
 
+            // Unescaping the property name will make the string shorter (or the same)
+            // So the first viable candidate is one whose length in bytes matches, or
+            // exceeds, our length in chars.
+            //
+            // The maximal escaping seems to be 6 -> 1 ("\u0030" => "0"), but just transcode
+            // and switch once one viable long property is found.
+
             int minBytes = propertyName.Length;
             int candidateIndex = index + DbRow.Size;
 
             while (candidateIndex < endIndex)
             {
-                _parsedData.Get(index, out row);
-                Debug.Assert(row.TokenType == JsonTokenType.String);
+                _parsedData.Get(candidateIndex, out row);
+                Debug.Assert(row.TokenType == JsonTokenType.PropertyName);
 
-                if (row.SizeOrLength >= minBytes && row.SizeOrLength <= maxBytes)
+                if (row.SizeOrLength >= minBytes)
                 {
                     byte[] tmpUtf8 = ArrayPool<byte>.Shared.Rent(maxBytes);
                     Span<byte> utf8Name = default;
@@ -73,17 +80,17 @@ namespace System.Text.Json
                 }
 
                 // Move to the value
-                index += DbRow.Size;
-                _parsedData.Get(index, out row);
+                candidateIndex += DbRow.Size;
+                _parsedData.Get(candidateIndex, out row);
 
                 // Move past the value
                 if (row.IsSimpleValue)
                 {
-                    index += DbRow.Size;
+                    candidateIndex += DbRow.Size;
                 }
                 else
                 {
-                    index += DbRow.Size * (row.NumberOfRows + 1);
+                    candidateIndex += DbRow.Size * (row.NumberOfRows + 1);
                 }
             }
 
