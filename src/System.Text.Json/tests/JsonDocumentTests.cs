@@ -1305,6 +1305,43 @@ namespace System.Text.Json.Tests
             Assert.False(defaultEnumerator.MoveNext());
         }
 
+        [Fact]
+        public static void ReadNestedObject()
+        {
+            const string json = @"
+{
+  ""first"":
+  {
+    ""true"": true,
+    ""false"": false,
+    ""null"": null,
+    ""int"": 3,
+    ""nearlyPi"": 3.14159,
+    ""text"": ""This is some text that does not end... <EOT>""
+  },
+  ""second"":
+  {
+    ""blub"": { ""bool"": true },
+    ""glub"": { ""bool"": false }
+  }
+}";
+            using (JsonDocument doc = JsonDocument.Parse(json))
+            {
+                JsonElement root = doc.RootElement;
+                Assert.Equal(JsonValueType.Object, root.Type);
+
+                Assert.True(root["first"]["true"].GetBoolean());
+                Assert.False(root["first"]["false"].GetBoolean());
+                Assert.Equal(JsonValueType.Null, root["first"]["null"].Type);
+                Assert.Equal(3, root["first"]["int"].GetInt32());
+                Assert.Equal(3.14159f, root["first"]["nearlyPi"].GetSingle());
+                Assert.Equal("This is some text that does not end... <EOT>", root["first"]["text"].GetString());
+
+                Assert.True(root["second"]["blub"]["bool"].GetBoolean());
+                Assert.False(root["second"]["glub"]["bool"].GetBoolean());
+            }
+        }
+
         private static ArraySegment<byte> StringToUtf8BufferWithEmptySpace(string testString, int emptySpaceSize = 2048)
         {
             int expectedLength = Encoding.UTF8.GetByteCount(testString);
