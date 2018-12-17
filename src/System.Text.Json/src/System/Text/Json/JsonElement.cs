@@ -19,7 +19,34 @@ namespace System.Text.Json
             _idx = idx;
         }
 
-        public JsonTokenType Type => _parent?.GetJsonTokenType(_idx) ?? JsonTokenType.None;
+        internal JsonTokenType TokenType => _parent?.GetJsonTokenType(_idx) ?? JsonTokenType.None;
+
+        public JsonValueType Type
+        {
+            get
+            {
+                JsonTokenType tokenType = TokenType;
+
+                switch (tokenType)
+                {
+                    case JsonTokenType.None:
+                        return JsonValueType.Undefined;
+                    case JsonTokenType.StartArray:
+                        return JsonValueType.Array;
+                    case JsonTokenType.StartObject:
+                        return JsonValueType.Object;
+                    case JsonTokenType.String:
+                    case JsonTokenType.Number:
+                    case JsonTokenType.True:
+                    case JsonTokenType.False:
+                    case JsonTokenType.Null:
+                        return (JsonValueType)((byte)tokenType - 3);
+                    default:
+                        Debug.Fail($"No mapping for token type {tokenType}");
+                        return JsonValueType.Undefined;
+                }
+            }
+        }
 
         public JsonElement this[int index]
         {
@@ -106,7 +133,7 @@ namespace System.Text.Json
             // CheckValidInstance is redundant.  Asking for the type will
             // return None, which then throws the same exception in the return statement.
 
-            JsonTokenType type = Type;
+            JsonTokenType type = TokenType;
 
             return
                 type == JsonTokenType.True ? true :
@@ -238,7 +265,7 @@ namespace System.Text.Json
         {
             CheckValidInstance();
 
-            if (Type != JsonTokenType.StartArray)
+            if (TokenType != JsonTokenType.StartArray)
             {
                 throw new InvalidOperationException();
             }
@@ -250,7 +277,7 @@ namespace System.Text.Json
         {
             CheckValidInstance();
 
-            if (Type != JsonTokenType.StartObject)
+            if (TokenType != JsonTokenType.StartObject)
             {
                 throw new InvalidOperationException();
             }
@@ -260,7 +287,7 @@ namespace System.Text.Json
 
         public override string ToString()
         {
-            switch (Type)
+            switch (TokenType)
             {
                 case JsonTokenType.None:
                 case JsonTokenType.Null:
@@ -272,7 +299,6 @@ namespace System.Text.Json
                 case JsonTokenType.Number:
                 case JsonTokenType.StartArray:
                 case JsonTokenType.StartObject:
-                case JsonTokenType.Comment:
                 {
                     // null parent should have hit the None case
                     Debug.Assert(_parent != null);
@@ -280,6 +306,7 @@ namespace System.Text.Json
                 }
                 case JsonTokenType.String:
                     return GetString();
+                case JsonTokenType.Comment:
                 case JsonTokenType.EndArray:
                 case JsonTokenType.EndObject:
                 default:
@@ -304,7 +331,7 @@ namespace System.Text.Json
 
             internal ArrayEnumerator(JsonElement target)
             {
-                Debug.Assert(target.Type == JsonTokenType.StartArray);
+                Debug.Assert(target.TokenType == JsonTokenType.StartArray);
 
                 _target = target;
                 _curIdx = -1;
@@ -363,7 +390,7 @@ namespace System.Text.Json
 
             internal ObjectEnumerator(JsonElement target)
             {
-                Debug.Assert(target.Type == JsonTokenType.StartObject);
+                Debug.Assert(target.TokenType == JsonTokenType.StartObject);
 
                 _target = target;
                 _curIdx = -1;

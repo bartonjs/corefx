@@ -139,7 +139,7 @@ namespace System.Text.Json.Performance.Tests
             // Reading the type touched it.
             switch (element.Type)
             {
-                case JsonTokenType.StartArray:
+                case JsonValueType.Array:
                 {
                     foreach (JsonElement child in element.EnumerateArray())
                     {
@@ -148,7 +148,7 @@ namespace System.Text.Json.Performance.Tests
 
                     break;
                 }
-                case JsonTokenType.StartObject:
+                case JsonValueType.Object:
                 {
                     foreach (JsonProperty child in element.EnumerateObject())
                     {

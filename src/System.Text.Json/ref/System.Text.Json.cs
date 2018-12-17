@@ -30,7 +30,7 @@ namespace System.Text.Json
         public System.Text.Json.JsonElement this[System.ReadOnlySpan<byte> utf8PropertyName] { get { throw null; } }
         public System.Text.Json.JsonElement this[System.ReadOnlySpan<char> propertyName] { get { throw null; } }
         public System.Text.Json.JsonElement this[string propertyName] { get { throw null; } }
-        public System.Text.Json.JsonTokenType Type { get { throw null; } }
+        public System.Text.Json.JsonValueType Type { get { throw null; } }
         public System.Text.Json.JsonElement.ArrayEnumerator EnumerateArray() { throw null; }
         public System.Text.Json.JsonElement.ObjectEnumerator EnumerateObject() { throw null; }
         public int GetArrayLength() { throw null; }
@@ -122,6 +122,17 @@ namespace System.Text.Json
         StartObject = (byte)1,
         String = (byte)6,
         True = (byte)8,
+    }
+    public enum JsonValueType : byte
+    {
+        Array = (byte)2,
+        False = (byte)6,
+        Null = (byte)7,
+        Number = (byte)4,
+        Object = (byte)1,
+        String = (byte)3,
+        True = (byte)5,
+        Undefined = (byte)0,
     }
     public ref partial struct Utf8JsonReader
     {

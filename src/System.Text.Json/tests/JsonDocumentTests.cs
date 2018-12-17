@@ -240,20 +240,20 @@ namespace System.Text.Json.Tests
 
         private static void DepthFirstAppend(StringBuilder buf, JsonElement element)
         {
-            JsonTokenType type = element.Type;
+            JsonValueType type = element.Type;
 
             switch (type)
             {
-                case JsonTokenType.False:
-                case JsonTokenType.True:
-                case JsonTokenType.String:
-                case JsonTokenType.Number:
+                case JsonValueType.False:
+                case JsonValueType.True:
+                case JsonValueType.String:
+                case JsonValueType.Number:
                 {
                     buf.Append(element.ToString());
                     buf.Append(", ");
                     break;
                 }
-                case JsonTokenType.StartObject:
+                case JsonValueType.Object:
                 {
                     foreach (JsonProperty prop in element.EnumerateObject())
                     {
@@ -264,7 +264,7 @@ namespace System.Text.Json.Tests
 
                     break;
                 }
-                case JsonTokenType.StartArray:
+                case JsonValueType.Array:
                 {
                     foreach (JsonElement child in element.EnumerateArray())
                     {
@@ -419,7 +419,7 @@ namespace System.Text.Json.Tests
             {
                 JsonElement root = doc.RootElement;
 
-                Assert.Equal(JsonTokenType.StartArray, root.Type);
+                Assert.Equal(JsonValueType.Array, root.Type);
                 Assert.Equal(SR.ParseJson, root.ToString());
             }
         }
@@ -433,7 +433,7 @@ namespace System.Text.Json.Tests
             {
                 JsonElement root = doc.RootElement;
 
-                Assert.Equal(JsonTokenType.StartObject, root.Type);
+                Assert.Equal(JsonValueType.Object, root.Type);
                 Assert.Equal(SR.BasicJson, root.ToString());
             }
         }
@@ -451,7 +451,7 @@ namespace System.Text.Json.Tests
             {
                 JsonElement root = doc.RootElement;
 
-                Assert.Equal(JsonTokenType.Number, root.Type);
+                Assert.Equal(JsonValueType.Number, root.Type);
 
                 Assert.True(root.TryGetSingle(out float floatVal));
                 Assert.Equal(expectedFloat, floatVal);
@@ -519,7 +519,7 @@ namespace System.Text.Json.Tests
             {
                 JsonElement root = doc.RootElement;
 
-                Assert.Equal(JsonTokenType.Number, root.Type);
+                Assert.Equal(JsonValueType.Number, root.Type);
 
                 Assert.True(root.TryGetSingle(out float floatVal));
                 Assert.Equal(expectedFloat, floatVal);
@@ -594,7 +594,7 @@ namespace System.Text.Json.Tests
             {
                 JsonElement root = doc.RootElement;
 
-                Assert.Equal(JsonTokenType.Number, root.Type);
+                Assert.Equal(JsonValueType.Number, root.Type);
 
                 Assert.True(root.TryGetSingle(out float floatVal));
                 Assert.Equal(expectedFloat, floatVal);
@@ -642,7 +642,7 @@ namespace System.Text.Json.Tests
             {
                 JsonElement root = doc.RootElement;
 
-                Assert.Equal(JsonTokenType.Number, root.Type);
+                Assert.Equal(JsonValueType.Number, root.Type);
 
                 Assert.True(root.TryGetSingle(out float floatVal));
                 Assert.Equal(expectedFloat, floatVal);
@@ -689,7 +689,7 @@ namespace System.Text.Json.Tests
             {
                 JsonElement root = doc.RootElement;
 
-                Assert.Equal(JsonTokenType.Number, root.Type);
+                Assert.Equal(JsonValueType.Number, root.Type);
 
                 Assert.True(root.TryGetSingle(out float floatVal));
                 Assert.Equal(expectedFloat, floatVal);
@@ -729,7 +729,7 @@ namespace System.Text.Json.Tests
             {
                 JsonElement root = doc.RootElement;
 
-                Assert.Equal(JsonTokenType.Number, root.Type);
+                Assert.Equal(JsonValueType.Number, root.Type);
 
                 Assert.True(root.TryGetSingle(out float floatVal));
                 Assert.Equal(float.PositiveInfinity, floatVal);
@@ -776,7 +776,7 @@ namespace System.Text.Json.Tests
             {
                 JsonElement root = doc.RootElement;
 
-                Assert.Equal(JsonTokenType.StartArray, root.Type);
+                Assert.Equal(JsonValueType.Array, root.Type);
                 Assert.Equal(5, root.GetArrayLength());
 
                 for (int i = root.GetArrayLength() - 1; i >= 0; i--)
@@ -836,7 +836,7 @@ namespace System.Text.Json.Tests
         {
             JsonElement root = default;
 
-            Assert.Equal(JsonTokenType.None, root.Type);
+            Assert.Equal(JsonValueType.Undefined, root.Type);
 
             Assert.Throws<InvalidOperationException>(() => root.GetArrayLength());
             Assert.Throws<InvalidOperationException>(() => root.EnumerateArray());
@@ -921,7 +921,7 @@ namespace System.Text.Json.Tests
             using (JsonDocument doc = JsonDocument.Parse(okayJson))
             {
                 JsonElement root = doc.RootElement;
-                Assert.Equal(JsonTokenType.StartArray, root.Type);
+                Assert.Equal(JsonValueType.Array, root.Type);
             }
 
             string badJson = $"[{okayJson}]";
@@ -1123,8 +1123,8 @@ namespace System.Text.Json.Tests
             JsonElement.ArrayEnumerator enumerator = enumerable.GetEnumerator();
             JsonElement.ArrayEnumerator defaultEnumerator = default;
 
-            Assert.Equal(JsonTokenType.None, enumerable.Current.Type);
-            Assert.Equal(JsonTokenType.None, enumerator.Current.Type);
+            Assert.Equal(JsonValueType.Undefined, enumerable.Current.Type);
+            Assert.Equal(JsonValueType.Undefined, enumerator.Current.Type);
 
             Assert.False(enumerable.MoveNext());
             Assert.False(enumerable.MoveNext());
@@ -1294,8 +1294,8 @@ namespace System.Text.Json.Tests
             JsonElement.ObjectEnumerator enumerator = enumerable.GetEnumerator();
             JsonElement.ObjectEnumerator defaultEnumerator = default;
 
-            Assert.Equal(JsonTokenType.None, enumerable.Current.Value.Type);
-            Assert.Equal(JsonTokenType.None, enumerator.Current.Value.Type);
+            Assert.Equal(JsonValueType.Undefined, enumerable.Current.Value.Type);
+            Assert.Equal(JsonValueType.Undefined, enumerator.Current.Value.Type);
 
             Assert.Throws<InvalidOperationException>(() => enumerable.Current.Name);
             Assert.Throws<InvalidOperationException>(() => enumerator.Current.Name);
