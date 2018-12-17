@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Buffers;
+using System.Collections;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
@@ -987,6 +988,321 @@ namespace System.Text.Json.Tests
                 Assert.Equal(3, root[propertyName.AsSpan()].GetInt32());
                 Assert.Equal(3, root[Encoding.UTF8.GetBytes(propertyName)].GetInt32());
             }
+        }
+
+        [Fact]
+        public static void ArrayEnumeratorIndependentWalk()
+        {
+            using (JsonDocument doc = JsonDocument.Parse("[0, 1, 2, 3, 4, 5]"))
+            {
+                JsonElement root = doc.RootElement;
+                JsonElement.ArrayEnumerator structEnumerable = root.EnumerateArray();
+                IEnumerable<JsonElement> strongBoxedEnumerable = root.EnumerateArray();
+                IEnumerable weakBoxedEnumerable = root.EnumerateArray();
+
+                JsonElement.ArrayEnumerator structEnumerator = structEnumerable.GetEnumerator();
+                IEnumerator<JsonElement> strongBoxedEnumerator = strongBoxedEnumerable.GetEnumerator();
+                IEnumerator weakBoxedEnumerator = weakBoxedEnumerable.GetEnumerator();
+
+                Assert.True(structEnumerator.MoveNext());
+                Assert.True(strongBoxedEnumerator.MoveNext());
+                Assert.True(weakBoxedEnumerator.MoveNext());
+
+                Assert.Equal(0, structEnumerator.Current.GetInt32());
+                Assert.Equal(0, strongBoxedEnumerator.Current.GetInt32());
+                Assert.Equal(0, ((JsonElement)weakBoxedEnumerator.Current).GetInt32());
+
+                Assert.True(structEnumerator.MoveNext());
+                Assert.True(strongBoxedEnumerator.MoveNext());
+                Assert.True(weakBoxedEnumerator.MoveNext());
+
+                Assert.Equal(1, structEnumerator.Current.GetInt32());
+                Assert.Equal(1, strongBoxedEnumerator.Current.GetInt32());
+                Assert.Equal(1, ((JsonElement)weakBoxedEnumerator.Current).GetInt32());
+
+                int test = 0;
+
+                foreach (JsonElement element in structEnumerable)
+                {
+                    Assert.Equal(test, element.GetInt32());
+                    test++;
+                }
+
+                test = 0;
+
+                foreach (JsonElement element in structEnumerable)
+                {
+                    Assert.Equal(test, element.GetInt32());
+                    test++;
+                }
+
+                test = 0;
+
+                foreach (JsonElement element in strongBoxedEnumerable)
+                {
+                    Assert.Equal(test, element.GetInt32());
+                    test++;
+                }
+
+                test = 0;
+
+                foreach (JsonElement element in strongBoxedEnumerable)
+                {
+                    Assert.Equal(test, element.GetInt32());
+                    test++;
+                }
+
+                test = 0;
+
+                foreach (JsonElement element in weakBoxedEnumerable)
+                {
+                    Assert.Equal(test, element.GetInt32());
+                    test++;
+                }
+
+                test = 0;
+
+                foreach (JsonElement element in weakBoxedEnumerable)
+                {
+                    Assert.Equal(test, element.GetInt32());
+                    test++;
+                }
+
+                Assert.True(structEnumerator.MoveNext());
+                Assert.Equal(2, structEnumerator.Current.GetInt32());
+
+                Assert.True(structEnumerator.MoveNext());
+                Assert.Equal(3, structEnumerator.Current.GetInt32());
+
+                Assert.True(strongBoxedEnumerator.MoveNext());
+                Assert.Equal(2, strongBoxedEnumerator.Current.GetInt32());
+
+                Assert.True(structEnumerator.MoveNext());
+                Assert.Equal(4, structEnumerator.Current.GetInt32());
+
+                Assert.True(structEnumerator.MoveNext());
+                Assert.Equal(5, structEnumerator.Current.GetInt32());
+
+                Assert.True(strongBoxedEnumerator.MoveNext());
+                Assert.Equal(3, strongBoxedEnumerator.Current.GetInt32());
+
+                Assert.True(weakBoxedEnumerator.MoveNext());
+                Assert.Equal(2, ((JsonElement)weakBoxedEnumerator.Current).GetInt32());
+
+                Assert.False(structEnumerator.MoveNext());
+
+                Assert.True(strongBoxedEnumerator.MoveNext());
+                Assert.Equal(4, strongBoxedEnumerator.Current.GetInt32());
+
+                Assert.True(strongBoxedEnumerator.MoveNext());
+                Assert.Equal(5, strongBoxedEnumerator.Current.GetInt32());
+
+                Assert.True(weakBoxedEnumerator.MoveNext());
+                Assert.Equal(3, ((JsonElement)weakBoxedEnumerator.Current).GetInt32());
+
+                Assert.True(weakBoxedEnumerator.MoveNext());
+                Assert.Equal(4, ((JsonElement)weakBoxedEnumerator.Current).GetInt32());
+
+                Assert.False(structEnumerator.MoveNext());
+                Assert.False(strongBoxedEnumerator.MoveNext());
+
+                Assert.True(weakBoxedEnumerator.MoveNext());
+                Assert.Equal(5, ((JsonElement)weakBoxedEnumerator.Current).GetInt32());
+
+                Assert.False(weakBoxedEnumerator.MoveNext());
+                Assert.False(structEnumerator.MoveNext());
+                Assert.False(strongBoxedEnumerator.MoveNext());
+                Assert.False(weakBoxedEnumerator.MoveNext());
+            }
+        }
+
+        [Fact]
+        public static void DefaultArrayEnumeratorDoesNotThrow()
+        {
+            JsonElement.ArrayEnumerator enumerable = default;
+            JsonElement.ArrayEnumerator enumerator = enumerable.GetEnumerator();
+            JsonElement.ArrayEnumerator defaultEnumerator = default;
+
+            Assert.Equal(JsonTokenType.None, enumerable.Current.Type);
+            Assert.Equal(JsonTokenType.None, enumerator.Current.Type);
+
+            Assert.False(enumerable.MoveNext());
+            Assert.False(enumerable.MoveNext());
+            Assert.False(defaultEnumerator.MoveNext());
+        }
+
+        [Fact]
+        public static void ObjectEnumeratorIndependentWalk()
+        {
+            const string json = @"
+{
+  ""name0"": 0,
+  ""name1"": 1,
+  ""name2"": 2,
+  ""name3"": 3,
+  ""name4"": 4,
+  ""name5"": 5
+}";
+            using (JsonDocument doc = JsonDocument.Parse(json))
+            {
+                JsonElement root = doc.RootElement;
+                JsonElement.ObjectEnumerator structEnumerable = root.EnumerateObject();
+                IEnumerable<JsonProperty> strongBoxedEnumerable = root.EnumerateObject();
+                IEnumerable weakBoxedEnumerable = root.EnumerateObject();
+
+                JsonElement.ObjectEnumerator structEnumerator = structEnumerable.GetEnumerator();
+                IEnumerator<JsonProperty> strongBoxedEnumerator = strongBoxedEnumerable.GetEnumerator();
+                IEnumerator weakBoxedEnumerator = weakBoxedEnumerable.GetEnumerator();
+
+                Assert.True(structEnumerator.MoveNext());
+                Assert.True(strongBoxedEnumerator.MoveNext());
+                Assert.True(weakBoxedEnumerator.MoveNext());
+
+                Assert.Equal("name0", structEnumerator.Current.Name);
+                Assert.Equal(0, structEnumerator.Current.Value.GetInt32());
+                Assert.Equal("name0", strongBoxedEnumerator.Current.Name);
+                Assert.Equal(0, strongBoxedEnumerator.Current.Value.GetInt32());
+                Assert.Equal("name0", ((JsonProperty)weakBoxedEnumerator.Current).Name);
+                Assert.Equal(0, ((JsonProperty)weakBoxedEnumerator.Current).Value.GetInt32());
+
+                Assert.True(structEnumerator.MoveNext());
+                Assert.True(strongBoxedEnumerator.MoveNext());
+                Assert.True(weakBoxedEnumerator.MoveNext());
+
+                Assert.Equal(1, structEnumerator.Current.Value.GetInt32());
+                Assert.Equal(1, strongBoxedEnumerator.Current.Value.GetInt32());
+                Assert.Equal(1, ((JsonProperty)weakBoxedEnumerator.Current).Value.GetInt32());
+
+                int test = 0;
+
+                foreach (JsonProperty property in structEnumerable)
+                {
+                    Assert.Equal("name" + test, property.Name);
+                    Assert.Equal(test, property.Value.GetInt32());
+                    test++;
+                }
+
+                test = 0;
+
+                foreach (JsonProperty property in structEnumerable)
+                {
+                    Assert.Equal("name" + test, property.Name);
+                    Assert.Equal(test, property.Value.GetInt32());
+                    test++;
+                }
+
+                test = 0;
+
+                foreach (JsonProperty property in strongBoxedEnumerable)
+                {
+                    Assert.Equal("name" + test, property.Name);
+                    Assert.Equal(test, property.Value.GetInt32());
+                    test++;
+                }
+
+                test = 0;
+
+                foreach (JsonProperty property in strongBoxedEnumerable)
+                {
+                    Assert.Equal("name" + test, property.Name);
+                    Assert.Equal(test, property.Value.GetInt32());
+                    test++;
+                }
+
+                test = 0;
+
+                foreach (JsonProperty property in weakBoxedEnumerable)
+                {
+                    Assert.Equal("name" + test, property.Name);
+                    Assert.Equal(test, property.Value.GetInt32());
+                    test++;
+                }
+
+                test = 0;
+
+                foreach (JsonProperty property in weakBoxedEnumerable)
+                {
+                    Assert.Equal("name" + test, property.Name);
+                    Assert.Equal(test, property.Value.GetInt32());
+                    test++;
+                }
+
+                Assert.True(structEnumerator.MoveNext());
+                Assert.Equal("name2", structEnumerator.Current.Name);
+                Assert.Equal(2, structEnumerator.Current.Value.GetInt32());
+
+                Assert.True(structEnumerator.MoveNext());
+                Assert.Equal("name3", structEnumerator.Current.Name);
+                Assert.Equal(3, structEnumerator.Current.Value.GetInt32());
+
+                Assert.True(strongBoxedEnumerator.MoveNext());
+                Assert.Equal("name2", strongBoxedEnumerator.Current.Name);
+                Assert.Equal(2, strongBoxedEnumerator.Current.Value.GetInt32());
+
+                Assert.True(structEnumerator.MoveNext());
+                Assert.Equal("name4", structEnumerator.Current.Name);
+                Assert.Equal(4, structEnumerator.Current.Value.GetInt32());
+
+                Assert.True(structEnumerator.MoveNext());
+                Assert.Equal("name5", structEnumerator.Current.Name);
+                Assert.Equal(5, structEnumerator.Current.Value.GetInt32());
+
+                Assert.True(strongBoxedEnumerator.MoveNext());
+                Assert.Equal("name3", strongBoxedEnumerator.Current.Name);
+                Assert.Equal(3, strongBoxedEnumerator.Current.Value.GetInt32());
+
+                Assert.True(weakBoxedEnumerator.MoveNext());
+                Assert.Equal("name2", ((JsonProperty)weakBoxedEnumerator.Current).Name);
+                Assert.Equal(2, ((JsonProperty)weakBoxedEnumerator.Current).Value.GetInt32());
+
+                Assert.False(structEnumerator.MoveNext());
+
+                Assert.True(strongBoxedEnumerator.MoveNext());
+                Assert.Equal("name4", strongBoxedEnumerator.Current.Name);
+                Assert.Equal(4, strongBoxedEnumerator.Current.Value.GetInt32());
+
+                Assert.True(strongBoxedEnumerator.MoveNext());
+                Assert.Equal("name5", strongBoxedEnumerator.Current.Name);
+                Assert.Equal(5, strongBoxedEnumerator.Current.Value.GetInt32());
+
+                Assert.True(weakBoxedEnumerator.MoveNext());
+                Assert.Equal("name3", ((JsonProperty)weakBoxedEnumerator.Current).Name);
+                Assert.Equal(3, ((JsonProperty)weakBoxedEnumerator.Current).Value.GetInt32());
+
+                Assert.True(weakBoxedEnumerator.MoveNext());
+                Assert.Equal("name4", ((JsonProperty)weakBoxedEnumerator.Current).Name);
+                Assert.Equal(4, ((JsonProperty)weakBoxedEnumerator.Current).Value.GetInt32());
+
+                Assert.False(structEnumerator.MoveNext());
+                Assert.False(strongBoxedEnumerator.MoveNext());
+
+                Assert.True(weakBoxedEnumerator.MoveNext());
+                Assert.Equal("name5", ((JsonProperty)weakBoxedEnumerator.Current).Name);
+                Assert.Equal(5, ((JsonProperty)weakBoxedEnumerator.Current).Value.GetInt32());
+
+                Assert.False(weakBoxedEnumerator.MoveNext());
+                Assert.False(structEnumerator.MoveNext());
+                Assert.False(strongBoxedEnumerator.MoveNext());
+                Assert.False(weakBoxedEnumerator.MoveNext());
+            }
+        }
+
+        [Fact]
+        public static void DefaultObjectEnumeratorDoesNotThrow()
+        {
+            JsonElement.ObjectEnumerator enumerable = default;
+            JsonElement.ObjectEnumerator enumerator = enumerable.GetEnumerator();
+            JsonElement.ObjectEnumerator defaultEnumerator = default;
+
+            Assert.Equal(JsonTokenType.None, enumerable.Current.Value.Type);
+            Assert.Equal(JsonTokenType.None, enumerator.Current.Value.Type);
+
+            Assert.Throws<InvalidOperationException>(() => enumerable.Current.Name);
+            Assert.Throws<InvalidOperationException>(() => enumerator.Current.Name);
+
+            Assert.False(enumerable.MoveNext());
+            Assert.False(enumerable.MoveNext());
+            Assert.False(defaultEnumerator.MoveNext());
         }
 
         private static ArraySegment<byte> StringToUtf8BufferWithEmptySpace(string testString, int emptySpaceSize = 2048)
