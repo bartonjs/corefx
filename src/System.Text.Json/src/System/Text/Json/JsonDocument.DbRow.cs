@@ -16,6 +16,7 @@ namespace System.Text.Json
 
             // Sign bit is currently unassigned
             private int _location;
+
             // Sign bit is used for "HasComplexChildren" (StartArray)
             private int _sizeOrLengthUnion;
 
