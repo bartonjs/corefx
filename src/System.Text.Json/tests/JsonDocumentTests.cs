@@ -122,7 +122,7 @@ namespace System.Text.Json.Tests
 
         private static string ReadHelloWorld(JsonElement obj)
         {
-            string message = obj["message"].GetString();
+            string message = obj.GetProperty("message").GetString();
             return message;
         }
 
@@ -132,38 +132,38 @@ namespace System.Text.Json.Tests
             int length = obj.GetArrayLength();
             for (int i = 0; i < length; i++)
             {
-                sb.Append(obj[i]["_id"].GetString());
-                sb.Append(obj[i]["index"].GetInt32());
-                sb.Append(obj[i]["guid"].GetString());
-                sb.Append(obj[i]["isActive"].GetBoolean());
-                sb.Append(obj[i]["balance"].GetString());
-                sb.Append(obj[i]["picture"].GetString());
-                sb.Append(obj[i]["age"].GetInt32());
-                sb.Append(obj[i]["eyeColor"].GetString());
-                sb.Append(obj[i]["name"].GetString());
-                sb.Append(obj[i]["gender"].GetString());
-                sb.Append(obj[i]["company"].GetString());
-                sb.Append(obj[i]["email"].GetString());
-                sb.Append(obj[i]["phone"].GetString());
-                sb.Append(obj[i]["address"].GetString());
-                sb.Append(obj[i]["about"].GetString());
-                sb.Append(obj[i]["registered"].GetString());
-                sb.Append(obj[i]["latitude"].GetDouble());
-                sb.Append(obj[i]["longitude"].GetDouble());
+                sb.Append(obj[i].GetProperty("_id").GetString());
+                sb.Append(obj[i].GetProperty("index").GetInt32());
+                sb.Append(obj[i].GetProperty("guid").GetString());
+                sb.Append(obj[i].GetProperty("isActive").GetBoolean());
+                sb.Append(obj[i].GetProperty("balance").GetString());
+                sb.Append(obj[i].GetProperty("picture").GetString());
+                sb.Append(obj[i].GetProperty("age").GetInt32());
+                sb.Append(obj[i].GetProperty("eyeColor").GetString());
+                sb.Append(obj[i].GetProperty("name").GetString());
+                sb.Append(obj[i].GetProperty("gender").GetString());
+                sb.Append(obj[i].GetProperty("company").GetString());
+                sb.Append(obj[i].GetProperty("email").GetString());
+                sb.Append(obj[i].GetProperty("phone").GetString());
+                sb.Append(obj[i].GetProperty("address").GetString());
+                sb.Append(obj[i].GetProperty("about").GetString());
+                sb.Append(obj[i].GetProperty("registered").GetString());
+                sb.Append(obj[i].GetProperty("latitude").GetDouble());
+                sb.Append(obj[i].GetProperty("longitude").GetDouble());
 
-                JsonElement tags = obj[i]["tags"];
+                JsonElement tags = obj[i].GetProperty("tags");
                 for (int j = 0; j < tags.GetArrayLength(); j++)
                 {
                     sb.Append(tags[j].GetString());
                 }
-                JsonElement friends = obj[i]["friends"];
+                JsonElement friends = obj[i].GetProperty("friends");
                 for (int j = 0; j < friends.GetArrayLength(); j++)
                 {
-                    sb.Append(friends[j]["id"].GetInt32());
-                    sb.Append(friends[j]["name"].GetString());
+                    sb.Append(friends[j].GetProperty("id").GetInt32());
+                    sb.Append(friends[j].GetProperty("name").GetString());
                 }
-                sb.Append(obj[i]["greeting"].GetString());
-                sb.Append(obj[i]["favoriteFruit"].GetString());
+                sb.Append(obj[i].GetProperty("greeting").GetString());
+                sb.Append(obj[i].GetProperty("favoriteFruit").GetString());
             }
             return sb.ToString();
         }
@@ -328,14 +328,14 @@ namespace System.Text.Json.Tests
             {
                 JsonElement parsedObject = doc.RootElement;
 
-                int age = parsedObject["age"].GetInt32();
-                string ageString = parsedObject["age"].ToString();
-                string first = parsedObject["first"].GetString();
-                string last = parsedObject["last"].GetString();
-                string phoneNumber = parsedObject["phoneNumber"].GetString();
-                string street = parsedObject["street"].GetString();
-                string city = parsedObject["city"].GetString();
-                int zip = parsedObject["zip"].GetInt32();
+                int age = parsedObject.GetProperty("age").GetInt32();
+                string ageString = parsedObject.GetProperty("age").ToString();
+                string first = parsedObject.GetProperty("first").GetString();
+                string last = parsedObject.GetProperty("last").GetString();
+                string phoneNumber = parsedObject.GetProperty("phoneNumber").GetString();
+                string street = parsedObject.GetProperty("street").GetString();
+                string city = parsedObject.GetProperty("city").GetString();
+                int zip = parsedObject.GetProperty("zip").GetInt32();
 
                 Assert.True(parsedObject.TryGetProperty("age", out JsonElement age2));
                 Assert.Equal(30, age2.GetInt32());
@@ -362,17 +362,17 @@ namespace System.Text.Json.Tests
 
                 Assert.Equal(1, parsedObject.GetArrayLength());
                 JsonElement person = parsedObject[0];
-                double age = person["age"].GetDouble();
-                string first = person["first"].GetString();
-                string last = person["last"].GetString();
-                JsonElement phoneNums = person["phoneNumbers"];
+                double age = person.GetProperty("age").GetDouble();
+                string first = person.GetProperty("first").GetString();
+                string last = person.GetProperty("last").GetString();
+                JsonElement phoneNums = person.GetProperty("phoneNumbers");
                 Assert.Equal(2, phoneNums.GetArrayLength());
                 string phoneNum1 = phoneNums[0].GetString();
                 string phoneNum2 = phoneNums[1].GetString();
-                JsonElement address = person["address"];
-                string street = address["street"].GetString();
-                string city = address["city"].GetString();
-                double zipCode = address["zip"].GetDouble();
+                JsonElement address = person.GetProperty("address");
+                string street = address.GetProperty("street").GetString();
+                string city = address.GetProperty("city").GetString();
+                double zipCode = address.GetProperty("zip").GetDouble();
 
                 Assert.Equal(30, age);
                 Assert.Equal("John", first);
@@ -385,12 +385,12 @@ namespace System.Text.Json.Tests
 
                 Assert.Throws<InvalidOperationException>(() => person.GetArrayLength());
                 Assert.Throws<IndexOutOfRangeException>(() => phoneNums[2]);
-                Assert.Throws<InvalidOperationException>(() => phoneNums["2"]);
-                Assert.Throws<KeyNotFoundException>(() => address["2"]);
-                Assert.Throws<InvalidOperationException>(() => address["city"].GetDouble());
-                Assert.Throws<InvalidOperationException>(() => address["city"].GetBoolean());
-                Assert.Throws<InvalidOperationException>(() => address["zip"].GetString());
-                Assert.Throws<InvalidOperationException>(() => person["phoneNumbers"].GetString());
+                Assert.Throws<InvalidOperationException>(() => phoneNums.GetProperty("2"));
+                Assert.Throws<KeyNotFoundException>(() => address.GetProperty("2"));
+                Assert.Throws<InvalidOperationException>(() => address.GetProperty("city").GetDouble());
+                Assert.Throws<InvalidOperationException>(() => address.GetProperty("city").GetBoolean());
+                Assert.Throws<InvalidOperationException>(() => address.GetProperty("zip").GetString());
+                Assert.Throws<InvalidOperationException>(() => person.GetProperty("phoneNumbers").GetString());
                 Assert.Throws<InvalidOperationException>(() => person.GetString());
             }
         }
@@ -886,10 +886,10 @@ namespace System.Text.Json.Tests
                 Assert.False(root.TryGetProperty(notPresentUtf8, out _));
                 Assert.False(root.TryGetProperty(new string('z', 512), out _));
 
-                Assert.Throws<KeyNotFoundException>(() => root[NotPresent]);
-                Assert.Throws<KeyNotFoundException>(() => root[NotPresent.AsSpan()]);
-                Assert.Throws<KeyNotFoundException>(() => root[notPresentUtf8]);
-                Assert.Throws<KeyNotFoundException>(() => root[new string('z', 512)]);
+                Assert.Throws<KeyNotFoundException>(() => root.GetProperty(NotPresent));
+                Assert.Throws<KeyNotFoundException>(() => root.GetProperty(NotPresent.AsSpan()));
+                Assert.Throws<KeyNotFoundException>(() => root.GetProperty(notPresentUtf8));
+                Assert.Throws<KeyNotFoundException>(() => root.GetProperty(new string('z', 512)));
             }
         }
 
@@ -965,7 +965,7 @@ namespace System.Text.Json.Tests
             {
                 AssertExtensions.Throws<ArgumentNullException>(
                     "propertyName",
-                    () => doc.RootElement[(string)null]);
+                    () => doc.RootElement.GetProperty((string)null));
 
                 AssertExtensions.Throws<ArgumentNullException>(
                     "propertyName",
@@ -984,9 +984,9 @@ namespace System.Text.Json.Tests
             {
                 JsonElement root = doc.RootElement;
 
-                Assert.Equal(3, root[propertyName].GetInt32());
-                Assert.Equal(3, root[propertyName.AsSpan()].GetInt32());
-                Assert.Equal(3, root[Encoding.UTF8.GetBytes(propertyName)].GetInt32());
+                Assert.Equal(3, root.GetProperty(propertyName).GetInt32());
+                Assert.Equal(3, root.GetProperty(propertyName.AsSpan()).GetInt32());
+                Assert.Equal(3, root.GetProperty(Encoding.UTF8.GetBytes(propertyName)).GetInt32());
             }
         }
 
@@ -1330,15 +1330,15 @@ namespace System.Text.Json.Tests
                 JsonElement root = doc.RootElement;
                 Assert.Equal(JsonValueType.Object, root.Type);
 
-                Assert.True(root["first"]["true"].GetBoolean());
-                Assert.False(root["first"]["false"].GetBoolean());
-                Assert.Equal(JsonValueType.Null, root["first"]["null"].Type);
-                Assert.Equal(3, root["first"]["int"].GetInt32());
-                Assert.Equal(3.14159f, root["first"]["nearlyPi"].GetSingle());
-                Assert.Equal("This is some text that does not end... <EOT>", root["first"]["text"].GetString());
+                Assert.True(root.GetProperty("first").GetProperty("true").GetBoolean());
+                Assert.False(root.GetProperty("first").GetProperty("false").GetBoolean());
+                Assert.Equal(JsonValueType.Null, root.GetProperty("first").GetProperty("null").Type);
+                Assert.Equal(3, root.GetProperty("first").GetProperty("int").GetInt32());
+                Assert.Equal(3.14159f, root.GetProperty("first").GetProperty("nearlyPi").GetSingle());
+                Assert.Equal("This is some text that does not end... <EOT>", root.GetProperty("first").GetProperty("text").GetString());
 
-                Assert.True(root["second"]["blub"]["bool"].GetBoolean());
-                Assert.False(root["second"]["glub"]["bool"].GetBoolean());
+                Assert.True(root.GetProperty("second").GetProperty("blub").GetProperty("bool").GetBoolean());
+                Assert.False(root.GetProperty("second").GetProperty("glub").GetProperty("bool").GetBoolean());
             }
         }
 

@@ -58,52 +58,44 @@ namespace System.Text.Json
             }
         }
 
-        public JsonElement this[string propertyName]
-        {
-            get
-            {
-                if (propertyName == null)
-                    throw new ArgumentNullException(nameof(propertyName));
-
-                return this[propertyName.AsSpan()];
-            }
-        }
-
-        public JsonElement this[ReadOnlySpan<char> propertyName]
-        {
-            get
-            {
-                CheckValidInstance();
-
-                if (!_parent.TryGetNamedPropertyValue(_idx, propertyName, out JsonElement value))
-                {
-                    throw new KeyNotFoundException();
-                }
-
-                return value;
-            }
-        }
-
-        public JsonElement this[ReadOnlySpan<byte> utf8PropertyName]
-        {
-            get
-            {
-                CheckValidInstance();
-
-                if (!_parent.TryGetNamedPropertyValue(_idx, utf8PropertyName, out JsonElement value))
-                {
-                    throw new KeyNotFoundException();
-                }
-
-                return value;
-            }
-        }
-
         public int GetArrayLength()
         {
             CheckValidInstance();
 
             return _parent.GetArrayLength(_idx);
+        }
+
+        public JsonElement GetProperty(string propertyName)
+        {
+            if (propertyName == null)
+                throw new ArgumentNullException(nameof(propertyName));
+
+            if (TryGetProperty(propertyName, out JsonElement property))
+            {
+                return property;
+            }
+
+            throw new KeyNotFoundException();
+        }
+
+        public JsonElement GetProperty(ReadOnlySpan<char> propertyName)
+        {
+            if (TryGetProperty(propertyName, out JsonElement property))
+            {
+                return property;
+            }
+
+            throw new KeyNotFoundException();
+        }
+
+        public JsonElement GetProperty(ReadOnlySpan<byte> utf8PropertyName)
+        {
+            if (TryGetProperty(utf8PropertyName, out JsonElement property))
+            {
+                return property;
+            }
+
+            throw new KeyNotFoundException();
         }
 
         public bool TryGetProperty(string propertyName, out JsonElement value)

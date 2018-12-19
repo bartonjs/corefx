@@ -27,9 +27,6 @@ namespace System.Text.Json
     {
         private readonly object _dummy;
         public System.Text.Json.JsonElement this[int index] { get { throw null; } }
-        public System.Text.Json.JsonElement this[System.ReadOnlySpan<byte> utf8PropertyName] { get { throw null; } }
-        public System.Text.Json.JsonElement this[System.ReadOnlySpan<char> propertyName] { get { throw null; } }
-        public System.Text.Json.JsonElement this[string propertyName] { get { throw null; } }
         public System.Text.Json.JsonValueType Type { get { throw null; } }
         public System.Text.Json.JsonElement.ArrayEnumerator EnumerateArray() { throw null; }
         public System.Text.Json.JsonElement.ObjectEnumerator EnumerateObject() { throw null; }
@@ -38,6 +35,9 @@ namespace System.Text.Json
         public double GetDouble() { throw null; }
         public int GetInt32() { throw null; }
         public long GetInt64() { throw null; }
+        public System.Text.Json.JsonElement GetProperty(System.ReadOnlySpan<byte> utf8PropertyName) { throw null; }
+        public System.Text.Json.JsonElement GetProperty(System.ReadOnlySpan<char> propertyName) { throw null; }
+        public System.Text.Json.JsonElement GetProperty(string propertyName) { throw null; }
         public float GetSingle() { throw null; }
         public string GetString() { throw null; }
         [System.CLSCompliantAttribute(false)]

@@ -43,7 +43,7 @@ namespace System.Text.Json.Performance.Tests
             Evaluate(
                 BasicJsonWithLargeNum,
                 repeatCount,
-                doc => { doc.RootElement[index]["phoneNumbers"][1].ToString(); });
+                doc => { doc.RootElement[index].GetProperty("phoneNumbers")[1].ToString(); });
         }
 
         [Benchmark(InnerIterationCount = InnerIterCount)]
