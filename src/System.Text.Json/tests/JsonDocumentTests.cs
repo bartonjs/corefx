@@ -446,6 +446,7 @@ namespace System.Text.Json.Tests
         {
             double expectedDouble = value;
             float expectedFloat = value;
+            decimal expectedDecimal = value;
 
             using (JsonDocument doc = JsonDocument.Parse("    " + value + "  "))
             {
@@ -459,6 +460,9 @@ namespace System.Text.Json.Tests
                 Assert.True(root.TryGetDouble(out double doubleVal));
                 Assert.Equal(expectedDouble, doubleVal);
 
+                Assert.True(root.TryGetDecimal(out decimal decimalVal));
+                Assert.Equal(expectedDecimal, decimalVal);
+
                 Assert.True(root.TryGetInt32(out int intVal));
                 Assert.Equal(value, intVal);
 
@@ -467,6 +471,7 @@ namespace System.Text.Json.Tests
 
                 Assert.Equal(expectedFloat, root.GetSingle());
                 Assert.Equal(expectedDouble, root.GetDouble());
+                Assert.Equal(expectedDecimal, root.GetDecimal());
                 Assert.Equal(value, root.GetInt32());
                 Assert.Equal(value, root.GetInt64());
 
@@ -514,6 +519,7 @@ namespace System.Text.Json.Tests
         {
             double expectedDouble = value;
             float expectedFloat = value;
+            decimal expectedDecimal = value;
 
             using (JsonDocument doc = JsonDocument.Parse("    " + value + "  "))
             {
@@ -527,6 +533,9 @@ namespace System.Text.Json.Tests
                 Assert.True(root.TryGetDouble(out double doubleVal));
                 Assert.Equal(expectedDouble, doubleVal);
 
+                Assert.True(root.TryGetDecimal(out decimal decimalVal));
+                Assert.Equal(expectedDecimal, decimalVal);
+
                 Assert.False(root.TryGetInt32(out int intVal));
                 Assert.Equal(0, intVal);
 
@@ -535,6 +544,7 @@ namespace System.Text.Json.Tests
 
                 Assert.Equal(expectedFloat, root.GetSingle());
                 Assert.Equal(expectedDouble, root.GetDouble());
+                Assert.Equal(expectedDecimal, root.GetDecimal());
                 Assert.Throws<FormatException>(() => root.GetInt32());
                 Assert.Equal(value, root.GetInt64());
 
@@ -589,6 +599,7 @@ namespace System.Text.Json.Tests
         {
             double expectedDouble = value;
             float expectedFloat = value;
+            decimal expectedDecimal = value;
 
             using (JsonDocument doc = JsonDocument.Parse("    " + value + "  "))
             {
@@ -602,6 +613,9 @@ namespace System.Text.Json.Tests
                 Assert.True(root.TryGetDouble(out double doubleVal));
                 Assert.Equal(expectedDouble, doubleVal);
 
+                Assert.True(root.TryGetDecimal(out decimal decimalVal));
+                Assert.Equal(expectedDecimal, decimalVal);
+
                 Assert.False(root.TryGetInt32(out int intVal));
                 Assert.Equal(0, intVal);
 
@@ -613,6 +627,7 @@ namespace System.Text.Json.Tests
 
                 Assert.Equal(expectedFloat, root.GetSingle());
                 Assert.Equal(expectedDouble, root.GetDouble());
+                Assert.Equal(expectedDecimal, root.GetDecimal());
                 Assert.Throws<FormatException>(() => root.GetInt32());
                 Assert.Throws<FormatException>(() => root.GetUInt32());
                 Assert.Throws<FormatException>(() => root.GetInt64());
@@ -635,8 +650,10 @@ namespace System.Text.Json.Tests
         {
             float expectedFloat = ulong.MaxValue;
             double expectedDouble = ulong.MaxValue;
+            decimal expectedDecimal = ulong.MaxValue;
             expectedDouble *= 10;
             expectedFloat *= 10;
+            expectedDecimal *= 10;
 
             using (JsonDocument doc = JsonDocument.Parse("    " + ulong.MaxValue + "0  ", default))
             {
@@ -649,6 +666,9 @@ namespace System.Text.Json.Tests
 
                 Assert.True(root.TryGetDouble(out double doubleVal));
                 Assert.Equal(expectedDouble, doubleVal);
+
+                Assert.True(root.TryGetDecimal(out decimal decimalVal));
+                Assert.Equal(expectedDecimal, decimalVal);
 
                 Assert.False(root.TryGetInt32(out int intVal));
                 Assert.Equal(0, intVal);
@@ -664,6 +684,7 @@ namespace System.Text.Json.Tests
 
                 Assert.Equal(expectedFloat, root.GetSingle());
                 Assert.Equal(expectedDouble, root.GetDouble());
+                Assert.Equal(expectedDecimal, root.GetDecimal());
                 Assert.Throws<FormatException>(() => root.GetInt32());
                 Assert.Throws<FormatException>(() => root.GetUInt32());
                 Assert.Throws<FormatException>(() => root.GetInt64());
@@ -677,15 +698,23 @@ namespace System.Text.Json.Tests
             }
         }
 
-        [Theory]
-        [InlineData("1e+1", 10.0, 10.0f)]
-        [InlineData("1.1e-0", 1.1, 1.1f)]
-        [InlineData("3.14159", 3.14159, 3.14159f)]
-        [InlineData("1e-10", 1e-10, 1e-10f)]
-        [InlineData("1234567.15", 1234567.15, 1234567.13f)]
-        public static void ReadNonInteger(string str, double expectedDouble, float expectedFloat)
+        public static IEnumerable<object[]> NonIntegerCases
         {
-            using (JsonDocument doc = JsonDocument.Parse("    " + str + "  ", default))
+            get
+            {
+                yield return new object[] { "1e+1", 10.0, 10.0f, 10m };
+                yield return new object[] { "1.1e-0", 1.1, 1.1f, 1.1m };
+                yield return new object[] { "3.14159", 3.14159, 3.14159f, 3.14159m };
+                yield return new object[] { "1e-10", 1e-10, 1e-10f, 1e-10m };
+                yield return new object[] { "1234567.15", 1234567.15, 1234567.13f, 1234567.15m };
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(NonIntegerCases))]
+        public static void ReadNonInteger(string str, double expectedDouble, float expectedFloat, decimal expectedDecimal)
+        {
+            using (JsonDocument doc = JsonDocument.Parse("    " + str + "  "))
             {
                 JsonElement root = doc.RootElement;
 
@@ -696,6 +725,9 @@ namespace System.Text.Json.Tests
 
                 Assert.True(root.TryGetDouble(out double doubleVal));
                 Assert.Equal(expectedDouble, doubleVal);
+
+                Assert.True(root.TryGetDecimal(out decimal decimalVal));
+                Assert.Equal(expectedDecimal, decimalVal);
 
                 Assert.False(root.TryGetInt32(out int intVal));
                 Assert.Equal(0, intVal);
@@ -708,6 +740,7 @@ namespace System.Text.Json.Tests
 
                 Assert.Equal(expectedFloat, root.GetSingle());
                 Assert.Equal(expectedDouble, root.GetDouble());
+                Assert.Equal(expectedDecimal, root.GetDecimal());
                 Assert.Throws<FormatException>(() => root.GetInt32());
                 Assert.Throws<FormatException>(() => root.GetInt64());
                 Assert.Throws<FormatException>(() => root.GetUInt64());
@@ -725,7 +758,7 @@ namespace System.Text.Json.Tests
         {
             // If https://github.com/dotnet/corefx/issues/33997 gets resolved as the reader throwing,
             // this test would need to expect FormatException from GetDouble, and false from TryGet.
-            using (JsonDocument doc = JsonDocument.Parse("    1e+100000002", default))
+            using (JsonDocument doc = JsonDocument.Parse("    1e+100000002"))
             {
                 JsonElement root = doc.RootElement;
 
@@ -736,6 +769,9 @@ namespace System.Text.Json.Tests
 
                 Assert.True(root.TryGetDouble(out double doubleVal));
                 Assert.Equal(double.PositiveInfinity, doubleVal);
+
+                Assert.False(root.TryGetDecimal(out decimal decimalVal));
+                Assert.Equal(0m, decimalVal);
 
                 Assert.False(root.TryGetInt32(out int intVal));
                 Assert.Equal(0, intVal);
@@ -748,6 +784,7 @@ namespace System.Text.Json.Tests
 
                 Assert.Equal(float.PositiveInfinity, root.GetSingle());
                 Assert.Equal(double.PositiveInfinity, root.GetDouble());
+                Assert.Throws<FormatException>(() => root.GetDecimal());
                 Assert.Throws<FormatException>(() => root.GetInt32());
                 Assert.Throws<FormatException>(() => root.GetInt64());
                 Assert.Throws<FormatException>(() => root.GetUInt64());

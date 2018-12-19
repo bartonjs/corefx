@@ -404,6 +404,27 @@ namespace System.Text.Json
             return false;
         }
 
+        internal bool TryGetValue(int index, out decimal value)
+        {
+            CheckNotDisposed();
+
+            _parsedData.Get(index, out DbRow row);
+
+            CheckExpectedType(JsonTokenType.Number, row.TokenType);
+
+            ReadOnlySpan<byte> data = _utf8Json.Span;
+            ReadOnlySpan<byte> segment = data.Slice(row.Location, row.SizeOrLength);
+
+            if (Utf8JsonReader.TryGetDecimalValue(segment, out decimal tmp))
+            {
+                value = tmp;
+                return true;
+            }
+
+            value = default;
+            return false;
+        }
+
         internal string GetRawValueAsString(int index)
         {
             ReadOnlyMemory<byte> segment = GetRawValue(index);

@@ -246,6 +246,23 @@ namespace System.Text.Json
             throw new FormatException();
         }
 
+        public bool TryGetDecimal(out decimal value)
+        {
+            CheckValidInstance();
+
+            return _parent.TryGetValue(_idx, out value);
+        }
+
+        public decimal GetDecimal()
+        {
+            if (TryGetDecimal(out decimal value))
+            {
+                return value;
+            }
+
+            throw new FormatException();
+        }
+
         internal string GetPropertyName()
         {
             CheckValidInstance();
