@@ -9,6 +9,7 @@ using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.IO;
 using Xunit;
+using System.Buffers.Text;
 
 namespace System.Text.Json.Tests
 {
@@ -938,10 +939,13 @@ namespace System.Text.Json.Tests
             }
         }
 
-        [Fact]
-        public static void TryGetProperty_NoProperty()
+        [Theory]
+        [InlineData(" { \"hi\": \"there\" }")]
+        [InlineData(" { \n\n\n\n } ")]
+        [InlineData(" { \"outer\": { \"inner\": [ 1, 2, 3 ] }, \"secondOuter\": [ 2, 4, 6, 0, 1 ] }")]
+        public static void TryGetProperty_NoProperty(string json)
         {
-            using (JsonDocument doc = JsonDocument.Parse(" { \"hi\": \"there\" }"))
+            using (JsonDocument doc = JsonDocument.Parse(json))
             {
                 JsonElement root = doc.RootElement;
 
@@ -1406,6 +1410,68 @@ namespace System.Text.Json.Tests
 
                 Assert.True(root.GetProperty("second").GetProperty("blub").GetProperty("bool").GetBoolean());
                 Assert.False(root.GetProperty("second").GetProperty("glub").GetProperty("bool").GetBoolean());
+            }
+        }
+
+        [Fact]
+        public static void EnsureResizeSucceeds()
+        {
+            // This test increases coverage, so it's based on a lot of implementation detail,
+            // to ensure that the otherwise untested blocks produce the right functional behavior.
+            //
+            // The initial database size is just over the number of bytes of UTF-8 data in the payload,
+            // capped at 2^20 (unless the payload exceeds 2^22).
+            //
+            // Regrowth happens if the rented array (which may be bigger than we asked for) is not sufficient,
+            // meaning tokens (on average) occur more often than every 12 bytes.
+            //
+            // The array pool (for bytes) returns power-of-two sizes.
+            //
+            // Conclusion: A resize will happen if a payload of 1MB+epsilon has tokens more often than every 12 bytes.
+            //
+            // Integer numbers as strings, padded to 4 with no whitespace in series in an array: 7x + 1.
+            //  That would take 149797 integers.
+            //
+            // Padded to 5 (8x + 1) => 131072 integers.
+            // Padded to 6 (9x + 1) => 116509 integers.
+            //
+            // At pad-to-6 tokens occur every 9 bytes, and we can represent values without repeat.
+
+            const int NumberOfNumbers = (1024 * 1024 / 9) + 1;
+            const int NumberOfBytes = 9 * NumberOfNumbers + 1;
+
+            byte[] utf8Json = new byte[NumberOfBytes];
+            utf8Json.AsSpan().Fill((byte)'"');
+            utf8Json[0] = (byte)'[';
+
+            Span<byte> valuesSpan = utf8Json.AsSpan(1);
+            StandardFormat format = StandardFormat.Parse("D6");
+
+            for (int i = 0; i < NumberOfNumbers; i++)
+            {
+                // Just inside the quote
+                Span<byte> curDest = valuesSpan.Slice(9 * i + 1);
+
+                if (!Utf8Formatter.TryFormat(i, curDest, out int bytesWritten, format) || bytesWritten != 6)
+                {
+                    throw new InvalidOperationException("" + i);
+                }
+
+                curDest[7] = (byte)',';
+            }
+
+            // Replace last comma with ]
+            utf8Json[NumberOfBytes - 1] = (byte)']';
+
+            using (JsonDocument doc = JsonDocument.Parse(utf8Json))
+            {
+                JsonElement root = doc.RootElement;
+                int count = root.GetArrayLength();
+
+                for (int i = 0; i < count; i++)
+                {
+                    Assert.Equal(i, int.Parse(root[i].GetString()));
+                }
             }
         }
 
