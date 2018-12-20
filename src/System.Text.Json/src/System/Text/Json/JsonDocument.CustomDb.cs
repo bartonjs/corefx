@@ -157,11 +157,7 @@ namespace System.Text.Json
             {
                 AssertValidIndex(index);
                 Debug.Assert(length >= 0);
-                Span<byte> destination = _rentedBuffer.AsSpan(index + 4);
-                int cur = MemoryMarshal.Read<int>(destination);
-                
-                // Persist the most significant bit
-                length |= (cur & unchecked((int)0x80000000));
+                Span<byte> destination = _rentedBuffer.AsSpan(index + SizeOrLengthOffset);
                 MemoryMarshal.Write(destination, ref length);
             }
 
@@ -233,7 +229,7 @@ namespace System.Text.Json
             internal string PrintDatabase()
             {
                 StringBuilder sb = new StringBuilder();
-                sb.AppendLine("Index  Offset  SizeOrLen  TokenType    Child IPV   NumRows");
+                sb.AppendLine("Index  Offset  SizeOrLen  TokenType    Child NumRows");
                 Span<byte> data = _rentedBuffer;
 
                 for (int i = 0; i < Length; i += DbRow.Size)
@@ -241,8 +237,7 @@ namespace System.Text.Json
                     DbRow record = MemoryMarshal.Read<DbRow>(data.Slice(i));
                     sb.Append($"{i:D6} {record.Location:D7} {record.SizeOrLength:D10} ");
                     sb.Append(record.TokenType.ToString().PadRight(13));
-                    sb.Append(record.HasChildren.ToString().PadRight(6));
-                    sb.Append(record.IsPropertyValue.ToString().PadRight(6));
+                    sb.Append(record.HasComplexChildren.ToString().PadRight(6));
                     sb.AppendLine("" + record.NumberOfRows);
                 }
 

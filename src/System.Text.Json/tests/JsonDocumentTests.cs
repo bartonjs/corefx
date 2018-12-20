@@ -438,6 +438,36 @@ namespace System.Text.Json.Tests
             }
         }
 
+        [Fact]
+        public static void MixedArrayIndexing()
+        {
+            // The root object is an array with "complex" children
+            // root[0] is a number (simple single forward)
+            // root[1] is an object which needs to account for the start entry, the children, and end.
+            // root[2] is the target inner array
+            // root[3] is a simple value past two complex values
+            //
+            // Within root[2] the array has only simple values, so it uses a different indexing algorithm.
+            const string json = " [ 6, { \"hi\": \"mom\" }, [ \"425-214-3151\", 25 ], null ] ";
+
+            using (JsonDocument doc = JsonDocument.Parse(json))
+            {
+                JsonElement root = doc.RootElement;
+                JsonElement target = root[2];
+
+                Assert.Equal(2, target.GetArrayLength());
+
+                string phoneNumber = target[0].GetString();
+                int age = target[1].GetInt32();
+
+                Assert.Equal("425-214-3151", phoneNumber);
+                Assert.Equal(25, age);
+                Assert.Equal(JsonValueType.Null, root[3].Type);
+
+                Assert.Throws<IndexOutOfRangeException>(() => root[4]);
+            }
+        }
+
         [Theory]
         [InlineData(0)]
         [InlineData(int.MaxValue)]

@@ -179,7 +179,7 @@ namespace System.Text.Json
 
             if (!row.HasComplexChildren)
             {
-                return new JsonElement(this, currentIndex + (arrayIndex * DbRow.Size));
+                return new JsonElement(this, currentIndex + ((arrayIndex + 1) * DbRow.Size));
             }
 
             int elementCount = 0;
@@ -441,7 +441,6 @@ namespace System.Text.Json
             int arrayItemsCount = 0;
             int numberOfRowsForMembers = 0;
             int numberOfRowsForValues = 0;
-            int parentLocation = -1;
 
             ref byte jsonStart = ref MemoryMarshal.GetReference(utf8JsonSpan);
 
@@ -455,13 +454,6 @@ namespace System.Text.Json
 
                 if (tokenType == JsonTokenType.StartObject)
                 {
-                    if (parentLocation != -1)
-                    {
-                        database.SetHasComplexChildren(parentLocation);
-                    }
-
-                    parentLocation = database.Length;
-
                     if (inArray)
                     {
                         arrayItemsCount++;
@@ -475,8 +467,6 @@ namespace System.Text.Json
                 }
                 else if (tokenType == JsonTokenType.EndObject)
                 {
-                    parentLocation = -1;
-
                     int rowIndex = database.FindIndexOfFirstUnsetSizeOrLength(JsonTokenType.StartObject);
 
                     numberOfRowsForValues++;
@@ -493,13 +483,6 @@ namespace System.Text.Json
                 }
                 else if (tokenType == JsonTokenType.StartArray)
                 {
-                    if (parentLocation != -1)
-                    {
-                        database.SetHasComplexChildren(parentLocation);
-                    }
-
-                    parentLocation = database.Length;
-
                     if (inArray)
                     {
                         arrayItemsCount++;
@@ -514,14 +497,27 @@ namespace System.Text.Json
                 }
                 else if (tokenType == JsonTokenType.EndArray)
                 {
-                    parentLocation = -1;
-
                     int rowIndex = database.FindIndexOfFirstUnsetSizeOrLength(JsonTokenType.StartArray);
 
                     numberOfRowsForValues++;
                     numberOfRowsForMembers++;
                     database.SetLength(rowIndex, arrayItemsCount);
                     database.SetNumberOfRows(rowIndex, numberOfRowsForValues);
+
+                    // If the array item count is (e.g.) 12 and the number of rows is (e.g.) 13
+                    // then the extra row is just this EndArray item, so the array was made up
+                    // of simple values.
+                    //
+                    // If the off-by-one relationship does not hold, then one of the values was
+                    // more than one row, making it a complex object.
+                    //
+                    // This check is similar to tracking the start array and painting it when
+                    // StartObject or StartArray is encountered, but avoids the mixed state
+                    // where "UnknownSize" implies "has complex children".
+                    if (arrayItemsCount + 1 != numberOfRowsForValues)
+                    {
+                        database.SetHasComplexChildren(rowIndex);
+                    }
 
                     int newRowIndex = database.Length;
                     database.Append(tokenType, tokenStart, reader.ValueSpan.Length);
