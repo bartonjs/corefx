@@ -15,6 +15,7 @@ namespace System.Text.Json
         private ReadOnlyMemory<byte> _utf8Json;
         private CustomDb _parsedData;
         private byte[] _extraRentedBytes;
+        private (int, string) _lastString = (-1, null);
 
         public JsonElement RootElement => new JsonElement(this, 0);
 
@@ -250,6 +251,13 @@ namespace System.Text.Json
         {
             CheckNotDisposed();
 
+            (int lastIdx, string lastString) = _lastString;
+
+            if (lastIdx == index)
+            {
+                return lastString;
+            }
+
             _parsedData.Get(index, out DbRow row);
 
             JsonTokenType tokenType = row.TokenType;
@@ -265,7 +273,9 @@ namespace System.Text.Json
             ReadOnlySpan<byte> segment = data.Slice(row.Location, row.SizeOrLength);
 
             // TODO(#33292): Unescape this.
-            return Utf8JsonReader.Utf8Encoding.GetString(segment);
+            lastString = Utf8JsonReader.Utf8Encoding.GetString(segment);
+            _lastString = (index, lastString);
+            return lastString;
         }
 
         internal string GetNameOfPropertyValue(int index)

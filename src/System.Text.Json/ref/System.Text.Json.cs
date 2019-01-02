@@ -83,9 +83,9 @@ namespace System.Text.Json
             System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() { throw null; }
         }
     }
-    public partial struct JsonProperty
+    public readonly partial struct JsonProperty
     {
-        private object _dummy;
+        private readonly object _dummy;
         public string Name { get { throw null; } }
         public System.Text.Json.JsonElement Value { get { throw null; } }
     }

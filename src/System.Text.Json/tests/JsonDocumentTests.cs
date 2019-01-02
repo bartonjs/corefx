@@ -1275,9 +1275,16 @@ namespace System.Text.Json.Tests
 
                 foreach (JsonProperty property in strongBoxedEnumerable)
                 {
+                    string propertyName = property.Name;
                     Assert.Equal("name" + test, property.Name);
                     Assert.Equal(test, property.Value.GetInt32());
                     test++;
+
+                    // Subsequent read of the same JsonProperty doesn't allocate a new string
+                    // (if another property is inspected from the same document that guarantee
+                    // doesn't hold).
+                    string propertyName2 = property.Name;
+                    Assert.Same(propertyName, propertyName2);
                 }
 
                 test = 0;
