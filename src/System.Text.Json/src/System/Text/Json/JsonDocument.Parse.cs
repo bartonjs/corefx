@@ -67,17 +67,25 @@ namespace System.Text.Json
             }
         }
 
-        public static async Task<JsonDocument> ParseAsync(
+        public static Task<JsonDocument> ParseAsync(
             Stream utf8Json,
-            CancellationToken cancellationToken = default,
-            JsonReaderOptions readerOptions = default)
+            JsonReaderOptions readerOptions = default,
+            CancellationToken cancellationToken = default)
         {
             if (utf8Json == null)
                 throw new ArgumentNullException(nameof(utf8Json));
 
             CheckSupportedOptions(readerOptions);
 
-            ArraySegment<byte> drained = await ReadToEndAsync(utf8Json, cancellationToken);
+            return ParseAsyncCore(utf8Json, readerOptions, cancellationToken);
+        }
+
+        private static async Task<JsonDocument> ParseAsyncCore(
+            Stream utf8Json,
+            JsonReaderOptions readerOptions = default,
+            CancellationToken cancellationToken = default)
+        {
+            ArraySegment<byte> drained = await ReadToEndAsync(utf8Json, cancellationToken).ConfigureAwait(false);
 
             try
             {
@@ -207,7 +215,9 @@ namespace System.Text.Json
             }
         }
 
-        private static async Task<ArraySegment<byte>> ReadToEndAsync(Stream stream, CancellationToken cancellationToken)
+        private static async Task<ArraySegment<byte>> ReadToEndAsync(
+            Stream stream,
+            CancellationToken cancellationToken)
         {
             int written = 0;
             byte[] rented = null;
@@ -240,7 +250,10 @@ namespace System.Text.Json
                         rented = tmp;
                     }
 
-                    lastRead = await stream.ReadAsync(rented, written, rented.Length - written, cancellationToken);
+                    lastRead = await stream.ReadAsync(
+                        rented.AsMemory(written, rented.Length - written),
+                        cancellationToken).ConfigureAwait(false);
+
                 } while (lastRead > 0);
 
                 return new ArraySegment<byte>(rented, 0, written);
