@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 
 namespace System.Text.Json
 {
-    partial class JsonDocument
+    public sealed partial class JsonDocument
     {
         // The database for the parsed structure of a JSON document.
         //

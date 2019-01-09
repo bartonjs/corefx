@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace System.Text.Json
 {
-    public partial class JsonDocument
+    public sealed partial class JsonDocument
     {
         [StructLayout(LayoutKind.Sequential)]
         internal struct DbRow

@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 
 namespace System.Text.Json
 {
-    public partial class JsonDocument
+    public sealed partial class JsonDocument
     {
         private struct CustomStack : IDisposable
         {
