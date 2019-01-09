@@ -199,6 +199,7 @@ namespace System.Text.Json
                     }
 
                     lastRead = stream.Read(rented, written, rented.Length - written);
+                    written += lastRead;
                 } while (lastRead > 0);
 
                 return new ArraySegment<byte>(rented, 0, written);
@@ -253,6 +254,8 @@ namespace System.Text.Json
                     lastRead = await stream.ReadAsync(
                         rented.AsMemory(written, rented.Length - written),
                         cancellationToken).ConfigureAwait(false);
+
+                    written += lastRead;
 
                 } while (lastRead > 0);
 

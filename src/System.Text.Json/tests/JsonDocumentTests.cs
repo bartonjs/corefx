@@ -10,47 +10,59 @@ using System.Collections.Generic;
 using System.IO;
 using Xunit;
 using System.Buffers.Text;
+using System.IO.Tests;
+using System.Threading.Tasks;
 
 namespace System.Text.Json.Tests
 {
     public static class JsonDocumentTests
     {
-        public static IEnumerable<object[]> TestCases
-        {
-            get
-            {
-                return new List<object[]>
-                {
-                    new object[] { true, Tests.TestCaseType.Basic, SR.BasicJson},
-                    new object[] { true, Tests.TestCaseType.BasicLargeNum, SR.BasicJsonWithLargeNum}, // Json.NET treats numbers starting with 0 as octal (0425 becomes 277)
-                    new object[] { true, Tests.TestCaseType.BroadTree, SR.BroadTree}, // \r\n behavior is different between Json.NET and System.Text.Json
-                    new object[] { true, Tests.TestCaseType.DeepTree, SR.DeepTree},
-                    new object[] { true, Tests.TestCaseType.FullSchema1, SR.FullJsonSchema1},
-                    new object[] { true, Tests.TestCaseType.HelloWorld, SR.HelloWorld},
-                    new object[] { true, Tests.TestCaseType.LotsOfNumbers, SR.LotsOfNumbers},
-                    new object[] { true, Tests.TestCaseType.LotsOfStrings, SR.LotsOfStrings},
-                    new object[] { true, Tests.TestCaseType.ProjectLockJson, SR.ProjectLockJson},
-                    new object[] { true, Tests.TestCaseType.Json400B, SR.Json400B},
-                    new object[] { true, Tests.TestCaseType.Json4KB, SR.Json4KB},
-                    new object[] { true, Tests.TestCaseType.Json40KB, SR.Json40KB},
-                    new object[] { true, Tests.TestCaseType.Json400KB, SR.Json400KB},
+        private static readonly Dictionary<TestCaseType, string> s_expectedConcat =
+            new Dictionary<TestCaseType, string>();
 
-                    new object[] { false, Tests.TestCaseType.Basic, SR.BasicJson},
-                    new object[] { false, Tests.TestCaseType.BasicLargeNum, SR.BasicJsonWithLargeNum}, // Json.NET treats numbers starting with 0 as octal (0425 becomes 277)
-                    new object[] { false, Tests.TestCaseType.BroadTree, SR.BroadTree}, // \r\n behavior is different between Json.NET and System.Text.Json
-                    new object[] { false, Tests.TestCaseType.DeepTree, SR.DeepTree},
-                    new object[] { false, Tests.TestCaseType.FullSchema1, SR.FullJsonSchema1},
-                    new object[] { false, Tests.TestCaseType.HelloWorld, SR.HelloWorld},
-                    new object[] { false, Tests.TestCaseType.LotsOfNumbers, SR.LotsOfNumbers},
-                    new object[] { false, Tests.TestCaseType.LotsOfStrings, SR.LotsOfStrings},
-                    new object[] { false, Tests.TestCaseType.ProjectLockJson, SR.ProjectLockJson},
-                    new object[] { false, Tests.TestCaseType.Json400B, SR.Json400B},
-                    new object[] { false, Tests.TestCaseType.Json4KB, SR.Json4KB},
-                    new object[] { false, Tests.TestCaseType.Json40KB, SR.Json40KB},
-                    new object[] { false, Tests.TestCaseType.Json400KB, SR.Json400KB},
-                };
-            }
-        }
+        private static readonly Dictionary<TestCaseType, string> s_compactJson =
+            new Dictionary<TestCaseType, string>();
+
+        public static IEnumerable<object[]> ReducedTestCases { get; } =
+            new List<object[]>
+            {
+                new object[] { true, TestCaseType.ProjectLockJson, SR.ProjectLockJson},
+                new object[] { true, TestCaseType.Json40KB, SR.Json40KB},
+                new object[] { false, TestCaseType.DeepTree, SR.DeepTree},
+                new object[] { false, TestCaseType.Json400KB, SR.Json400KB},
+            };
+
+        public static IEnumerable<object[]> TestCases { get; } =
+            new List<object[]>
+            {
+                new object[] { true, TestCaseType.Basic, SR.BasicJson},
+                new object[] { true, TestCaseType.BasicLargeNum, SR.BasicJsonWithLargeNum}, // Json.NET treats numbers starting with 0 as octal (0425 becomes 277)
+                new object[] { true, TestCaseType.BroadTree, SR.BroadTree}, // \r\n behavior is different between Json.NET and System.Text.Json
+                new object[] { true, TestCaseType.DeepTree, SR.DeepTree},
+                new object[] { true, TestCaseType.FullSchema1, SR.FullJsonSchema1},
+                new object[] { true, TestCaseType.HelloWorld, SR.HelloWorld},
+                new object[] { true, TestCaseType.LotsOfNumbers, SR.LotsOfNumbers},
+                new object[] { true, TestCaseType.LotsOfStrings, SR.LotsOfStrings},
+                new object[] { true, TestCaseType.ProjectLockJson, SR.ProjectLockJson},
+                new object[] { true, TestCaseType.Json400B, SR.Json400B},
+                new object[] { true, TestCaseType.Json4KB, SR.Json4KB},
+                new object[] { true, TestCaseType.Json40KB, SR.Json40KB},
+                new object[] { true, TestCaseType.Json400KB, SR.Json400KB},
+
+                new object[] { false, TestCaseType.Basic, SR.BasicJson},
+                new object[] { false, TestCaseType.BasicLargeNum, SR.BasicJsonWithLargeNum}, // Json.NET treats numbers starting with 0 as octal (0425 becomes 277)
+                new object[] { false, TestCaseType.BroadTree, SR.BroadTree}, // \r\n behavior is different between Json.NET and System.Text.Json
+                new object[] { false, TestCaseType.DeepTree, SR.DeepTree},
+                new object[] { false, TestCaseType.FullSchema1, SR.FullJsonSchema1},
+                new object[] { false, TestCaseType.HelloWorld, SR.HelloWorld},
+                new object[] { false, TestCaseType.LotsOfNumbers, SR.LotsOfNumbers},
+                new object[] { false, TestCaseType.LotsOfStrings, SR.LotsOfStrings},
+                new object[] { false, TestCaseType.ProjectLockJson, SR.ProjectLockJson},
+                new object[] { false, TestCaseType.Json400B, SR.Json400B},
+                new object[] { false, TestCaseType.Json4KB, SR.Json4KB},
+                new object[] { false, TestCaseType.Json40KB, SR.Json40KB},
+                new object[] { false, TestCaseType.Json400KB, SR.Json400KB},
+            };
 
         // TestCaseType is only used to give the json strings a descriptive name within the unit tests.
         public enum TestCaseType
@@ -58,11 +70,8 @@ namespace System.Text.Json.Tests
             HelloWorld,
             Basic,
             BasicLargeNum,
-            SpecialNumForm,
-            SpecialStrings,
             ProjectLockJson,
             FullSchema1,
-            FullSchema2,
             DeepTree,
             BroadTree,
             LotsOfNumbers,
@@ -81,7 +90,7 @@ namespace System.Text.Json.Tests
 
         private static string ReadJson400KB(JToken obj)
         {
-            var sb = new StringBuilder();
+            var sb = new StringBuilder(250000);
             foreach (JToken token in obj)
             {
                 sb.Append((string)token["_id"]);
@@ -129,101 +138,211 @@ namespace System.Text.Json.Tests
 
         private static string ReadJson400KB(JsonElement obj)
         {
-            var sb = new StringBuilder();
-            int length = obj.GetArrayLength();
-            for (int i = 0; i < length; i++)
-            {
-                sb.Append(obj[i].GetProperty("_id").GetString());
-                sb.Append(obj[i].GetProperty("index").GetInt32());
-                sb.Append(obj[i].GetProperty("guid").GetString());
-                sb.Append(obj[i].GetProperty("isActive").GetBoolean());
-                sb.Append(obj[i].GetProperty("balance").GetString());
-                sb.Append(obj[i].GetProperty("picture").GetString());
-                sb.Append(obj[i].GetProperty("age").GetInt32());
-                sb.Append(obj[i].GetProperty("eyeColor").GetString());
-                sb.Append(obj[i].GetProperty("name").GetString());
-                sb.Append(obj[i].GetProperty("gender").GetString());
-                sb.Append(obj[i].GetProperty("company").GetString());
-                sb.Append(obj[i].GetProperty("email").GetString());
-                sb.Append(obj[i].GetProperty("phone").GetString());
-                sb.Append(obj[i].GetProperty("address").GetString());
-                sb.Append(obj[i].GetProperty("about").GetString());
-                sb.Append(obj[i].GetProperty("registered").GetString());
-                sb.Append(obj[i].GetProperty("latitude").GetDouble());
-                sb.Append(obj[i].GetProperty("longitude").GetDouble());
+            var sb = new StringBuilder(250000);
 
-                JsonElement tags = obj[i].GetProperty("tags");
+            foreach (JsonElement element in obj.EnumerateArray())
+            {
+                sb.Append(element.GetProperty("_id").GetString());
+                sb.Append(element.GetProperty("index").GetInt32());
+                sb.Append(element.GetProperty("guid").GetString());
+                sb.Append(element.GetProperty("isActive").GetBoolean());
+                sb.Append(element.GetProperty("balance").GetString());
+                sb.Append(element.GetProperty("picture").GetString());
+                sb.Append(element.GetProperty("age").GetInt32());
+                sb.Append(element.GetProperty("eyeColor").GetString());
+                sb.Append(element.GetProperty("name").GetString());
+                sb.Append(element.GetProperty("gender").GetString());
+                sb.Append(element.GetProperty("company").GetString());
+                sb.Append(element.GetProperty("email").GetString());
+                sb.Append(element.GetProperty("phone").GetString());
+                sb.Append(element.GetProperty("address").GetString());
+                sb.Append(element.GetProperty("about").GetString());
+                sb.Append(element.GetProperty("registered").GetString());
+                sb.Append(element.GetProperty("latitude").GetDouble());
+                sb.Append(element.GetProperty("longitude").GetDouble());
+
+                JsonElement tags = element.GetProperty("tags");
                 for (int j = 0; j < tags.GetArrayLength(); j++)
                 {
                     sb.Append(tags[j].GetString());
                 }
-                JsonElement friends = obj[i].GetProperty("friends");
+                JsonElement friends = element.GetProperty("friends");
                 for (int j = 0; j < friends.GetArrayLength(); j++)
                 {
                     sb.Append(friends[j].GetProperty("id").GetInt32());
                     sb.Append(friends[j].GetProperty("name").GetString());
                 }
-                sb.Append(obj[i].GetProperty("greeting").GetString());
-                sb.Append(obj[i].GetProperty("favoriteFruit").GetString());
+                sb.Append(element.GetProperty("greeting").GetString());
+                sb.Append(element.GetProperty("favoriteFruit").GetString());
             }
+
             return sb.ToString();
         }
 
-        // TestCaseType is only used to give the json strings a descriptive name.
         [Theory]
+        // The ReadOnlyMemory<bytes> variant is the only one that runs all the input documents.
+        // The rest use a reduced set as because (implementation detail) they ultimately
+        // funnel into the same worker code and the difference between Reduced and Full
+        // is about 0.7 seconds (which adds up).
+        //
+        // If the internals change such that one of these is exercising substantially different
+        // code, then it should switch to the full variation set.
         [MemberData(nameof(TestCases))]
-        public static void ParseJson(bool compactData, TestCaseType type, string jsonString)
+        public static void ParseJson_MemoryBytes(bool compactData, TestCaseType type, string jsonString)
         {
-            // Remove all formatting/indendation
+            ParseJson(
+                compactData,
+                type,
+                jsonString,
+                null,
+                bytes => JsonDocument.Parse(bytes.AsMemory()));
+        }
+
+        [Theory]
+        [MemberData(nameof(ReducedTestCases))]
+        public static void ParseJson_String(bool compactData, TestCaseType type, string jsonString)
+        {
+            ParseJson(
+                compactData,
+                type,
+                jsonString,
+                str => JsonDocument.Parse(str), 
+                null);
+        }
+
+        [Theory]
+        [MemberData(nameof(ReducedTestCases))]
+        public static void ParseJson_SeekableStream(bool compactData, TestCaseType type, string jsonString)
+        {
+            ParseJson(
+                compactData,
+                type,
+                jsonString,
+                null,
+                bytes => JsonDocument.Parse(new MemoryStream(bytes)));
+        }
+
+        [Theory]
+        [MemberData(nameof(ReducedTestCases))]
+        public static void ParseJson_SeekableStream_Async(bool compactData, TestCaseType type, string jsonString)
+        {
+            ParseJson(
+                compactData,
+                type,
+                jsonString,
+                null,
+                bytes => JsonDocument.ParseAsync(new MemoryStream(bytes)).GetAwaiter().GetResult());
+        }
+
+        [Theory]
+        [MemberData(nameof(ReducedTestCases))]
+        public static void ParseJson_UnseekableStream(bool compactData, TestCaseType type, string jsonString)
+        {
+            ParseJson(
+                compactData,
+                type,
+                jsonString,
+                null,
+                bytes => JsonDocument.Parse(
+                    new WrappedMemoryStream(canRead: true, canWrite: false, canSeek: false, bytes)));
+        }
+
+        [Theory]
+        [MemberData(nameof(ReducedTestCases))]
+        public static void ParseJson_UnseekableStream_Async(bool compactData, TestCaseType type, string jsonString)
+        {
+            ParseJson(
+                compactData,
+                type,
+                jsonString,
+                null,
+                bytes => JsonDocument.ParseAsync(
+                    new WrappedMemoryStream(canRead: true, canWrite: false, canSeek: false, bytes)).
+                    GetAwaiter().GetResult());
+        }
+
+        [Theory]
+        [MemberData(nameof(ReducedTestCases))]
+        public static void ParseJson_SequenceBytes_Single(bool compactData, TestCaseType type, string jsonString)
+        {
+            ParseJson(
+                compactData,
+                type,
+                jsonString,
+                null,
+                bytes => JsonDocument.Parse(new ReadOnlySequence<byte>(bytes)));
+        }
+
+        [Theory]
+        [MemberData(nameof(ReducedTestCases))]
+        public static void ParseJson_SequenceBytes_Multi(bool compactData, TestCaseType type, string jsonString)
+        {
+            ParseJson(
+                compactData,
+                type,
+                jsonString,
+                null,
+                bytes => JsonDocument.Parse(SegmentInto(bytes, 31)));
+        }
+
+        private static void ParseJson(
+            bool compactData,
+            TestCaseType type,
+            string jsonString,
+            Func<string, JsonDocument> stringDocBuilder,
+            Func<byte[], JsonDocument> bytesDocBuilder)
+        {
+            // One, but not both, must be null.
+            if ((stringDocBuilder == null) == (bytesDocBuilder == null))
+                throw new InvalidOperationException();
+
+            // Remove all formatting/indentation
             if (compactData)
             {
-                using (JsonTextReader jsonReader = new JsonTextReader(new StringReader(jsonString)))
-                {
-                    jsonReader.FloatParseHandling = FloatParseHandling.Decimal;
-                    JToken jtoken = JToken.ReadFrom(jsonReader);
-                    var stringWriter = new StringWriter();
-                    using (JsonTextWriter jsonWriter = new JsonTextWriter(stringWriter))
-                    {
-                        jtoken.WriteTo(jsonWriter);
-                        jsonString = stringWriter.ToString();
-                    }
-                }
+                jsonString = GetCompactJson(type, jsonString);
             }
 
             byte[] dataUtf8 = Encoding.UTF8.GetBytes(jsonString);
 
-            using (JsonDocument doc = JsonDocument.Parse(dataUtf8, default))
+            using (JsonDocument doc = stringDocBuilder?.Invoke(jsonString) ?? bytesDocBuilder?.Invoke(dataUtf8))
             {
-                using (var stream = new MemoryStream(dataUtf8))
-                using (var streamReader = new StreamReader(stream, Encoding.UTF8, false, 1024, true))
-                using (JsonTextReader jsonReader = new JsonTextReader(streamReader))
+                Func<JToken, string> expectedFunc = null;
+                Func<JsonElement, string> actualFunc = null;
+
+                switch (type)
                 {
-                    JToken jToken = JToken.ReadFrom(jsonReader);
+                    case TestCaseType.Json400KB:
+                        expectedFunc = token => ReadJson400KB(token);
+                        actualFunc = element => ReadJson400KB(element);
+                        break;
+                    case TestCaseType.HelloWorld:
+                        expectedFunc = token => ReadHelloWorld(token);
+                        actualFunc = element => ReadHelloWorld(element);
+                        break;
+                }
 
-                    string expectedString = "";
-                    string actualString = "";
+                if (expectedFunc != null)
+                {
+                    string expectedCustom;
+                    string actualCustom;
 
-                    if (type == TestCaseType.Json400KB)
+                    using (var stream = new MemoryStream(dataUtf8))
+                    using (var streamReader = new StreamReader(stream, Encoding.UTF8, false, 1024, true))
+                    using (JsonTextReader jsonReader = new JsonTextReader(streamReader))
                     {
-                        expectedString = ReadJson400KB(jToken);
-                        actualString = ReadJson400KB(doc.RootElement);
-                    }
-                    else if (type == TestCaseType.HelloWorld)
-                    {
-                        expectedString = ReadHelloWorld(jToken);
-                        actualString = ReadHelloWorld(doc.RootElement);
+                        JToken jToken = JToken.ReadFrom(jsonReader);
+
+                        expectedCustom = expectedFunc(jToken);
+                        actualCustom = actualFunc(doc.RootElement);
                     }
 
-                    Assert.Equal(expectedString, actualString);
+                    Assert.Equal(expectedCustom, actualCustom);
                 }
 
                 string actual = doc.PrintJson();
-
-                TextReader reader = new StringReader(jsonString);
-                string expected = JsonTestHelper.NewtonsoftReturnStringHelper(reader);
+                string expected = GetExpectedConcat(type, jsonString);
 
                 Assert.Equal(expected, actual);
-
             }
         }
 
@@ -969,7 +1088,7 @@ namespace System.Text.Json.Tests
         [InlineData("    ")]
         [InlineData("1 2")]
         [InlineData("[ 1")]
-        public static void CheckUnparsable(string json)
+        public static Task CheckUnparsable(string json)
         {
             Assert.Throws<JsonReaderException>(() => JsonDocument.Parse(json));
 
@@ -981,6 +1100,12 @@ namespace System.Text.Json.Tests
 
             ReadOnlySequence<byte> multiSegment = SegmentInto(utf8, 6);
             Assert.Throws<JsonReaderException>(() => JsonDocument.Parse(multiSegment));
+
+            Stream stream = new MemoryStream(utf8);
+            Assert.Throws<JsonReaderException>(() => JsonDocument.Parse(stream));
+
+            stream.Seek(0, SeekOrigin.Begin);
+            return Assert.ThrowsAsync<JsonReaderException>(() => JsonDocument.ParseAsync(stream));
         }
 
         [Fact]
@@ -1001,7 +1126,7 @@ namespace System.Text.Json.Tests
         }
 
         [Fact]
-        public static void EnableComments()
+        public static Task EnableComments()
         {
             string json = "3";
             JsonReaderOptions options = new JsonReaderOptions
@@ -1027,6 +1152,16 @@ namespace System.Text.Json.Tests
             AssertExtensions.Throws<ArgumentException>(
                 "readerOptions",
                 () => JsonDocument.Parse(multiSegment, options));
+
+            Stream stream = new MemoryStream(utf8);
+            AssertExtensions.Throws<ArgumentException>(
+                "readerOptions",
+                () => JsonDocument.Parse(stream, options));
+
+            stream.Seek(0, SeekOrigin.Begin);
+            return AssertExtensions.ThrowsAsync<ArgumentException>(
+                "readerOptions",
+                () => JsonDocument.ParseAsync(stream, options));
         }
 
         [Fact]
@@ -1421,6 +1556,22 @@ namespace System.Text.Json.Tests
         }
 
         [Fact]
+        public static void ParseNull()
+        {
+            // This succeeds as the empty string, then fails to parse the empty document.
+            Assert.Throws<JsonReaderException>(() => JsonDocument.Parse((string)null));
+
+            AssertExtensions.Throws<ArgumentNullException>(
+                "utf8Json",
+                () => JsonDocument.Parse((Stream)null));
+
+            // This synchronously throws the ArgumentNullException
+            AssertExtensions.Throws<ArgumentNullException>(
+                "utf8Json",
+                () => JsonDocument.ParseAsync((Stream)null));
+        }
+
+        [Fact]
         public static void EnsureResizeSucceeds()
         {
             // This test increases coverage, so it's based on a lot of implementation detail,
@@ -1523,6 +1674,40 @@ namespace System.Text.Json.Tests
 
             last = last.Append(data);
             return new ReadOnlySequence<byte>(first, 0, last, data.Length);
+        }
+
+        private static string GetExpectedConcat(TestCaseType testCaseType, string jsonString)
+        {
+            if (s_expectedConcat.TryGetValue(testCaseType, out string existing))
+            {
+                return existing;
+            }
+
+            TextReader reader = new StringReader(jsonString);
+            return s_expectedConcat[testCaseType] = JsonTestHelper.NewtonsoftReturnStringHelper(reader);
+        }
+
+        private static string GetCompactJson(TestCaseType testCaseType, string jsonString)
+        {
+            if (s_compactJson.TryGetValue(testCaseType, out string existing))
+            {
+                return existing;
+            }
+
+            using (JsonTextReader jsonReader = new JsonTextReader(new StringReader(jsonString)))
+            {
+                jsonReader.FloatParseHandling = FloatParseHandling.Decimal;
+                JToken jtoken = JToken.ReadFrom(jsonReader);
+                var stringWriter = new StringWriter();
+
+                using (JsonTextWriter jsonWriter = new JsonTextWriter(stringWriter))
+                {
+                    jtoken.WriteTo(jsonWriter);
+                    existing = stringWriter.ToString();
+                }
+            }
+
+            return s_compactJson[testCaseType] = existing;
         }
     }
 }
