@@ -524,7 +524,7 @@ namespace System.Text.Json
         {
             if (expected != actual)
             {
-                throw new InvalidOperationException();
+                throw ThrowHelper.GetJsonElementWrongTypeException(expected, actual);
             }
         }
 
@@ -533,7 +533,7 @@ namespace System.Text.Json
             if (readerOptions.CommentHandling == JsonCommentHandling.Allow)
             {
                 throw new ArgumentException(
-                    "Comments cannot be incorporated into JsonDocument, only comment handling modes Skip and Allow are supported.",
+                    SR.JsonDocumentDoesNotSupportComments,
                     nameof(readerOptions));
             }
         }

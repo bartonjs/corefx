@@ -26,25 +26,7 @@ namespace System.Text.Json
             get
             {
                 JsonTokenType tokenType = TokenType;
-
-                switch (tokenType)
-                {
-                    case JsonTokenType.None:
-                        return JsonValueType.Undefined;
-                    case JsonTokenType.StartArray:
-                        return JsonValueType.Array;
-                    case JsonTokenType.StartObject:
-                        return JsonValueType.Object;
-                    case JsonTokenType.String:
-                    case JsonTokenType.Number:
-                    case JsonTokenType.True:
-                    case JsonTokenType.False:
-                    case JsonTokenType.Null:
-                        return (JsonValueType)((byte)tokenType - 3);
-                    default:
-                        Debug.Fail($"No mapping for token type {tokenType}");
-                        return JsonValueType.Undefined;
-                }
+                return tokenType.ToValueType();
             }
         }
 
@@ -130,7 +112,7 @@ namespace System.Text.Json
             return
                 type == JsonTokenType.True ? true :
                 type == JsonTokenType.False ? false :
-                throw new InvalidOperationException();
+                throw ThrowHelper.GetJsonElementWrongTypeException(nameof(Boolean), type);
         }
 
         public string GetString()
@@ -288,9 +270,11 @@ namespace System.Text.Json
         {
             CheckValidInstance();
 
-            if (TokenType != JsonTokenType.StartArray)
+            JsonTokenType tokenType = TokenType;
+
+            if (tokenType != JsonTokenType.StartArray)
             {
-                throw new InvalidOperationException();
+                throw ThrowHelper.GetJsonElementWrongTypeException(JsonTokenType.StartArray, tokenType);
             }
 
             return new ArrayEnumerator(this);
@@ -300,9 +284,11 @@ namespace System.Text.Json
         {
             CheckValidInstance();
 
-            if (TokenType != JsonTokenType.StartObject)
+            JsonTokenType tokenType = TokenType;
+
+            if (tokenType != JsonTokenType.StartObject)
             {
-                throw new InvalidOperationException();
+                throw ThrowHelper.GetJsonElementWrongTypeException(JsonTokenType.StartObject, tokenType);
             }
 
             return new ObjectEnumerator(this);
@@ -333,7 +319,7 @@ namespace System.Text.Json
                 case JsonTokenType.EndArray:
                 case JsonTokenType.EndObject:
                 default:
-                    Debug.Fail($"No handler for {nameof(JsonTokenType)}.{Type}");
+                    Debug.Fail($"No handler for {nameof(JsonTokenType)}.{TokenType}");
                     return string.Empty;
             }
         }
