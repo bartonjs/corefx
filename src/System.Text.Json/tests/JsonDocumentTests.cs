@@ -11,6 +11,7 @@ using System.IO;
 using Xunit;
 using System.Buffers.Text;
 using System.IO.Tests;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace System.Text.Json.Tests
@@ -306,6 +307,8 @@ namespace System.Text.Json.Tests
 
             using (JsonDocument doc = stringDocBuilder?.Invoke(jsonString) ?? bytesDocBuilder?.Invoke(dataUtf8))
             {
+                JsonElement rootElement = doc.RootElement;
+
                 Func<JToken, string> expectedFunc = null;
                 Func<JsonElement, string> actualFunc = null;
 
@@ -333,7 +336,7 @@ namespace System.Text.Json.Tests
                         JToken jToken = JToken.ReadFrom(jsonReader);
 
                         expectedCustom = expectedFunc(jToken);
-                        actualCustom = actualFunc(doc.RootElement);
+                        actualCustom = actualFunc(rootElement);
                     }
 
                     Assert.Equal(expectedCustom, actualCustom);
@@ -343,6 +346,8 @@ namespace System.Text.Json.Tests
                 string expected = GetExpectedConcat(type, jsonString);
 
                 Assert.Equal(expected, actual);
+
+                Assert.Equal(jsonString, rootElement.GetRawText());
             }
         }
 
@@ -1015,6 +1020,7 @@ namespace System.Text.Json.Tests
                 Assert.Throws<ObjectDisposedException>(() => root.TryGetUInt64(out ulong _));
                 Assert.Throws<ObjectDisposedException>(() => root.GetString());
                 Assert.Throws<ObjectDisposedException>(() => root.GetBoolean());
+                Assert.Throws<ObjectDisposedException>(() => root.GetRawText());
             }
         }
 
@@ -1038,6 +1044,7 @@ namespace System.Text.Json.Tests
             Assert.Throws<InvalidOperationException>(() => root.TryGetUInt64(out ulong _));
             Assert.Throws<InvalidOperationException>(() => root.GetString());
             Assert.Throws<InvalidOperationException>(() => root.GetBoolean());
+            Assert.Throws<InvalidOperationException>(() => root.GetRawText());
         }
 
         [Fact]
@@ -1189,10 +1196,129 @@ namespace System.Text.Json.Tests
             using (JsonDocument doc = JsonDocument.Parse(json))
             {
                 JsonElement root = doc.RootElement;
+                byte[] utf8PropertyName = Encoding.UTF8.GetBytes(propertyName);
 
                 Assert.Equal(3, root.GetProperty(propertyName).GetInt32());
                 Assert.Equal(3, root.GetProperty(propertyName.AsSpan()).GetInt32());
-                Assert.Equal(3, root.GetProperty(Encoding.UTF8.GetBytes(propertyName)).GetInt32());
+                Assert.Equal(3, root.GetProperty(utf8PropertyName).GetInt32());
+
+                JsonElement matchedProperty;
+                Assert.True(root.TryGetProperty(propertyName, out matchedProperty));
+                Assert.Equal(3, matchedProperty.GetInt32());
+                Assert.True(root.TryGetProperty(propertyName.AsSpan(), out matchedProperty));
+                Assert.Equal(3, matchedProperty.GetInt32());
+                Assert.True(root.TryGetProperty(utf8PropertyName, out matchedProperty));
+                Assert.Equal(3, matchedProperty.GetInt32());
+            }
+        }
+
+        [Fact]
+        public static void GetRawText()
+        {
+            const string json =
+                // Don't let there be a newline before the first embedded quote,
+                // because the index would change across CRLF vs LF compile environments.
+@"{  ""  weird  property  name""
+                  :
+       {
+         ""nested"":
+         [ 1, 2, 3
+,
+4, 5, 6 ],
+        ""also"" : 3
+  },
+  ""number"": 1.02e+4,
+  ""bool"": false,
+  ""n\u0075ll"": null,
+  ""multiLineArray"": 
+
+[
+
+0,
+1,
+2,
+
+    3
+
+],
+  ""string"": 
+
+""Aren't string just the greatest?\r\nNot a terminating quote: \""     \r   \n   \t  \\   ""
+}";
+
+            using (JsonDocument doc = JsonDocument.Parse(json))
+            {
+                JsonElement.ObjectEnumerator enumerator = doc.RootElement.EnumerateObject();
+                Assert.True(enumerator.MoveNext(), "Move to first property");
+                JsonProperty property = enumerator.Current;
+                
+                Assert.Equal("  weird  property  name", property.Name);
+                string rawText = property.ToString();
+                int crCount = rawText.Count(c => c == '\r');
+                Assert.Equal(128 + crCount, rawText.Length);
+                Assert.Equal('\"', rawText[0]);
+                Assert.Equal(' ', rawText[1]);
+                Assert.Equal('}', rawText[rawText.Length - 1]);
+                Assert.Equal(json.Substring(json.IndexOf('\"'), rawText.Length), rawText);
+
+                Assert.True(enumerator.MoveNext(), "Move to number property");
+                property = enumerator.Current;
+
+                Assert.Equal("number", property.Name);
+                Assert.Equal("\"number\": 1.02e+4", property.ToString());
+                Assert.Equal(10200.0, property.Value.GetDouble());
+                Assert.Equal("1.02e+4", property.Value.GetRawText());
+
+                Assert.True(enumerator.MoveNext(), "Move to bool property");
+                property = enumerator.Current;
+
+                Assert.Equal("bool", property.Name);
+                Assert.False(property.Value.GetBoolean());
+                Assert.Equal("false", property.Value.GetRawText());
+                Assert.Equal(bool.FalseString, property.Value.ToString());
+
+                Assert.True(enumerator.MoveNext(), "Move to null property");
+                property = enumerator.Current;
+
+                // TODO(#33292) Assert.Equal("null", property.Name);
+                Assert.Equal("null", property.Value.GetRawText());
+                Assert.Equal(string.Empty, property.Value.ToString());
+
+                Assert.True(enumerator.MoveNext(), "Move to multiLineArray property");
+                property = enumerator.Current;
+
+                Assert.Equal("multiLineArray", property.Name);
+                Assert.Equal(4, property.Value.GetArrayLength());
+                rawText = property.Value.GetRawText();
+                Assert.Equal('[', rawText[0]);
+                Assert.Equal(']', rawText[rawText.Length - 1]);
+                Assert.Contains('3', rawText);
+                Assert.Contains('\n', rawText);
+
+                Assert.True(enumerator.MoveNext(), "Move to string property");
+                property = enumerator.Current;
+
+                Assert.Equal("string", property.Name);
+                rawText = property.Value.GetRawText();
+                Assert.Equal('\"', rawText[0]);
+                Assert.Equal('\"', rawText[rawText.Length - 1]);
+                string strValue = property.Value.GetString();
+                int colonIdx = strValue.IndexOf(':');
+                int escapedQuoteIdx = colonIdx + 2;
+                Assert.Equal(rawText.Substring(1, escapedQuoteIdx), strValue.Substring(0, escapedQuoteIdx));
+                Assert.Equal('\\', rawText[escapedQuoteIdx + 1]);
+                Assert.Equal('\"', rawText[escapedQuoteIdx + 2]);
+                // TODO(#33292) Assert.Equal('\"', strValue[escapedQuoteIdx]);
+                // TODO(#33292) Assert.Contains("\r", strValue);
+                Assert.Contains(@"\r", rawText);
+                string valueText = rawText;
+                rawText = property.ToString();
+                Assert.Equal('\"', rawText[0]);
+                Assert.Equal('\"', rawText[rawText.Length - 1]);
+                Assert.NotEqual(valueText, rawText);
+                Assert.EndsWith(valueText, rawText);
+
+                Assert.False(enumerator.MoveNext(), "Move past the last property");
             }
         }
 
@@ -1568,7 +1694,7 @@ namespace System.Text.Json.Tests
             // This synchronously throws the ArgumentNullException
             AssertExtensions.Throws<ArgumentNullException>(
                 "utf8Json",
-                () => JsonDocument.ParseAsync((Stream)null));
+                () => JsonDocument.ParseAsync(null));
         }
 
         [Fact]

@@ -270,6 +270,20 @@ namespace System.Text.Json
             return _parent.GetNameOfPropertyValue(_idx);
         }
 
+        public string GetRawText()
+        {
+            CheckValidInstance();
+
+            return _parent.GetRawValueAsString(_idx);
+        }
+
+        internal string GetPropertyRawText()
+        {
+            CheckValidInstance();
+
+            return _parent.GetPropertyRawValueAsString(_idx);
+        }
+
         public ArrayEnumerator EnumerateArray()
         {
             CheckValidInstance();

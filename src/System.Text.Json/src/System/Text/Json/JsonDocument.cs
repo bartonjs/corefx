@@ -132,7 +132,7 @@ namespace System.Text.Json
             return endIndex;
         }
 
-        internal ReadOnlyMemory<byte> GetRawValue(int index)
+        private ReadOnlyMemory<byte> GetRawValue(int index, bool includeQuotes)
         {
             CheckNotDisposed();
 
@@ -140,6 +140,13 @@ namespace System.Text.Json
 
             if (row.IsSimpleValue)
             {
+                if (includeQuotes && row.TokenType == JsonTokenType.String)
+                {
+                    // Start one character earlier than the value (the open quote)
+                    // End one character after the value (the close quote)
+                    return _utf8Json.Slice(row.Location - 1, row.SizeOrLength + 2);
+                }
+
                 return _utf8Json.Slice(row.Location, row.SizeOrLength);
             }
 
@@ -147,6 +154,39 @@ namespace System.Text.Json
             int start = row.Location;
             _parsedData.Get(endElementIdx, out row);
             return _utf8Json.Slice(start, row.Location - start + row.SizeOrLength);
+        }
+
+        private ReadOnlyMemory<byte> GetPropertyRawValue(int valueIndex)
+        {
+            CheckNotDisposed();
+
+            // The property name is stored one row before the value
+            _parsedData.Get(valueIndex - DbRow.Size, out DbRow row);
+            Debug.Assert(row.TokenType == JsonTokenType.PropertyName);
+
+            // Subtract one for the open quote.
+            int start = row.Location - 1;
+            int end;
+
+            _parsedData.Get(valueIndex, out row);
+
+            if (row.IsSimpleValue)
+            {
+                end = row.Location + row.SizeOrLength;
+
+                // If the value was a string, pick up the terminating quote.
+                if (row.TokenType == JsonTokenType.String)
+                {
+                    end++;
+                }
+
+                return _utf8Json.Slice(start, end - start);
+            }
+
+            int endElementIdx = GetEndIndex(valueIndex, includeEndElement: false);
+            _parsedData.Get(endElementIdx, out row);
+            end = row.Location + row.SizeOrLength;
+            return _utf8Json.Slice(start, end - start);
         }
 
         internal string GetString(int index, JsonTokenType expectedType)
@@ -339,7 +379,13 @@ namespace System.Text.Json
 
         internal string GetRawValueAsString(int index)
         {
-            ReadOnlyMemory<byte> segment = GetRawValue(index);
+            ReadOnlyMemory<byte> segment = GetRawValue(index, includeQuotes: true);
+            return Utf8JsonReader.Utf8Encoding.GetString(segment.Span);
+        }
+
+        internal string GetPropertyRawValueAsString(int valueIndex)
+        {
+            ReadOnlyMemory<byte> segment = GetPropertyRawValue(valueIndex);
             return Utf8JsonReader.Utf8Encoding.GetString(segment.Span);
         }
 

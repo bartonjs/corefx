@@ -14,5 +14,10 @@ namespace System.Text.Json
         }
 
         public string Name => Value.GetPropertyName();
+
+        public override string ToString()
+        {
+            return Value.GetPropertyRawText();
+        }
     }
 }

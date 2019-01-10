@@ -41,6 +41,7 @@ namespace System.Text.Json
         public System.Text.Json.JsonElement GetProperty(System.ReadOnlySpan<byte> utf8PropertyName) { throw null; }
         public System.Text.Json.JsonElement GetProperty(System.ReadOnlySpan<char> propertyName) { throw null; }
         public System.Text.Json.JsonElement GetProperty(string propertyName) { throw null; }
+        public string GetRawText() { throw null; }
         public float GetSingle() { throw null; }
         public string GetString() { throw null; }
         [System.CLSCompliantAttribute(false)]
@@ -90,6 +91,7 @@ namespace System.Text.Json
         private readonly object _dummy;
         public string Name { get { throw null; } }
         public System.Text.Json.JsonElement Value { get { throw null; } }
+        public override string ToString() { throw null; }
     }
     public sealed partial class JsonReaderException : System.Exception
     {
