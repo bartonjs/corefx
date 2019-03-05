@@ -93,9 +93,13 @@ namespace System.Security.Cryptography.X509Certificates.Tests
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
+                // For the lower levels, turn NotSignatureValid into PartialChain,
+                // and clear all errors at higher levels.
+
                 if ((endEntityErrors & X509ChainStatusFlags.NotSignatureValid) != 0)
                 {
                     expectedCount = 1;
+                    endEntityErrors &= ~X509ChainStatusFlags.NotSignatureValid;
                     endEntityErrors |= X509ChainStatusFlags.PartialChain;
                     intermediateErrors = X509ChainStatusFlags.NoError;
                     rootErrors = X509ChainStatusFlags.NoError;
@@ -103,6 +107,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                 else if ((intermediateErrors & X509ChainStatusFlags.NotSignatureValid) != 0)
                 {
                     expectedCount = 2;
+                    intermediateErrors &= ~X509ChainStatusFlags.NotSignatureValid;
                     intermediateErrors |= X509ChainStatusFlags.PartialChain;
                     rootErrors = X509ChainStatusFlags.NoError;
                 }
@@ -117,6 +122,12 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             }
 
             X509ChainStatusFlags expectedAllErrors = endEntityErrors | intermediateErrors | rootErrors;
+
+            // If PartialChain or UntrustedRoot are the only remaining errors, the chain will succeed.
+            const X509ChainStatusFlags SuccessCodes =
+                X509ChainStatusFlags.UntrustedRoot | X509ChainStatusFlags.PartialChain;
+
+            bool expectSuccess = (expectedAllErrors & ~SuccessCodes) == 0;
 
             endEntityCert = TamperIfNeeded(endEntityCert, endEntityErrors);
             intermediateCert = TamperIfNeeded(intermediateCert, intermediateErrors);
@@ -142,7 +153,15 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                 {
                     i++;
 
-                    Assert.False(chain.Build(endEntityCert), $"Chain build on iteration {i}");
+                    if (expectSuccess)
+                    {
+                        Assert.True(chain.Build(endEntityCert), $"Chain build on iteration {i}");
+                    }
+                    else
+                    {
+                        Assert.False(chain.Build(endEntityCert), $"Chain build on iteration {i}");
+                    }
+
                     Assert.Equal(expectedCount, chain.ChainElements.Count);
                     Assert.Equal(expectedAllErrors, chain.AllStatusFlags());
                     

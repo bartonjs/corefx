@@ -759,12 +759,15 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                 {
                     iter++;
                     bool valid = chain.Build(cert);
-                    Assert.False(valid, $"Chain is valid on execution {iter}");
-
                     X509ChainStatusFlags allFlags = chain.AllStatusFlags();
 
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                     {
+                        // OSX considers this to be valid because it doesn't report NotSignatureValid,
+                        // just PartialChain ("I couldn't find an issuer that made the signature work"),
+                        // and PartialChain + AllowUnknownCertificateAuthority == pass.
+                        Assert.True(valid, $"Chain is valid on execution {iter}");
+
                         Assert.Equal(1, chain.ChainElements.Count);
 
                         Assert.Equal(
@@ -773,6 +776,8 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                     }
                     else
                     {
+                        Assert.False(valid, $"Chain is valid on execution {iter}");
+
                         Assert.Equal(3, chain.ChainElements.Count);
 
                         // Clear UntrustedRoot, if it happened.
