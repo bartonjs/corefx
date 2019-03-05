@@ -91,6 +91,11 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             verificationTime = RewindIfNeeded(verificationTime, intermediateCert, intermediateErrors);
             verificationTime = RewindIfNeeded(verificationTime, rootCert, rootErrors);
 
+            // Replace the certs for the scenario.
+            endEntityCert = TamperIfNeeded(endEntityCert, endEntityErrors);
+            intermediateCert = TamperIfNeeded(intermediateCert, intermediateErrors);
+            rootCert = TamperIfNeeded(rootCert, rootErrors);
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 // For the lower levels, turn NotSignatureValid into PartialChain,
@@ -129,10 +134,6 @@ namespace System.Security.Cryptography.X509Certificates.Tests
 
             bool expectSuccess = (expectedAllErrors & ~SuccessCodes) == 0;
 
-            endEntityCert = TamperIfNeeded(endEntityCert, endEntityErrors);
-            intermediateCert = TamperIfNeeded(intermediateCert, intermediateErrors);
-            rootCert = TamperIfNeeded(rootCert, rootErrors);
-
             using (endEntityCert)
             using (intermediateCert)
             using (rootCert)
@@ -153,13 +154,15 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                 {
                     i++;
 
+                    bool valid = chain.Build(endEntityCert);
+
                     if (expectSuccess)
                     {
-                        Assert.True(chain.Build(endEntityCert), $"Chain build on iteration {i}");
+                        Assert.True(valid, $"Chain build on iteration {i}");
                     }
                     else
                     {
-                        Assert.False(chain.Build(endEntityCert), $"Chain build on iteration {i}");
+                        Assert.False(valid, $"Chain build on iteration {i}");
                     }
 
                     Assert.Equal(expectedCount, chain.ChainElements.Count);
