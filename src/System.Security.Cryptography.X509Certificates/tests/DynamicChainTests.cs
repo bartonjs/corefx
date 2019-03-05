@@ -116,6 +116,13 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                     intermediateErrors |= X509ChainStatusFlags.PartialChain;
                     rootErrors = X509ChainStatusFlags.NoError;
                 }
+                else if ((rootErrors & X509ChainStatusFlags.NotSignatureValid) != 0)
+                {
+                    // Also have to clear UntrustedRoot now that PartialChain is being asserted here.
+                    rootErrors &=
+                        ~(X509ChainStatusFlags.NotSignatureValid | X509ChainStatusFlags.UntrustedRoot);
+                    rootErrors |= X509ChainStatusFlags.PartialChain;
+                }
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
