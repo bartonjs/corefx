@@ -771,7 +771,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                         Assert.Equal(1, chain.ChainElements.Count);
 
                         Assert.Equal(
-                            X509ChainStatusFlags.PartialChain | X509ChainStatusFlags.UntrustedRoot,
+                            X509ChainStatusFlags.PartialChain,
                             allFlags);
                     }
                     else
