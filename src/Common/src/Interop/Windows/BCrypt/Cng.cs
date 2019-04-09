@@ -64,6 +64,7 @@ namespace Internal.NativeCrypto
         public const string BCRYPT_RC2_ALGORITHM = "RC2";
 
         public const string BCRYPT_CHAIN_MODE_CBC = "ChainingModeCBC";
+        public const string BCRYPT_CHAIN_MODE_CFB = "ChainingModeCFB";
         public const string BCRYPT_CHAIN_MODE_ECB = "ChainingModeECB";
         public const string BCRYPT_CHAIN_MODE_GCM = "ChainingModeGCM";
         public const string BCRYPT_CHAIN_MODE_CCM = "ChainingModeCCM";
@@ -129,6 +130,20 @@ namespace Internal.NativeCrypto
         public static void SetEffectiveKeyLength(this SafeAlgorithmHandle hAlg, int effectiveKeyLength)
         {
             NTSTATUS ntStatus = Interop.BCryptSetIntProperty(hAlg, BCryptPropertyStrings.BCRYPT_EFFECTIVE_KEY_LENGTH, ref effectiveKeyLength, 0);
+
+            if (ntStatus != NTSTATUS.STATUS_SUCCESS)
+            {
+                throw CreateCryptographicException(ntStatus);
+            }
+        }
+
+        public static void SetFeedbackSize(this SafeKeyHandle hKey, int feedbackSizeInBytes)
+        {
+            NTSTATUS ntStatus = Interop.BCryptSetIntProperty(
+                hKey,
+                BCryptPropertyStrings.BCRYPT_MESSAGE_BLOCK_LENGTH,
+                ref feedbackSizeInBytes,
+                0);
 
             if (ntStatus != NTSTATUS.STATUS_SUCCESS)
             {

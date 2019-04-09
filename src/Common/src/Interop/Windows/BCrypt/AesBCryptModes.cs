@@ -11,6 +11,7 @@ namespace Internal.Cryptography
     internal static class AesBCryptModes
     {
         private static readonly SafeAlgorithmHandle s_hAlgCbc = OpenAesAlgorithm(Cng.BCRYPT_CHAIN_MODE_CBC);
+        private static readonly SafeAlgorithmHandle s_hAlgCfb = OpenAesAlgorithm(Cng.BCRYPT_CHAIN_MODE_CFB);
         private static readonly SafeAlgorithmHandle s_hAlgEcb = OpenAesAlgorithm(Cng.BCRYPT_CHAIN_MODE_ECB);
 
         internal static SafeAlgorithmHandle GetSharedHandle(CipherMode cipherMode)
@@ -21,6 +22,8 @@ namespace Internal.Cryptography
             {
                 case CipherMode.CBC:
                     return s_hAlgCbc;
+                case CipherMode.CFB:
+                    return s_hAlgCfb;
                 case CipherMode.ECB:
                     return s_hAlgEcb;
                 default:

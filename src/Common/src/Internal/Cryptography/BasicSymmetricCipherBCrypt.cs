@@ -13,10 +13,20 @@ namespace Internal.Cryptography
     {
         private readonly bool _encrypting;
         private SafeKeyHandle _hKey;
-        private byte[] _currentIv;  // CNG mutates this with the updated IV for the next stage on each Encrypt/Decrypt call.
-                                    // The base IV holds a copy of the original IV for Reset(), until it is cleared by Dispose().
 
-        public BasicSymmetricCipherBCrypt(SafeAlgorithmHandle algorithm, CipherMode cipherMode, int blockSizeInBytes, byte[] key, bool ownsParentHandle, byte[] iv, bool encrypting)
+        // CNG mutates this with the updated IV for the next stage on each Encrypt/Decrypt call.
+        // The base IV holds a copy of the original IV for Reset(), until it is cleared by Dispose().
+        private byte[] _currentIv;
+
+        public BasicSymmetricCipherBCrypt(
+            SafeAlgorithmHandle algorithm,
+            CipherMode cipherMode,
+            int feedbackSizeBytes,
+            int blockSizeInBytes,
+            byte[] key,
+            bool ownsParentHandle,
+            byte[] iv,
+            bool encrypting)
             : base(cipherMode.GetCipherIv(iv), blockSizeInBytes)
         {
             Debug.Assert(algorithm != null);
@@ -29,6 +39,19 @@ namespace Internal.Cryptography
             }
 
             _hKey = algorithm.BCryptImportKey(key);
+
+            // Only CFB and OFB have a feedback size.
+            // CNG doesn't support OFB, so only CFB should end up needing this.
+            if (cipherMode == CipherMode.CFB)
+            {
+                _hKey.SetFeedbackSize(feedbackSizeBytes);
+            }
+            else
+            {
+                Debug.Assert(
+                    cipherMode == CipherMode.CBC || cipherMode == CipherMode.ECB,
+                    $"Unhandled CipherMode {cipherMode}");
+            }
 
             if (ownsParentHandle)
             {
