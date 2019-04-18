@@ -144,8 +144,15 @@ namespace System.Security.Cryptography
 
             set
             {
-                if (!(value == CipherMode.CBC || value == CipherMode.ECB))
-                    throw new CryptographicException(SR.Cryptography_InvalidCipherMode);
+                switch (value)
+                {
+                    case CipherMode.CBC:
+                    case CipherMode.CFB:
+                    case CipherMode.ECB:
+                        break;
+                    default:
+                        throw new CryptographicException(SR.Cryptography_InvalidCipherMode);
+                }
 
                 ModeValue = value;
             }

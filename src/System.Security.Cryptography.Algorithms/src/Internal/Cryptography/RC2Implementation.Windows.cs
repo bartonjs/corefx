@@ -13,6 +13,7 @@ namespace Internal.Cryptography
         private static ICryptoTransform CreateTransformCore(
             CipherMode cipherMode,
             PaddingMode paddingMode,
+            int feedbackSizeBytes,
             byte[] key,
             int effectiveKeyLength,
             byte[] iv,
@@ -22,7 +23,16 @@ namespace Internal.Cryptography
             using (SafeAlgorithmHandle algorithm = RC2BCryptModes.GetHandle(cipherMode, effectiveKeyLength))
             {
                 // The BasicSymmetricCipherBCrypt ctor will increase algorithm reference count and take ownership.
-                BasicSymmetricCipher cipher = new BasicSymmetricCipherBCrypt(algorithm, cipherMode, blockSize, key, true, iv, encrypting);
+                BasicSymmetricCipher cipher = new BasicSymmetricCipherBCrypt(
+                    algorithm,
+                    cipherMode,
+                    feedbackSizeBytes,
+                    blockSize,
+                    key,
+                    true,
+                    iv,
+                    encrypting);
+
                 return UniversalCryptoTransform.Create(paddingMode, cipher, encrypting);
             }
         }

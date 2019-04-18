@@ -12,6 +12,7 @@ namespace Internal.Cryptography
         private static ICryptoTransform CreateTransformCore(
             CipherMode cipherMode,
             PaddingMode paddingMode,
+            int feedbackSizeBytes,
             byte[] key,
             byte[] iv,
             int blockSize,
@@ -19,7 +20,16 @@ namespace Internal.Cryptography
         {
             SafeAlgorithmHandle algorithm = TripleDesBCryptModes.GetSharedHandle(cipherMode);
 
-            BasicSymmetricCipher cipher = new BasicSymmetricCipherBCrypt(algorithm, cipherMode, blockSize, key, false, iv, encrypting);
+            BasicSymmetricCipher cipher = new BasicSymmetricCipherBCrypt(
+                algorithm,
+                cipherMode,
+                feedbackSizeBytes,
+                blockSize,
+                key,
+                false,
+                iv,
+                encrypting);
+
             return UniversalCryptoTransform.Create(paddingMode, cipher, encrypting);
         }
 

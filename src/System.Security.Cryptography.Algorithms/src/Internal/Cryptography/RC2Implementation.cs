@@ -78,7 +78,15 @@ namespace Internal.Cryptography
             }
 
             int effectiveKeySize = EffectiveKeySizeValue == 0 ? (int)keySize : EffectiveKeySize;
-            return CreateTransformCore(Mode, Padding, rgbKey, effectiveKeySize, rgbIV, BlockSize / BitsPerByte, encrypting);
+            return CreateTransformCore(
+                Mode,
+                Padding,
+                FeedbackSize / BitsPerByte,
+                rgbKey,
+                effectiveKeySize,
+                rgbIV,
+                BlockSize / BitsPerByte,
+                encrypting);
         }
     }
 }

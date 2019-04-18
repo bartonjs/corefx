@@ -74,7 +74,14 @@ namespace Internal.Cryptography
                 rgbKey = newkey;
             }
 
-            return CreateTransformCore(Mode, Padding, rgbKey, rgbIV, BlockSize / BitsPerByte, encrypting);
+            return CreateTransformCore(
+                Mode,
+                Padding,
+                FeedbackSize / BitsPerByte,
+                rgbKey,
+                rgbIV,
+                BlockSize / BitsPerByte,
+                encrypting);
         }
     }
 }

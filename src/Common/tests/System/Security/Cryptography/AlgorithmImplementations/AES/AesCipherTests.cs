@@ -350,6 +350,186 @@ namespace System.Security.Cryptography.Encryption.Aes.Tests
         }
 
         [Fact]
+        public static void VerifyKnownTransform_CFB8_128_NoPadding_0_Extended()
+        {
+            // NIST CAVP AESMMT.ZIP CFB8MMT128.rsp, [ENCRYPT] COUNT=0
+            // plaintext zero-extended to a full block, cipherBytes extended value
+            // provided by .NET Framework
+            TestAesTransformDirectKey(
+                CipherMode.CFB,
+                PaddingMode.None,
+                key: "c57d699d89df7cfbef71c080a6b10ac3".HexToByteArray(),
+                iv: "fcb2bc4c006b87483978796a2ae2c42e".HexToByteArray(),
+                plainBytes: ("61" + "000000000000000000000000000000").HexToByteArray(),
+                cipherBytes: ("24" + "D89FE413C3D37172D6B577E2F94997").HexToByteArray(),
+                feedbackSize: 8);
+        }
+
+        [Fact]
+        public static void VerifyKnownTransform_CFB8_128_NoPadding_9_Extended()
+        {
+            // NIST CAVP AESMMT.ZIP CFB8MMT128.rsp, [ENCRYPT] COUNT=9
+            // plaintext zero-extended to a full block, cipherBytes extended value
+            // provided by .NET Framework
+            TestAesTransformDirectKey(
+                CipherMode.CFB,
+                PaddingMode.None,
+                key: "3a6f9159263fa6cef2a075caface5817".HexToByteArray(),
+                iv: "0fc23662b7dbf73827f0c7de321ca36e".HexToByteArray(),
+                plainBytes: ("87efeb8d559ed3367728" + "000000000000").HexToByteArray(),
+                cipherBytes: ("8e9c50425614d540ce11" + "7DD85E93D8E0").HexToByteArray(),
+                feedbackSize: 8);
+        }
+
+        [Fact]
+        public static void VerifyKnownTransform_CFB8_192_NoPadding_0_Extended()
+        {
+            // NIST CAVP AESMMT.ZIP CFB8MMT192.rsp, [ENCRYPT] COUNT=0
+            // plaintext zero-extended to a full block, cipherBytes extended value
+            // provided by .NET Framework
+            TestAesTransformDirectKey(
+                CipherMode.CFB,
+                PaddingMode.None,
+                key: "32a1b0e3da368db563d7316b9779d3327e53d9a6d287ed97".HexToByteArray(),
+                iv: "3dd0e7e21f09d5842f3a699da9b57346".HexToByteArray(),
+                plainBytes: ("54" + "000000000000000000000000000000").HexToByteArray(),
+                cipherBytes: ("6d" + "B3F513638A136D73873517AF1A770F").HexToByteArray(),
+                feedbackSize: 8);
+        }
+
+        [Fact]
+        public static void VerifyKnownTransform_CFB8_192_NoPadding_9_Extended()
+        {
+            // NIST CAVP AESMMT.ZIP CFB8MMT192.rsp, [ENCRYPT] COUNT=9
+            // plaintext zero-extended to a full block, cipherBytes extended value
+            // provided by .NET Framework
+            TestAesTransformDirectKey(
+                CipherMode.CFB,
+                PaddingMode.None,
+                key: "537e7bf661fd4024a024613f15b13690f7d0c847c1e18965".HexToByteArray(),
+                iv: "3a81f9d9d3c155b0caad5d73349476fc".HexToByteArray(),
+                plainBytes: ("d3d8b9b984adc24237ee" + "000000000000").HexToByteArray(),
+                cipherBytes: ("3879fea72ac99929e53a" + "39552A575D73").HexToByteArray(),
+                feedbackSize: 8);
+        }
+
+        [Fact]
+        public static void VerifyKnownTransform_CFB8_256_NoPadding_0_Extended()
+        {
+            // NIST CAVP AESMMT.ZIP CFB8MMT256.rsp, [ENCRYPT] COUNT=0
+            // plaintext zero-extended to a full block, cipherBytes extended value
+            // provided by .NET Framework
+            TestAesTransformDirectKey(
+                CipherMode.CFB,
+                PaddingMode.None,
+                key: "34e8091cee09f1bd3ebf1e8f05f51bfbd4899ef2ae006a3a0f7875052cdd46c8".HexToByteArray(),
+                iv: "43eb4dcc4b04a80216a20e4a09a7abb5".HexToByteArray(),
+                plainBytes: ("f9" + "000000000000000000000000000000").HexToByteArray(),
+                cipherBytes: ("28" + "26199F76D20BE53AB4D146CFC6D281").HexToByteArray(),
+                feedbackSize: 8);
+        }
+
+        [Fact]
+        public static void VerifyKnownTransform_CFB8_256_NoPadding_9_Extended()
+        {
+            // NIST CAVP AESMMT.ZIP CFB8MMT256.rsp, [ENCRYPT] COUNT=9
+            // plaintext zero-extended to a full block, cipherBytes extended value
+            // provided by .NET Framework
+            TestAesTransformDirectKey(
+                CipherMode.CFB,
+                PaddingMode.None,
+                key: "ebbb4566b5e182e0f072466b0b311df38f9175bc0213a5530bce2ec4d74f400d".HexToByteArray(),
+                iv: "0956a48e01002c9e16376d6e308dbad1".HexToByteArray(),
+                plainBytes: ("b0fe25ac8d3d28a2f471" + "000000000000").HexToByteArray(),
+                cipherBytes: ("638c6823e7256fb5626e" + "5EE5C1D7FA17").HexToByteArray(),
+                feedbackSize: 8);
+        }
+
+        [Fact]
+        public static void VerifyKnownTransform_CFB128_128_NoPadding_0()
+        {
+            // NIST CAVP AESMMT.ZIP CFB128MMT128.rsp, [ENCRYPT] COUNT=0
+            TestAesTransformDirectKey(
+                CipherMode.CFB,
+                PaddingMode.None,
+                key: "085b8af6788fa6bc1a0b47dcf50fbd35".HexToByteArray(),
+                iv: "58cb2b12bb52c6f14b56da9210524864".HexToByteArray(),
+                plainBytes: "4b5a872260293312eea1a570fd39c788".HexToByteArray(),
+                cipherBytes: "e92c80e0cfb6d8b1c27fd58bc3708b16".HexToByteArray(),
+                feedbackSize: 128);
+        }
+
+        [Fact]
+        public static void VerifyKnownTransform_CFB128_128_NoPadding_1_Extended()
+        {
+            // NIST CAVP AESMMT.ZIP CFB128MMT128.rsp, [ENCRYPT] COUNT=1
+            TestAesTransformDirectKey(
+                CipherMode.CFB,
+                PaddingMode.None,
+                key: "701ccc4c0e36e512ce077f5af6ccb957".HexToByteArray(),
+                iv: "5337ddeaf89a00dd4d58d860de968469".HexToByteArray(),
+                plainBytes: "cc1172f2f80866d0768b25f70fcf6361aab7c627c8488f97525d7d88949beeea".HexToByteArray(),
+                cipherBytes: "cdcf093bb7840df225683b58a479b00d5de5553a7e85eae4b70bf46dc729dd31".HexToByteArray(),
+                feedbackSize: 128);
+        }
+
+        [Fact]
+        public static void VerifyKnownTransform_CFB128_192_NoPadding_0_Extended()
+        {
+            // NIST CAVP AESMMT.ZIP CFB128MMT192.rsp, [ENCRYPT] COUNT=0
+            TestAesTransformDirectKey(
+                CipherMode.CFB,
+                PaddingMode.None,
+                key: "1bbb30016d3a908827693352ece9833415433618b1d97595".HexToByteArray(),
+                iv: "b2b48e8d60240bf2d9fa05cc2f90c161".HexToByteArray(),
+                plainBytes: "b4e499de51e646fad80030da9dc5e7e2".HexToByteArray(),
+                cipherBytes: "8b7ba98982063a55fca3492269bbe437".HexToByteArray(),
+                feedbackSize: 128);
+        }
+
+        [Fact]
+        public static void VerifyKnownTransform_CFB128_192_NoPadding_1_Extended()
+        {
+            // NIST CAVP AESMMT.ZIP CFB128MMT192.rsp, [ENCRYPT] COUNT=1
+            TestAesTransformDirectKey(
+                CipherMode.CFB,
+                PaddingMode.None,
+                key: "69f9d29885743826d7c5afc53637e6b1fa9512a10eea9ca9".HexToByteArray(),
+                iv: "3743793c7144a755768437f4ef5a33c8".HexToByteArray(),
+                plainBytes: "f84ebf42a758971c369949e288f775c9cf6a82ab51b286576b45652cd68c3ce6".HexToByteArray(),
+                cipherBytes: "a3bd28bb817bdb3f6492827f2aa3e6e134c254129d8f20dbc92389b7d89702d6".HexToByteArray(),
+                feedbackSize: 128);
+        }
+
+        [Fact]
+        public static void VerifyKnownTransform_CFB128_256_NoPadding_0_Extended()
+        {
+            // NIST CAVP AESMMT.ZIP CFB128MMT256.rsp, [ENCRYPT] COUNT=0
+            TestAesTransformDirectKey(
+                CipherMode.CFB,
+                PaddingMode.None,
+                key: "e1c6e6884eee69552dbfee21f22ca92685d5d08ef0e3f37e5b338c533bb8d72c".HexToByteArray(),
+                iv: "cea9f23ae87a637ab0cda6381ecc1202".HexToByteArray(),
+                plainBytes: "b72606c98d8e4fabf08839abf7a0ac61".HexToByteArray(),
+                cipherBytes: "2981761d979bb1765a28b2dd19125b54".HexToByteArray(),
+                feedbackSize: 128);
+        }
+
+        [Fact]
+        public static void VerifyKnownTransform_CFB128_256_NoPadding_1_Extended()
+        {
+            // NIST CAVP AESMMT.ZIP CFB128MMT256.rsp, [ENCRYPT] COUNT=1
+            TestAesTransformDirectKey(
+                CipherMode.CFB,
+                PaddingMode.None,
+                key: "ae59254c66d8f533e7f5002ced480c33984a421d7816e27be66c34c19bfbc2a8".HexToByteArray(),
+                iv: "821dd21653ece3af675cd25d26017ae3".HexToByteArray(),
+                plainBytes: "3cb4f17e775c2d6d06dd60f15d6c3a103e5131727f9c6cb80d13e00f316eb904".HexToByteArray(),
+                cipherBytes: "ae375db9f28148c460f6c6b6665fcc2ff6b50b8eaf82c64bba8c649efd4731bc".HexToByteArray(),
+                feedbackSize: 128);
+        }
+
+        [Fact]
         public static void WrongKeyFailDecrypt()
         {
             // The test:
@@ -589,7 +769,8 @@ namespace System.Security.Cryptography.Encryption.Aes.Tests
             byte[] key,
             byte[] iv,
             byte[] plainBytes,
-            byte[] cipherBytes)
+            byte[] cipherBytes,
+            int feedbackSize=-1)
         {
             byte[] liveEncryptBytes;
             byte[] liveDecryptBytes;
@@ -598,6 +779,11 @@ namespace System.Security.Cryptography.Encryption.Aes.Tests
             {
                 aes.Mode = cipherMode;
                 aes.Padding = paddingMode;
+
+                if (feedbackSize >= 0)
+                {
+                    aes.FeedbackSize = feedbackSize;
+                }
 
                 liveEncryptBytes = AesEncryptDirectKey(aes, key, iv, plainBytes);
                 liveDecryptBytes = AesDecryptDirectKey(aes, key, iv, cipherBytes);
