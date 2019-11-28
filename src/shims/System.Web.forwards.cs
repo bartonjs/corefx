@@ -97,31 +97,11 @@ namespace System.Web
 
         public HttpContext Context => default;
 
-        public event EventHandler Disposed
-        {
-            add
-            {
-                Events.AddHandler(EventDisposed, value);
-            }
-            remove
-            {
-                Events.RemoveHandler(EventDisposed, value);
-            }
-        }
- 
-        protected EventHandlerList Events
-        {
-            get
-            {
-                if (_events == null)
-                {
-                    _events = new EventHandlerList();
-                }
+#pragma warning disable CS0067
+        public event EventHandler Disposed;
+#pragma warning restore CS0067
 
-                return _events;
-            }
-        }
- 
+        protected EventHandlerList Events => default;
         public HttpRequest Request => default;
         public HttpResponse Response => default;
         public HttpSessionState Session => default;
@@ -205,7 +185,7 @@ namespace System.Web
         public ISite Site { get; set; }
 
         IAsyncResult IHttpAsyncHandler.BeginProcessRequest(HttpContext context, AsyncCallback cb, object extraData) => default;
-        void IHttpAsyncHandler.EndProcessRequest(IAsyncResult result) => default;
+        void IHttpAsyncHandler.EndProcessRequest(IAsyncResult result) { }
         void IHttpHandler.ProcessRequest(HttpContext context) { }
         bool IHttpHandler.IsReusable => true;
         
@@ -825,7 +805,7 @@ namespace System.Web
 
     public sealed class HttpModuleCollection : NameObjectCollectionBase
     {
-        internal HttpModuleCollection() : base(Misc.CaseInsensitiveInvariantKeyComparer)
+        internal HttpModuleCollection()
         {
             throw new PlatformNotSupportedException();
         }
@@ -2592,9 +2572,9 @@ namespace System.Web.UI
         protected virtual HtmlTextWriterTag GetTagKey(string tagName) => default;
         protected virtual string GetTagName(HtmlTextWriterTag tagKey) => default;
         protected bool IsAttributeDefined(HtmlTextWriterAttribute key) => default;
-        protected bool IsAttributeDefined(HtmlTextWriterAttribute key, out string value) => default;
+        protected bool IsAttributeDefined(HtmlTextWriterAttribute key, out string value) => throw new PlatformNotSupportedException();
         protected bool IsStyleAttributeDefined(HtmlTextWriterStyle key) => default;
-        protected bool IsStyleAttributeDefined(HtmlTextWriterStyle key, out string value) => default;
+        protected bool IsStyleAttributeDefined(HtmlTextWriterStyle key, out string value) => throw new PlatformNotSupportedException();
         protected virtual bool OnAttributeRender(string name, string value, HtmlTextWriterAttribute key) => default;
         protected virtual bool OnStyleAttributeRender(string name, string value, HtmlTextWriterStyle key) => default;
         protected virtual bool OnTagRender(string name, HtmlTextWriterTag key) => default;
@@ -2838,9 +2818,6 @@ namespace System.Web.UI
         public StateBag(bool ignoreCase)
         {
             throw new PlatformNotSupportedException();
-            marked = false;
-            this.ignoreCase = ignoreCase;
-            bag = CreateBag();
         }
  
         public int Count => default;
@@ -2921,202 +2898,71 @@ namespace System.Web.UI.WebControls
 
     public struct FontUnit
     {
-        public static readonly FontUnit Empty = new FontUnit();
-        public static readonly FontUnit Smaller = new FontUnit(FontSize.Smaller);
-        public static readonly FontUnit Larger = new FontUnit(FontSize.Larger);
-        public static readonly FontUnit XXSmall = new FontUnit(FontSize.XXSmall);
-        public static readonly FontUnit XSmall = new FontUnit(FontSize.XSmall);
-        public static readonly FontUnit Small = new FontUnit(FontSize.Small);
-        public static readonly FontUnit Medium = new FontUnit(FontSize.Medium);
-        public static readonly FontUnit Large = new FontUnit(FontSize.Large);
-        public static readonly FontUnit XLarge = new FontUnit(FontSize.XLarge);
-        public static readonly FontUnit XXLarge = new FontUnit(FontSize.XXLarge);
+        public static readonly FontUnit Empty = default;
+        public static readonly FontUnit Smaller = default;
+        public static readonly FontUnit Larger = default;
+        public static readonly FontUnit XXSmall = default;
+        public static readonly FontUnit XSmall = default;
+        public static readonly FontUnit Small = default;
+        public static readonly FontUnit Medium = default;
+        public static readonly FontUnit Large = default;
+        public static readonly FontUnit XLarge = default;
+        public static readonly FontUnit XXLarge = default;
 
-        private readonly FontSize type;
-        private readonly Unit value;
- 
         public FontUnit(FontSize type)
         {
-            if (type < FontSize.NotSet || type > FontSize.XXLarge) {
-                throw new ArgumentOutOfRangeException("type");
-            }
-            this.type = type;
-            if (this.type == FontSize.AsUnit) {
-                value = Unit.Point(10);
-            }
-            else {
-                value = Unit.Empty;
-            }
+            throw new PlatformNotSupportedException();
         }
  
         public FontUnit(Unit value) {
-            this.type = FontSize.NotSet;
-            if (value.IsEmpty == false) {
-                this.type = FontSize.AsUnit;
-                this.value = value;
-            }
-            else {
-                this.value = Unit.Empty;
-            }
+            throw new PlatformNotSupportedException();
         }
  
         public FontUnit(int value) {
-            this.type = FontSize.AsUnit;
-            this.value = Unit.Point(value);
+            throw new PlatformNotSupportedException();
         }
  
-        public FontUnit(double value) : this(new Unit(value, UnitType.Point)) {
+        public FontUnit(double value) {
+            throw new PlatformNotSupportedException();
         }
  
-        public FontUnit(double value, UnitType type) : this(new Unit(value, type)) {
+        public FontUnit(double value, UnitType type) {
+            throw new PlatformNotSupportedException();
         }
  
-        public FontUnit(string value) : this(value, CultureInfo.CurrentCulture) {
+        public FontUnit(string value) {
+            throw new PlatformNotSupportedException();
         }
  
         public FontUnit(string value, CultureInfo culture) {
-            this.type = FontSize.NotSet;
-            this.value = Unit.Empty;
- 
-            if (!String.IsNullOrEmpty(value)) {
-                char firstChar = Char.ToLower(value[0], CultureInfo.InvariantCulture);
-                if (firstChar == 'x') {
-                    if (String.Equals(value, "xx-small", StringComparison.OrdinalIgnoreCase) || 
-                        String.Equals(value, "xxsmall", StringComparison.OrdinalIgnoreCase)) {
-                        this.type = FontSize.XXSmall;
-                        return;
-                    }
-                    else if (String.Equals(value, "x-small", StringComparison.OrdinalIgnoreCase) || 
-                        String.Equals(value, "xsmall", StringComparison.OrdinalIgnoreCase)) {
-                        this.type = FontSize.XSmall;
-                        return;
-                    }
-                    else if (String.Equals(value, "x-large", StringComparison.OrdinalIgnoreCase) || 
-                        String.Equals(value, "xlarge", StringComparison.OrdinalIgnoreCase)) {
-                        this.type = FontSize.XLarge;
-                        return;
-                    }
-                    else if (String.Equals(value, "xx-large", StringComparison.OrdinalIgnoreCase) || 
-                        String.Equals(value, "xxlarge", StringComparison.OrdinalIgnoreCase)) {
-                        this.type = FontSize.XXLarge;
-                        return;
-                    }
-                }
-                else if (firstChar == 's') {
-                    if (String.Equals(value, "small", StringComparison.OrdinalIgnoreCase)) {
-                        this.type = FontSize.Small;
-                        return;
-                    }
-                    else if (String.Equals(value, "smaller", StringComparison.OrdinalIgnoreCase)) {
-                        this.type = FontSize.Smaller;
-                        return;
-                    }
-                }
-                else if (firstChar == 'l') {
-                    if (String.Equals(value, "large", StringComparison.OrdinalIgnoreCase)) {
-                        this.type = FontSize.Large;
-                        return;
-                    }
-                    if (String.Equals(value, "larger", StringComparison.OrdinalIgnoreCase)) {
-                        this.type = FontSize.Larger;
-                        return;
-                    }
-                }
-                else if ((firstChar == 'm') && String.Equals(value, "medium", StringComparison.OrdinalIgnoreCase)) {
-                    this.type = FontSize.Medium;
-                    return;
-                }
- 
-                this.value = new Unit(value, culture, UnitType.Point);
-                this.type = FontSize.AsUnit;
-            }
+            throw new PlatformNotSupportedException();
         }
         
-        public bool IsEmpty { get { return type == FontSize.NotSet; } }
-        public FontSize Type { get { return type; } }
-        public Unit Unit { get { return value; } }
-
-        public override int GetHashCode()
-        {
-            int h1 = type.GetHashCode();
-            int h2 = value.GetHashCode();
-
-            return ((h1 << 5) + h1) ^ h2;
-        }
- 
-        public override bool Equals(object obj)
-        {
-            if (obj == null || !(obj is FontUnit))
-                return false;
- 
-            FontUnit f = (FontUnit)obj;
- 
-            if ((f.type == type) && (f.value == value)) {
-                return true;
-            }
-            return false;
-        }
- 
-        public static bool operator ==(FontUnit left, FontUnit right) {
-            return ((left.type == right.type) && (left.value == right.value));                
-        }
-        
-        public static bool operator !=(FontUnit left, FontUnit right) {
-            return ((left.type != right.type) || (left.value != right.value));                
-        }
+        public bool IsEmpty => true;
+        public FontSize Type => default;
+        public Unit Unit => default;
+        public override int GetHashCode() => default;
+        public override bool Equals(object obj) => default;
+        public static bool operator ==(FontUnit left, FontUnit right) => true;
+        public static bool operator !=(FontUnit left, FontUnit right) => false;
  
         public static FontUnit Parse(string s) {
-            return new FontUnit(s, CultureInfo.InvariantCulture);
+            throw new PlatformNotSupportedException();
         }
  
         public static FontUnit Parse(string s, CultureInfo culture) {
-            return new FontUnit(s, culture);
+            throw new PlatformNotSupportedException();
         }
         
         public static FontUnit Point(int n) {
-            return new FontUnit(n);
+            throw new PlatformNotSupportedException();
         }
  
-        public override string ToString() {
-            return ToString((IFormatProvider)CultureInfo.CurrentCulture);
-        }
+        public override string ToString() => string.Empty;
+        public string ToString(CultureInfo culture) => string.Empty;
+        public string ToString(IFormatProvider formatProvider) => string.Empty;
  
-        public string ToString(CultureInfo culture) {
-            return ToString((IFormatProvider)culture);
-        }
- 
-        public string ToString(IFormatProvider formatProvider) {
-            string s = String.Empty;
- 
-            if (IsEmpty)
-                return s;
- 
-            switch (type) {
-                case FontSize.AsUnit:
-                    s = value.ToString(formatProvider);
-                    break;
-                case FontSize.XXSmall:
-                    s = "XX-Small";
-                    break;
-                case FontSize.XSmall:
-                    s = "X-Small";
-                    break;
-                case FontSize.XLarge:
-                    s = "X-Large";
-                    break;
-                case FontSize.XXLarge:
-                    s = "XX-Large";
-                    break;
-                default:
-                    s = PropertyConverter.EnumToString(typeof(FontSize), type);
-                    break;
-            }
-            return s;
-        }
- 
-        public static implicit operator FontUnit(int n) {
-            return FontUnit.Point(n);
-        }
+        public static implicit operator FontUnit(int n) => default;
     }
 
     public enum FontSize
@@ -3168,19 +3014,19 @@ namespace System.Web.UI.WebControls
         protected internal virtual void TrackViewState() { }
         public virtual void MergeWith(Style s) { }
         public virtual void Reset() { }
-        protected internal virtual object SaveViewState() { }
+        protected internal virtual object SaveViewState() => default;
         protected internal virtual void SetBit(int bit) { }
         public void SetDirty() { }
         
         bool IStateManager.IsTrackingViewState => default;
         void IStateManager.LoadViewState(object state) { }
         void IStateManager.TrackViewState() { }
-        object IStateManager.SaveViewState() { }
+        object IStateManager.SaveViewState() => default;
     }
 
     public struct Unit
     {
-        public static readonly Unit Empty = new Unit();
+        public static readonly Unit Empty = default;
 
         public Unit(int value) {
             throw new PlatformNotSupportedException();
@@ -3194,11 +3040,11 @@ namespace System.Web.UI.WebControls
             throw new PlatformNotSupportedException();
         }
  
-        public Unit(string value) : this(value, CultureInfo.CurrentCulture, UnitType.Pixel) {
+        public Unit(string value) {
             throw new PlatformNotSupportedException();
         }
  
-        public Unit(string value, CultureInfo culture) : this(value, culture, UnitType.Pixel) {
+        public Unit(string value, CultureInfo culture) {
             throw new PlatformNotSupportedException();
         }
  
@@ -3299,64 +3145,13 @@ namespace System.Web.WebSockets
 
     public sealed class AspNetWebSocketOptions
     {
-        private string _subProtocol;
+        public AspNetWebSocketOptions()
+        {
+            throw new PlatformNotSupportedException();
+        }
  
         public bool RequireSameOrigin { get; set; }
  
-        public string SubProtocol {
-            get {
-                return _subProtocol;
-            }
-            set {
-                if (value != null && !SubProtocolUtil.IsValidSubProtocolName(value)) {
-                    throw new ArgumentOutOfRangeException("value");
-                }
-                _subProtocol = value;
-            }
-        }
- 
-    }
-
-    internal static class SubProtocolUtil
-    {
-        public static bool IsValidSubProtocolName(string subprotocol)
-        {
-            return (!string.IsNullOrEmpty(subprotocol) && subprotocol.All(IsValidSubProtocolChar));
-        }
- 
-        private static bool IsValidSubProtocolChar(char c)
-        {
-            return ('\u0021' <= c && c <= '\u007e' && !IsSeparatorChar(c));
-        }
- 
-        private static bool IsSeparatorChar(char c)
-        {
-            switch (c)
-            {
-                case '(':
-                case ')':
-                case '<':
-                case '>':
-                case '@':
-                case ',':
-                case ';':
-                case ':':
-                case '\\':
-                case '"':
-                case '/':
-                case '[':
-                case ']':
-                case '?':
-                case '=':
-                case '{':
-                case '}':
-                case ' ':
-                case '\t':
-                    return true;
- 
-                default:
-                    return false;
-            }
-        }
+        public string SubProtocol { get; set; }
     }
 }    
