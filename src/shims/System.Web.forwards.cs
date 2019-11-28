@@ -3006,7 +3006,7 @@ namespace System.Web.UI.WebControls
         protected internal StateBag ViewState => default;
         public Unit Width { get; set; }
         public void AddAttributesToRender(HtmlTextWriter writer) { }
-        public virtual void AddAttributesToRender(HtmlTextWriter writer, WebControl owner) { }
+        //REMOVED: WebControl-public virtual void AddAttributesToRender(HtmlTextWriter writer, WebControl owner) { }
         public virtual void CopyFrom(Style s) { }
         protected virtual void FillStyleAttributes(CssStyleCollection attributes, IUrlResolutionService urlResolver) { }
         public CssStyleCollection GetStyleAttributes(IUrlResolutionService urlResolver) => default;
